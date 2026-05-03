@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finger-Spelling Practice - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="learning.html">Learn</a></li>
+                <li><a href="translator.html">Translator</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="index.html" class="logout-btn">Logout</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="header-content">
+            <h1>Finger-Spelling Practice</h1>
+            <p>Master the art of finger-spelling with camera-assisted recognition</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="fingerspelling-container">
+        <div class="practice-layout">
+            <!-- Left Panel: Word Selection -->
+            <aside class="word-selector">
+                <div class="selector-card">
+                    <h2>Word Categories</h2>
+                    <div class="category-buttons">
+                        <button class="category-btn active" onclick="filterCategory('all')">All Words</button>
+                        <button class="category-btn" onclick="filterCategory('common')">Common Words</button>
+                        <button class="category-btn" onclick="filterCategory('names')">Names</button>
+                        <button class="category-btn" onclick="filterCategory('places')">Places</button>
+                        <button class="category-btn" onclick="filterCategory('objects')">Objects</button>
+                        <button class="category-btn" onclick="filterCategory('actions')">Actions</button>
+                    </div>
+                </div>
+
+                <div class="selector-card">
+                    <h2>Difficulty Level</h2>
+                    <div class="difficulty-options">
+                        <label class="radio-option">
+                            <input type="radio" name="difficulty" value="beginner" checked onchange="setDifficulty('beginner')">
+                            <span>Beginner</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="difficulty" value="intermediate" onchange="setDifficulty('intermediate')">
+                            <span>Intermediate</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="difficulty" value="advanced" onchange="setDifficulty('advanced')">
+                            <span>Advanced</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="selector-card">
+                    <h2>Word List</h2>
+                    <div class="word-list">
+                        <div class="word-item" onclick="selectWord('Hello')">
+                            <span class="word-text">Hello</span>
+                            <span class="difficulty-badge beginner">Easy</span>
+                        </div>
+                        <div class="word-item" onclick="selectWord('Thank You')">
+                            <span class="word-text">Thank You</span>
+                            <span class="difficulty-badge beginner">Easy</span>
+                        </div>
+                        <div class="word-item" onclick="selectWord('Love')">
+                            <span class="word-text">Love</span>
+                            <span class="difficulty-badge beginner">Easy</span>
+                        </div>
+                        <div class="word-item" onclick="selectWord('Beautiful')">
+                            <span class="word-text">Beautiful</span>
+                            <span class="difficulty-badge intermediate">Medium</span>
+                        </div>
+                        <div class="word-item" onclick="selectWord('Understanding')">
+                            <span class="word-text">Understanding</span>
+                            <span class="difficulty-badge advanced">Hard</span>
+                        </div>
+                        <div class="word-item" onclick="selectWord('Conversation')">
+                            <span class="word-text">Conversation</span>
+                            <span class="difficulty-badge advanced">Hard</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Panel: Practice Area -->
+            <section class="practice-area">
+                <!-- Word Display -->
+                <div class="word-display">
+                    <div class="current-word">
+                        <h2 id="currentWord">Select a word to practice</h2>
+                        <div class="word-letters" id="wordLetters"></div>
+                    </div>
+                </div>
+
+                <!-- Camera Section -->
+                <div class="practice-camera">
+                    <div class="camera-feed-container">
+                        <div id="cameraFeed" class="camera-feed">
+                            <div class="camera-placeholder">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">📷</div>
+                                <p>Camera Feed</p>
+                                <p style="font-size: 0.9rem; opacity: 0.7;">Click "Start Practice" to begin</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="camera-controls">
+                        <button class="btn-primary" onclick="startPractice()">▶ Start Practice</button>
+                        <button class="btn-secondary" onclick="stopPractice()">Stop</button>
+                    </div>
+                </div>
+
+                <!-- Feedback Section -->
+                <div id="feedbackPanel" class="feedback-panel" style="display: none;">
+                    <div id="feedbackContent"></div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="practice-progress">
+                    <h3>Practice Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-label">Words Practiced</span>
+                            <span id="wordsPracticed" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Accuracy</span>
+                            <span id="accuracy" class="stat-value">0%</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Session Time</span>
+                            <span id="sessionTime" class="stat-value">0:00</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Points Earned</span>
+                            <span id="pointsEarned" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Guide -->
+            <aside class="practice-guide">
+                <div class="guide-card">
+                    <h3>📖 Letter Guide</h3>
+                    <div class="letter-guide">
+                        <div class="letter-item">
+                            <span class="letter">A</span>
+                            <span class="gesture">Closed fist</span>
+                        </div>
+                        <div class="letter-item">
+                            <span class="letter">B</span>
+                            <span class="gesture">Open hand</span>
+                        </div>
+                        <div class="letter-item">
+                            <span class="letter">C</span>
+                            <span class="gesture">Curved hand</span>
+                        </div>
+                        <div class="letter-item">
+                            <span class="letter">D</span>
+                            <span class="gesture">Point up</span>
+                        </div>
+                        <div class="letter-item">
+                            <span class="letter">E</span>
+                            <span class="gesture">Fingers bent</span>
+                        </div>
+                        <div class="letter-item">
+                            <span class="letter">F</span>
+                            <span class="gesture">OK sign</span>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="viewFullGuide()">View Full Alphabet</button>
+                </div>
+
+                <div class="guide-card">
+                    <h3>💡 Tips</h3>
+                    <ul class="tips-list">
+                        <li>Keep your hand visible in the camera</li>
+                        <li>Move slowly and deliberately</li>
+                        <li>Ensure good lighting</li>
+                        <li>Hold each letter for 1-2 seconds</li>
+                        <li>Practice one letter at a time</li>
+                        <li>Repeat until you see 90%+ accuracy</li>
+                    </ul>
+                </div>
+
+                <div class="guide-card">
+                    <h3>🏆 Achievements</h3>
+                    <div class="achievements">
+                        <div class="achievement-item">
+                            <span class="icon">🌟</span>
+                            <span class="label">10 Words Mastered</span>
+                        </div>
+                        <div class="achievement-item">
+                            <span class="icon">⚡</span>
+                            <span class="label">Speed Demon</span>
+                        </div>
+                        <div class="achievement-item">
+                            <span class="icon">🎯</span>
+                            <span class="label">Perfect Accuracy</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Practice Session History -->
+        <section class="history-section">
+            <h2>Recent Practice Sessions</h2>
+            <div class="history-table">
+                <div class="table-header">
+                    <div>Date</div>
+                    <div>Words Practiced</div>
+                    <div>Accuracy</div>
+                    <div>Duration</div>
+                    <div>Points</div>
+                </div>
+                <div class="table-row">
+                    <div>Today, 2:30 PM</div>
+                    <div>5 words</div>
+                    <div>
+                        <div class="accuracy-bar">
+                            <div class="accuracy-fill" style="width: 92%;"></div>
+                            <span>92%</span>
+                        </div>
+                    </div>
+                    <div>15 min</div>
+                    <div style="color: var(--primary); font-weight: 700;">+75 pts</div>
+                </div>
+                <div class="table-row">
+                    <div>Yesterday, 4:15 PM</div>
+                    <div>8 words</div>
+                    <div>
+                        <div class="accuracy-bar">
+                            <div class="accuracy-fill" style="width: 88%;"></div>
+                            <span>88%</span>
+                        </div>
+                    </div>
+                    <div>22 min</div>
+                    <div style="color: var(--primary); font-weight: 700;">+110 pts</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Kumpas - Sign Language Learning System. City College of Calapan</p>
+        </div>
+    </footer>
+
+    <style>
+        .fingerspelling-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .practice-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .word-selector, .practice-guide {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .selector-card, .guide-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .selector-card h2, .guide-card h3 {
+            margin-top: 0;
+            color: var(--dark);
+        }
+
+        .category-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .category-btn {
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .category-btn:hover {
+            border-color: var(--primary);
+            background: #e8efff;
+        }
+
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .difficulty-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .radio-option input {
+            cursor: pointer;
+        }
+
+        .word-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .word-item:hover {
+            background: #e8efff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .word-text {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .difficulty-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .difficulty-badge.beginner {
+            background: #e8f5e9;
+            color: #27ae60;
+        }
+
+        .difficulty-badge.intermediate {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+
+        .difficulty-badge.advanced {
+            background: #ffebee;
+            color: #e74c3c;
+        }
+
+        .practice-area {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .word-display {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%);
+            border-radius: 12px;
+        }
+
+        .current-word h2 {
+            margin: 0 0 1rem 0;
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        .word-letters {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .word-letter {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .practice-camera {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .camera-feed-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .camera-feed {
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: white;
+        }
+
+        .camera-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .feedback-panel {
+            padding: 1.5rem;
+            border-radius: 8px;
+            background: #e8f5e9;
+            border-left: 4px solid #27ae60;
+        }
+
+        .practice-progress {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .practice-progress h3 {
+            margin-top: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .letter-guide {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .letter-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .letter {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .gesture {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tips-list li {
+            padding: 0.5rem 0;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .tips-list li:before {
+            content: "✓ ";
+            color: var(--primary);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+
+        .achievements {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .achievement-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .achievement-item .icon {
+            font-size: 1.5rem;
+        }
+
+        .achievement-item .label {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .history-table {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-table .table-header,
+        .history-table .table-row {
+            display: grid;
+            grid-template-columns: 150px 150px 150px 100px 100px;
+            gap: 1rem;
+            padding: 1rem;
+            align-items: center;
+        }
+
+        .history-table .table-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            font-weight: 600;
+        }
+
+        .history-table .table-row {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .accuracy-bar {
+            display: flex;
+            align-items: center;
+            height: 24px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .accuracy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1024px) {
+            .practice-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .letter-guide {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .history-table .table-header,
+            .history-table .table-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        let currentWord = null;
+        let wordsPracticed = 0;
+        let sessionStartTime = null;
+
+        function selectWord(word) {
+            currentWord = word;
+            document.getElementById('currentWord').textContent = word;
+            
+            // Create letter buttons
+            const lettersContainer = document.getElementById('wordLetters');
+            lettersContainer.innerHTML = '';
+            word.split('').forEach(letter => {
+                if (letter !== ' ') {
+                    const letterEl = document.createElement('div');
+                    letterEl.className = 'word-letter';
+                    letterEl.textContent = letter.toUpperCase();
+                    lettersContainer.appendChild(letterEl);
+                }
+            });
+        }
+
+        function filterCategory(category) {
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            console.log('Filter by category:', category);
+        }
+
+        function setDifficulty(level) {
+            console.log('Difficulty set to:', level);
+        }
+
+        function startPractice() {
+            if (!currentWord) {
+                alert('Please select a word first');
+                return;
+            }
+            sessionStartTime = Date.now();
+            alert('Starting practice for: ' + currentWord);
+            
+            // Simulate camera start
+            document.querySelector('.camera-placeholder').innerHTML = `
+                <div style="color: #0f0; font-family: monospace;">
+                    <div style="font-size: 1rem; margin-bottom: 1rem;">🟢 CAMERA ACTIVE</div>
+                    <div>Recognizing: ${currentWord.toUpperCase()}</div>
+                </div>
+            `;
+        }
+
+        function stopPractice() {
+            document.querySelector('.camera-placeholder').innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📷</div>
+                <p>Camera Feed</p>
+                <p style="font-size: 0.9rem; opacity: 0.7;">Click "Start Practice" to begin</p>
+            `;
+        }
+
+        function viewFullGuide() {
+            alert('View full alphabet guide');
+        }
+    </script>
+</body>
+</html>

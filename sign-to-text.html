@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign-to-Text Translator - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" style="float: right;">Profile</a>
+        <a href="index.html" style="float: right;">Logout</a>
+    </div>
+
+    <div style="padding: 20px;">
+        <h1>Sign-to-Text Translator</h1>
+        <p>Use your camera to recognize sign language and convert it to text</p>
+        <br>
+    </div>
+
+    <!-- Main Content -->
+    <main class="sign-to-text-container">
+        <div class="translator-grid">
+            <!-- Camera Section -->
+            <section class="camera-section">
+                <div class="camera-panel">
+                    <h2>📷 Camera Input</h2>
+                    <div id="cameraContainer" class="camera-container">
+                        <div class="camera-feed-placeholder">
+                            <div class="camera-icon">📷</div>
+                            <p>Camera Feed Ready</p>
+                            <p class="camera-subtitle">Allow camera access to begin recognition</p>
+                        </div>
+                    </div>
+
+                    <div class="camera-controls">
+                        <button class="btn-primary" onclick="startCameraFeed()">
+                            <span>▶</span> Start Camera
+                        </button>
+                        <button class="btn-secondary" onclick="stopCameraFeed()">Stop</button>
+                        <button id="mirrorFixBtn" class="btn-secondary" onclick="toggleMirrorFix()">Mirror Fix: ON</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Translation Results Section -->
+            <section class="results-section">
+                <div class="results-panel">
+                    <h2>📝 Translation Output</h2>
+
+                    <div class="translation-output">
+                        <textarea 
+                            id="translationOutput" 
+                            class="text-output" 
+                            placeholder="Recognized text will appear here..."
+                            readonly
+                        ></textarea>
+                    </div>
+
+                    <div class="output-controls">
+                        <button class="btn-secondary" onclick="copyTranslation()">📋 Copy</button>
+                        <button class="btn-secondary" onclick="clearTranslation()">Clear</button>
+                    </div>
+
+                    <div id="fingerSpellingSection" class="recognized-signs">
+                        <h3>Finger Spelling (Letters to Word)</h3>
+                        <div class="status-item">
+                            <span class="status-label">Detected Letter</span>
+                            <span id="detectedLetter" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Current Spelled Word</span>
+                            <span id="currentSpelledWord" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Suggested Word</span>
+                            <span id="wordSuggestion" class="status-value">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Recognized Signs List -->
+                    <div id="recognizedSigns" class="recognized-signs" style="display: none;">
+                        <h3>Recognized Signs</h3>
+                        <div class="signs-list" id="signsList"></div>
+                    </div>
+
+                    <!-- Alternatives -->
+                    <div id="alternativesSection" class="alternatives-section" style="display: none;">
+                        <h3>Alternative Interpretations</h3>
+                        <div class="alternatives-list" id="alternativesList"></div>
+                    </div>
+
+                    <!-- Translation Statistics -->
+                    <div id="statsSection" class="stats-section" style="display: none;">
+                        <h3>Translation Statistics</h3>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <span class="stat-label">Words Recognized</span>
+                                <span id="wordsCount" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Accuracy</span>
+                                <span id="accuracyScore" class="stat-value">0%</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Processing Time</span>
+                                <span id="processingTime" class="stat-value">0ms</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Session Duration</span>
+                                <span id="sessionTime" class="stat-value">0:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Tips Section -->
+        <section class="tips-section">
+            <h2>💡 Tips for Best Recognition</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-icon">💡</div>
+                    <h3>Good Lighting</h3>
+                    <p>Ensure adequate lighting so the camera can clearly see your hand movements</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">📐</div>
+                    <h3>Clear View</h3>
+                    <p>Keep your hands visible and within the camera frame throughout signing</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">⚡</div>
+                    <h3>Deliberate Movements</h3>
+                    <p>Make clear, intentional hand movements at a moderate pace</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">📍</div>
+                    <h3>Hand Position</h3>
+                    <p>Keep hands at chest level, about 1-2 feet away from the camera</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">🔄</div>
+                    <h3>Repeat Practice</h3>
+                    <p>Practice the same signs multiple times to improve recognition accuracy</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">🎯</div>
+                    <h3>One Sign at a Time</h3>
+                    <p>Perform signs one at a time with clear pauses between them</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Kumpas - Sign Language Learning System. City College of Calapan</p>
+        </div>
+    </footer>
+
+    <style>
+        /* Navbar Styles */
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+        }
+
+        .sign-to-text-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .translator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .camera-panel, .results-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .camera-panel h2, .results-panel h2 {
+            margin-top: 0;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .camera-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            aspect-ratio: 4/3;
+            position: relative;
+        }
+
+        .camera-feed-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+        }
+
+        .camera-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .camera-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin: 0;
+        }
+
+        .camera-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .recognition-status, .camera-settings {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recognition-status h3, .camera-settings h3 {
+            margin-top: 0;
+            font-size: 0.95rem;
+            color: var(--dark);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .confidence-bar {
+            flex: 1;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 1rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .setting-group {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .setting-group label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .setting-group input[type="range"] {
+            flex: 1;
+        }
+
+        .setting-group input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        #sensitivityValue {
+            font-size: 0.9rem;
+            color: #666;
+            min-width: 40px;
+        }
+
+        .text-output {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+        }
+
+        .output-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .recognized-signs, .alternatives-section, .stats-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recognized-signs h3, .alternatives-section h3, .stats-section h3 {
+            margin-top: 0;
+            font-size: 0.95rem;
+            color: var(--dark);
+        }
+
+        .finger-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 0.8rem;
+        }
+
+        .signs-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.8rem;
+        }
+
+        .sign-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .sign-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .alternatives-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .alternative-item {
+            background: white;
+            border-left: 3px solid var(--primary);
+            padding: 0.8rem;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alternative-text {
+            font-size: 0.95rem;
+            color: var(--dark);
+        }
+
+        .alternative-confidence {
+            background: var(--primary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .practice-mode-section {
+            margin-bottom: 3rem;
+        }
+
+        .practice-mode-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .practice-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .practice-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .practice-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .practice-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .practice-card h3 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .tips-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .tips-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tip-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .tip-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .tip-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--dark);
+        }
+
+        .tip-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .translator-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .camera-controls,
+            .output-controls,
+            .finger-controls,
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .practice-modes,
+            .tips-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script>
+        // Debug logging
+        const DEBUG = true;
+        function debugLog(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            console[type](`[${timestamp}] ${msg}`);
+        }
+
+        let cameraActive = false;
+        let sessionStartTime = null;
+        let mediaStream = null;
+        let captureTimer = null;
+        let handsTimer = null;
+        let lastPrediction = '';
+        let lastPredictionAt = 0;
+        let mirrorFixEnabled = true;
+
+        let handsDetector = null;
+        let stableLetter = '';
+        let stableLetterSince = 0;
+        let lastCommittedLetterAt = 0;
+        let currentSpelledWord = '';
+        let lastHandSeenAt = 0;
+        let fingerRequestInFlight = false;
+        let lastFingerApiCallAt = 0;
+        let lastFingerImageSentAt = 0;
+        let handCurrentlyDetected = false;
+        let handTrackingAvailable = true;
+        let lastLetterAddedAt = 0;
+        let letterVoteBuffer = [];
+        let aiWordCandidate = '';
+        let aiWordSince = 0;
+        let aiWordCount = 0;
+        let aiUnavailableLogged = false;
+        let apiBackoffUntil = 0;
+        let apiFailureLogged = false;
+
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        const LETTER_STABLE_MS = 300;
+        const LETTER_COOLDOWN_MS = 360;
+        const WORD_PAUSE_MS = 1300;
+        const FINGER_API_INTERVAL_MS = 180;
+        const FINGER_IMAGE_INTERVAL_MS = 420;
+        const HYBRID_LETTER_AI_ENABLED = false;
+        const AI_WORD_STABLE_MS = 2 * 300;
+        const AI_WORD_MIN_CONFIDENCE = 35;
+        const AI_WORD_MIN_REPEAT = 1;
+        const LETTER_VOTE_WINDOW_MS = 800;
+        const LETTER_VOTE_MIN_COUNT = 2;
+        const LETTER_VOTE_MIN_RATIO = 0.50;
+        const API_RETRY_BACKOFF_MS = 2500;
+
+        function apiBackoffActive() {
+            return Date.now() < apiBackoffUntil;
+        }
+
+        function markApiFailure(errorMessage) {
+            apiBackoffUntil = Date.now() + API_RETRY_BACKOFF_MS;
+            if (!apiFailureLogged) {
+                debugLog(`⚠️ Backend unavailable (${errorMessage}). Retrying in ${(API_RETRY_BACKOFF_MS / 1000).toFixed(1)}s...`, 'warn');
+                apiFailureLogged = true;
+            }
+        }
+
+        function markApiRecovered() {
+            if (apiFailureLogged) {
+                debugLog('✅ Backend connection restored', 'success');
+            }
+            apiBackoffUntil = 0;
+            apiFailureLogged = false;
+        }
+
+        function applyVideoTransform(videoElement) {
+            videoElement.style.transform = mirrorFixEnabled ? 'scaleX(-1)' : 'scaleX(1)';
+        }
+
+        function toggleMirrorFix() {
+            mirrorFixEnabled = !mirrorFixEnabled;
+            const button = document.getElementById('mirrorFixBtn');
+            if (button) {
+                button.textContent = `Mirror Fix: ${mirrorFixEnabled ? 'ON' : 'OFF'}`;
+            }
+
+            const video = document.getElementById('cameraVideo');
+            if (video) {
+                applyVideoTransform(video);
+            }
+        }
+
+        async function predictLetterWithSvc(landmarks, handedness) {
+            if (fingerRequestInFlight) return;
+            if (apiBackoffActive()) return;
+
+            const now = Date.now();
+            if (now - lastFingerApiCallAt < FINGER_API_INTERVAL_MS) return;
+
+            fingerRequestInFlight = true;
+            lastFingerApiCallAt = now;
+
+            let imageDataUrl = '';
+            if (HYBRID_LETTER_AI_ENABLED && now - lastFingerImageSentAt >= FINGER_IMAGE_INTERVAL_MS) {
+                const video = document.getElementById('cameraVideo');
+                const canvas = document.getElementById('captureCanvas');
+                if (video && canvas && video.readyState >= 2) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.setTransform(1, 0, 0, 1, 0, 0);
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    if (mirrorFixEnabled) {
+                        context.translate(canvas.width, 0);
+                        context.scale(-1, 1);
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        context.setTransform(1, 0, 0, 1, 0, 0);
+                    } else {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    }
+                    imageDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                    lastFingerImageSentAt = now;
+                }
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/sign/fingerspell/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        landmarks: landmarks.map(point => ({
+                            x: point.x,
+                            y: point.y,
+                            z: point.z
+                        })),
+                        handedness,
+                        image: imageDataUrl,
+                        use_ai: HYBRID_LETTER_AI_ENABLED
+                    })
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                markApiRecovered();
+                handleSvcLetter(data.letter || '', Number(data.confidence || 0));
+            } catch (error) {
+                markApiFailure(error.message || 'Failed to fetch');
+                debugLog(`❌ SVC fallback error: ${error.message}`, 'error');
+            } finally {
+                fingerRequestInFlight = false;
+            }
+        }
+
+        function handleSvcLetter(letter, confidence) {
+            const normalizedLetter = confidence >= 7 ? String(letter || '').trim().toUpperCase() : '';
+            if (!normalizedLetter || !/^[A-Z]$/.test(normalizedLetter)) return;
+
+            const now = Date.now();
+            letterVoteBuffer.push({ letter: normalizedLetter, confidence, at: now });
+            letterVoteBuffer = letterVoteBuffer.filter(item => now - item.at <= LETTER_VOTE_WINDOW_MS);
+
+            const counts = {};
+            const confidenceSums = {};
+            for (let i = 0; i < letterVoteBuffer.length; i += 1) {
+                const item = letterVoteBuffer[i];
+                counts[item.letter] = (counts[item.letter] || 0) + 1;
+                confidenceSums[item.letter] = (confidenceSums[item.letter] || 0) + Number(item.confidence || 0);
+            }
+
+            let dominantLetter = normalizedLetter;
+            let dominantCount = 0;
+            Object.keys(counts).forEach(key => {
+                if (counts[key] > dominantCount) {
+                    dominantLetter = key;
+                    dominantCount = counts[key];
+                }
+            });
+
+            const totalVotes = letterVoteBuffer.length;
+            const dominantRatio = totalVotes > 0 ? (dominantCount / totalVotes) : 0;
+            const dominantAvgConfidence = dominantCount > 0 ? (confidenceSums[dominantLetter] / dominantCount) : 0;
+            const minAvgConfidence = dominantLetter === 'E' ? 5.5 : 7;
+            const minVoteCount = dominantLetter === 'E' ? 1 : LETTER_VOTE_MIN_COUNT;
+
+            updateFingerSpellingUI(dominantLetter);
+
+            if (dominantCount < minVoteCount || dominantRatio < LETTER_VOTE_MIN_RATIO || dominantAvgConfidence < minAvgConfidence) {
+                return;
+            }
+            const requiredStableMs = dominantAvgConfidence >= 80 ? 180 : (dominantAvgConfidence >= 65 ? 250 : LETTER_STABLE_MS);
+            const requiredCooldownMs = dominantAvgConfidence >= 80 ? 260 : LETTER_COOLDOWN_MS;
+            if (dominantLetter !== stableLetter) {
+                stableLetter = dominantLetter;
+                stableLetterSince = now;
+                return;
+            }
+
+            if (now - stableLetterSince < requiredStableMs) return;
+            if (now - lastCommittedLetterAt < requiredCooldownMs) return;
+
+            commitDetectedLetter(dominantLetter);
+            lastCommittedLetterAt = now;
+            letterVoteBuffer = [];
+        }
+
+        function getWordSuggestion(value) {
+            return '-';
+        }
+
+        function updateFingerSpellingUI(letter) {
+            document.getElementById('detectedLetter').textContent = letter || '-';
+            document.getElementById('currentSpelledWord').textContent = currentSpelledWord || '-';
+            document.getElementById('wordSuggestion').textContent = getWordSuggestion(currentSpelledWord);
+        }
+
+        function appendOutputToken(token, icon, confidence, processingMs) {
+            const textarea = document.getElementById('translationOutput');
+            textarea.value += (textarea.value ? ' ' : '') + token;
+
+            const recognizedSigns = document.getElementById('recognizedSigns');
+            const signsList = document.getElementById('signsList');
+            signsList.innerHTML += `<div class="sign-item"><div class="sign-icon">${icon}</div>${token}</div>`;
+            recognizedSigns.style.display = 'block';
+
+            const alternativesSection = document.getElementById('alternativesSection');
+            const alternativesList = document.getElementById('alternativesList');
+            const secondConfidence = Math.max(0, Math.round(confidence - 8));
+            const thirdConfidence = Math.max(0, Math.round(confidence - 16));
+            alternativesList.innerHTML = `
+                <div class="alternative-item">
+                    <span class="alternative-text">${token}</span>
+                    <span class="alternative-confidence">${Math.round(confidence)}%</span>
+                </div>
+                <div class="alternative-item">
+                    <span class="alternative-text">Maybe ${token}</span>
+                    <span class="alternative-confidence">${secondConfidence}%</span>
+                </div>
+                <div class="alternative-item">
+                    <span class="alternative-text">Try again</span>
+                    <span class="alternative-confidence">${thirdConfidence}%</span>
+                </div>
+            `;
+            alternativesSection.style.display = 'block';
+
+            const statsSection = document.getElementById('statsSection');
+            const words = textarea.value.trim() ? textarea.value.trim().split(/\s+/).length : 0;
+            document.getElementById('wordsCount').textContent = String(words);
+            document.getElementById('accuracyScore').textContent = `${Math.round(confidence)}%`;
+            document.getElementById('processingTime').textContent = `${processingMs}ms`;
+
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('sessionTime').textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            statsSection.style.display = 'block';
+        }
+
+        function handleAIWordPrediction(data, processingMs) {
+            const sign = String(data.prediction || '').trim().toUpperCase();
+            const confidence = Number(data.confidence || 0);
+            const handDetected = Boolean(data.hand_detected);
+            const isLetter = /^[A-Z]$/.test(sign);
+
+            debugLog(`🔍 AI Response: sign='${sign}' conf=${confidence}% hand=${handDetected}`, 'log');
+
+            if (!handDetected || !sign || sign === 'NO HAND DETECTED' || sign === 'NONE' || confidence < AI_WORD_MIN_CONFIDENCE) {
+                debugLog(`⏭️ Skipping (confidence too low or no hand)`, 'log');
+                if (!isLetter) {
+                    stableLetter = '';
+                    stableLetterSince = 0;
+                }
+                aiWordCandidate = '';
+                aiWordSince = 0;
+                aiWordCount = 0;
+                return;
+            }
+
+            const now = Date.now();
+
+            // Prefer MediaPipe+SVC letters whenever hand tracking is available.
+            if (isLetter && handTrackingAvailable) {
+                return;
+            }
+
+            // Finger spelling path: commit single letters into current spelled word.
+            if (isLetter) {
+                updateFingerSpellingUI(sign);
+
+                if (sign !== stableLetter) {
+                    stableLetter = sign;
+                    stableLetterSince = now;
+                    return;
+                }
+
+                if (now - stableLetterSince < LETTER_STABLE_MS) return;
+                if (now - lastCommittedLetterAt < LETTER_COOLDOWN_MS) return;
+
+                commitDetectedLetter(sign);
+                lastCommittedLetterAt = now;
+                return;
+            }
+
+            if (sign !== aiWordCandidate) {
+                aiWordCandidate = sign;
+                aiWordSince = now;
+                aiWordCount = 1;
+                debugLog(`🔄 New candidate: ${sign}`, 'log');
+                return;
+            }
+
+            aiWordCount += 1;
+            debugLog(`✓ Candidate match #${aiWordCount}/${AI_WORD_MIN_REPEAT}`, 'log');
+            
+            if (aiWordCount < AI_WORD_MIN_REPEAT) return;
+            if (now - aiWordSince < AI_WORD_STABLE_MS) return;
+
+            const lastWord = document.getElementById('translationOutput').value.trim().split(/\s+/).slice(-1)[0] || '';
+            if (sign === lastWord && now - lastPredictionAt < 2500) {
+                debugLog(`⏭️ Skipping (duplicate of last word)`, 'log');
+                return;
+            }
+
+            debugLog(`✨ COMMITTING: ${sign}`, 'success');
+            aiWordCandidate = '';
+            aiWordSince = 0;
+            aiWordCount = 0;
+
+            lastPrediction = sign;
+            lastPredictionAt = now;
+            appendOutputToken(sign, '✋', confidence, processingMs);
+        }
+
+        function commitDetectedLetter(letter) {
+            currentSpelledWord += letter;
+            lastLetterAddedAt = Date.now();
+            updateFingerSpellingUI(letter);
+        }
+
+        function removeLastLetter() {
+            if (!currentSpelledWord) return;
+            currentSpelledWord = currentSpelledWord.slice(0, -1);
+            updateFingerSpellingUI('');
+        }
+
+        function commitCurrentWord() {
+            if (!currentSpelledWord) return;
+            appendOutputToken(currentSpelledWord, '🔤', 96, 0);
+            currentSpelledWord = '';
+            stableLetter = '';
+            stableLetterSince = 0;
+            updateFingerSpellingUI('');
+        }
+
+        async function initFingerSpelling() {
+            debugLog('🔧 Initializing finger spelling...', 'log');
+            
+            if (!window.Hands) {
+                debugLog('❌ MediaPipe Hands not found!', 'error');
+                handTrackingAvailable = false;
+                return;
+            }
+
+            debugLog('✓ MediaPipe Hands detected', 'log');
+            handTrackingAvailable = true;
+
+            try {
+                handsDetector = new window.Hands({
+                    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                handsDetector.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.55,
+                    minTrackingConfidence: 0.55
+                });
+
+                handsDetector.onResults(results => {
+                    if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                        handCurrentlyDetected = false;
+                        stableLetter = '';
+                        stableLetterSince = 0;
+                        letterVoteBuffer = [];
+                        updateFingerSpellingUI('');
+                        return;
+                    }
+
+                    lastHandSeenAt = Date.now();
+                    handCurrentlyDetected = true;
+                    const landmarks = results.multiHandLandmarks[0];
+                    const handedness = results.multiHandedness && results.multiHandedness[0]
+                        ? results.multiHandedness[0].label
+                        : 'Right';
+                    debugLog(`👐 Hand detected (${handedness})`, 'log');
+                    // Keep SVC as letter fallback in case AI provider is temporarily unavailable.
+                    predictLetterWithSvc(landmarks, handedness);
+                });
+                
+                debugLog('✓ Finger spelling initialized', 'log');
+            } catch (error) {
+                debugLog(`❌ Init error: ${error.message}`, 'error');
+                handTrackingAvailable = false;
+            }
+        }
+
+        async function startCameraFeed() {
+            if (cameraActive) return;
+
+            debugLog('🎬 Starting camera...', 'log');
+            const container = document.getElementById('cameraContainer');
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' },
+                    audio: false
+                });
+                debugLog('✓ Camera access granted', 'log');
+            } catch (error) {
+                debugLog(`❌ Camera denied: ${error.message}`, 'error');
+                container.innerHTML = `
+                    <div class="camera-feed-placeholder">
+                        <div class="camera-icon">⚠️</div>
+                        <p>Camera access denied or unavailable.</p>
+                        <p class="camera-subtitle">Please allow camera permission and try again.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            cameraActive = true;
+            sessionStartTime = Date.now();
+
+            if (!handsDetector) {
+                debugLog('🔧 Initializing MediaPipe...', 'log');
+                await initFingerSpelling();
+            }
+
+            container.innerHTML = '';
+            const video = document.createElement('video');
+            video.id = 'cameraVideo';
+            video.autoplay = true;
+            video.playsInline = true;
+            video.muted = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            applyVideoTransform(video);
+            video.srcObject = mediaStream;
+            container.appendChild(video);
+
+            const canvas = document.createElement('canvas');
+            canvas.id = 'captureCanvas';
+            canvas.style.display = 'none';
+            container.appendChild(canvas);
+
+            debugLog('⏱️ Starting capture loop (900ms) and hand tracking (200ms)', 'log');
+            captureTimer = setInterval(captureAndPredict, 900);
+            handsTimer = setInterval(runFingerSpellingFrame, 200);
+        }
+
+        function stopCameraFeed() {
+            cameraActive = false;
+
+            if (captureTimer) {
+                clearInterval(captureTimer);
+                captureTimer = null;
+            }
+
+            if (handsTimer) {
+                clearInterval(handsTimer);
+                handsTimer = null;
+            }
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            const container = document.getElementById('cameraContainer');
+            container.innerHTML = `
+                <div class="camera-feed-placeholder">
+                    <div class="camera-icon">📷</div>
+                    <p>Camera Feed Ready</p>
+                    <p class="camera-subtitle">Allow camera access to begin recognition</p>
+                </div>
+            `;
+        }
+
+        async function runFingerSpellingFrame() {
+            if (!cameraActive || !handsDetector) return;
+
+            const video = document.getElementById('cameraVideo');
+            if (!video || video.readyState < 2) return;
+
+            try {
+                await handsDetector.send({ image: video });
+            } catch (error) {
+                console.error('Finger spelling detector error:', error);
+            }
+
+            if (currentSpelledWord && Date.now() - lastHandSeenAt > WORD_PAUSE_MS) {
+                commitCurrentWord();
+            }
+
+            if (currentSpelledWord && lastLetterAddedAt && Date.now() - lastLetterAddedAt > 1800) {
+                commitCurrentWord();
+            }
+        }
+
+        async function captureAndPredict() {
+            if (!cameraActive) return;
+            if (apiBackoffActive()) return;
+
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('captureCanvas');
+            if (!video || !canvas || video.readyState < 2) {
+                debugLog('⚠️ Video not ready', 'warn');
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const context = canvas.getContext('2d');
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (mirrorFixEnabled) {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                context.setTransform(1, 0, 0, 1, 0, 0);
+            } else {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            const requestStart = performance.now();
+
+            debugLog('📤 Sending word prediction request...', 'log');
+
+            try {
+                const response = await fetch(`${API_BASE}/sign/predict/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: imageDataUrl,
+                        source: 'webcam'
+                    })
+                });
+
+                if (!response.ok) {
+                    debugLog(`❌ Predict API error: ${response.status}`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                markApiRecovered();
+                const processingMs = Math.round(performance.now() - requestStart);
+                debugLog(`📥 Prediction: ${data.prediction} (${data.confidence}%, ${processingMs}ms)`, 'log');
+                renderWordPrediction(data, processingMs);
+            } catch (error) {
+                markApiFailure(error.message || 'Failed to fetch');
+                debugLog(`❌ Prediction error: ${error.message}`, 'error');
+            }
+        }
+
+        function renderWordPrediction(data, processingMs) {
+            if (data && data.ai_available === false && !aiUnavailableLogged) {
+                const detail = String(data.ai_error || 'Unknown AI provider error');
+                debugLog(`⚠️ AI word service unavailable. ${detail}`, 'warn');
+                debugLog('ℹ️ Letter fallback remains active.', 'warn');
+                aiUnavailableLogged = true;
+            }
+            handleAIWordPrediction(data, processingMs);
+        }
+
+        async function copyTranslation() {
+            const text = document.getElementById('translationOutput').value;
+            if (!text) return;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const textarea = document.getElementById('translationOutput');
+                textarea.select();
+                document.execCommand('copy');
+            }
+            alert('Translation copied to clipboard!');
+        }
+
+        function clearTranslation() {
+            document.getElementById('translationOutput').value = '';
+            document.getElementById('recognizedSigns').style.display = 'none';
+            document.getElementById('alternativesSection').style.display = 'none';
+            document.getElementById('statsSection').style.display = 'none';
+            document.getElementById('signsList').innerHTML = '';
+            document.getElementById('alternativesList').innerHTML = '';
+            lastPrediction = '';
+            lastPredictionAt = 0;
+            currentSpelledWord = '';
+            stableLetter = '';
+            stableLetterSince = 0;
+            letterVoteBuffer = [];
+            lastCommittedLetterAt = 0;
+            lastLetterAddedAt = 0;
+            aiWordCandidate = '';
+            aiWordSince = 0;
+            aiWordCount = 0;
+            aiUnavailableLogged = false;
+            updateFingerSpellingUI('');
+        }
+    </script>
+</body>
+</html>

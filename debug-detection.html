@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Detection Debug Console</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            color: #4ec9b0;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        .log-section {
+            display: flex;
+            flex-direction: column;
+        }
+        .status-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #debugLog {
+            flex: 1;
+            background: #2d2d2d;
+            border: 1px solid #4ec9b0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        .log-entry.error { background: rgba(255,0,0,0.1); color: #ff6b6b; }
+        .log-entry.warning { background: rgba(255,255,0,0.1); color: #ffff00; }
+        .log-entry.success { background: rgba(0,255,0,0.1); color: #51cf66; }
+        .log-entry.info { background: rgba(0,100,200,0.1); color: #4ec9b0; }
+        
+        .status-box {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .status-box h3 {
+            color: #4ec9b0;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+        .status-item:last-child { border-bottom: none; }
+        .status-label { color: #aaa; }
+        .status-value { font-weight: bold; }
+        .status-value.ok { color: #51cf66; }
+        .status-value.error { color: #ff6b6b; }
+        .status-value.pending { color: #ffd43b; }
+        
+        button {
+            padding: 8px 12px;
+            background: #4ec9b0;
+            color: #1e1e1e;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover { background: #6efad4; }
+        
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sign Detection Debug Console</h1>
+    
+    <div class="container">
+        <div class="log-section">
+            <h2 style="color: #4ec9b0; margin-bottom: 10px;">Debug Logs</h2>
+            <div id="debugLog"></div>
+        </div>
+        
+        <div class="status-section">
+            <div class="status-box">
+                <h3>System Status</h3>
+                <div class="status-item">
+                    <span class="status-label">MediaPipe Hands</span>
+                    <span class="status-value" id="status-mediapipe">Loading...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Camera Access</span>
+                    <span class="status-value" id="status-camera">Not Started</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Hand Detected</span>
+                    <span class="status-value" id="status-hand">No</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Backend API</span>
+                    <span class="status-value" id="status-api">Testing...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Last Prediction</span>
+                    <span class="status-value" id="status-pred">-</span>
+                </div>
+            </div>
+            
+            <div class="status-box">
+                <h3>Hand Detection</h3>
+                <div class="status-item">
+                    <span class="status-label">Frames Processed</span>
+                    <span class="status-value" id="frames-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Hands Detected</span>
+                    <span class="status-value" id="hands-count">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Landmarks Avg</span>
+                    <span class="status-value" id="landmarks-avg">-</span>
+                </div>
+            </div>
+            
+            <button onclick="testAPI()">Test API</button>
+            <button onclick="startDebugCamera()">Start Camera</button>
+            <button onclick="stopDebugCamera()">Stop Camera</button>
+            <button onclick="clearDebugLog()">Clear Logs</button>
+        </div>
+    </div>
+
+    <canvas id="captureCanvas"></canvas>
+    <video id="debugVideo" style="display: none;" autoplay muted playsinline></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        let debugLog = [];
+        let framesProcessed = 0;
+        let handsFoundCount = 0;
+        let handsDetector = null;
+        let cameraActive = false;
+        let mediaStream = null;
+        let handsTimer = null;
+
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            debugLog.unshift(entry);
+            if (debugLog.length > 100) debugLog.pop();
+            
+            const logDiv = document.getElementById('debugLog');
+            const entryDiv = document.createElement('div');
+            entryDiv.className = `log-entry ${type}`;
+            entryDiv.textContent = entry;
+            logDiv.insertBefore(entryDiv, logDiv.firstChild);
+        }
+
+        function clearDebugLog() {
+            debugLog = [];
+            document.getElementById('debugLog').innerHTML = '';
+        }
+
+        function updateStatus(element, value, type = 'info') {
+            const el = document.getElementById(element);
+            if (el) {
+                el.textContent = value;
+                el.className = `status-value ${type}`;
+            }
+        }
+
+        async function testAPI() {
+            addDebugLog('Testing API endpoint...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/health/`, { method: 'GET' });
+                if (response.ok) {
+                    const data = await response.json();
+                    addDebugLog(`✓ Backend responding: ${JSON.stringify(data)}`, 'success');
+                    updateStatus('status-api', 'OK', 'ok');
+                } else {
+                    addDebugLog(`✗ Backend error: ${response.status}`, 'error');
+                    updateStatus('status-api', `Error ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addDebugLog(`✗ API error: ${error.message}`, 'error');
+                updateStatus('status-api', 'Failed', 'error');
+            }
+        }
+
+        async function initMediaPipe() {
+            if (!window.Hands) {
+                addDebugLog('✗ MediaPipe Hands not loaded', 'error');
+                updateStatus('status-mediapipe', 'Not Loaded', 'error');
+                return false;
+            }
+
+            try {
+                addDebugLog('⏳ Initializing MediaPipe Hands...', 'warning');
+                handsDetector = new window.Hands({
+                    locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                handsDetector.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                handsDetector.onResults(handleMediaPipeResults);
+                
+                addDebugLog('✓ MediaPipe Hands initialized', 'success');
+                updateStatus('status-mediapipe', 'Ready', 'ok');
+                return true;
+            } catch (error) {
+                addDebugLog(`✗ MediaPipe init error: ${error.message}`, 'error');
+                updateStatus('status-mediapipe', 'Failed', 'error');
+                return false;
+            }
+        }
+
+        function handleMediaPipeResults(results) {
+            framesProcessed++;
+            document.getElementById('frames-count').textContent = framesProcessed;
+
+            if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                updateStatus('status-hand', 'No', 'error');
+                return;
+            }
+
+            handsFoundCount++;
+            document.getElementById('hands-count').textContent = handsFoundCount;
+            updateStatus('status-hand', 'Yes', 'ok');
+
+            const landmarks = results.multiHandLandmarks[0];
+            const avgY = landmarks.reduce((sum, point) => sum + point.y, 0) / landmarks.length;
+            document.getElementById('landmarks-avg').textContent = avgY.toFixed(3);
+
+            addDebugLog(`✓ Hand detected [${landmarks.length} landmarks]`, 'success');
+        }
+
+        async function startDebugCamera() {
+            if (cameraActive) {
+                addDebugLog('⚠️ Camera already running', 'warning');
+                return;
+            }
+
+            try {
+                addDebugLog('⏳ Requesting camera access...', 'warning');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' },
+                    audio: false
+                });
+                addDebugLog('✓ Camera access granted', 'success');
+                updateStatus('status-camera', 'Active', 'ok');
+
+                mediaStream = stream;
+                cameraActive = true;
+
+                const video = document.getElementById('debugVideo');
+                video.srcObject = stream;
+
+                if (!handsDetector) {
+                    await initMediaPipe();
+                }
+
+                handsTimer = setInterval(processHandFrame, 200);
+                addDebugLog('✓ Hand tracking started (200ms interval)', 'success');
+            } catch (error) {
+                addDebugLog(`✗ Camera error: ${error.message}`, 'error');
+                updateStatus('status-camera', 'Denied', 'error');
+            }
+        }
+
+        async function processHandFrame() {
+            if (!cameraActive || !handsDetector) return;
+
+            const video = document.getElementById('debugVideo');
+            if (!video || video.readyState < 2) return;
+
+            try {
+                await handsDetector.send({ image: video });
+            } catch (error) {
+                addDebugLog(`✗ Processing error: ${error.message}`, 'error');
+            }
+        }
+
+        function stopDebugCamera() {
+            cameraActive = false;
+            if (handsTimer) {
+                clearInterval(handsTimer);
+                handsTimer = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            addDebugLog('✓ Camera stopped', 'info');
+            updateStatus('status-camera', 'Stopped', 'error');
+        }
+
+        // Initialize on page load
+        window.onload = async () => {
+            addDebugLog('🚀 Debug console started', 'info');
+            await testAPI();
+            
+            if (window.Hands) {
+                addDebugLog('✓ MediaPipe library detected', 'success');
+            } else {
+                addDebugLog('⏳ MediaPipe library loading...', 'warning');
+                setTimeout(() => {
+                    if (window.Hands) {
+                        addDebugLog('✓ MediaPipe library loaded', 'success');
+                    } else {
+                        addDebugLog('✗ MediaPipe library failed to load', 'error');
+                    }
+                }, 3000);
+            }
+        };
+    </script>
+</body>
+</html>

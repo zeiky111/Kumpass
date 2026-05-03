@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Kumpas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learn.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" style="float: right;">Profile</a>
+        <a href="index.html" style="float: right;">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div style="padding: 20px;">
+        <h1>Welcome back, Juan! 👋</h1>
+        <p>Ready to continue your FSL learning journey?</p>
+        <br>
+
+        <!-- Stats Cards -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">⭐</div>
+                <h2>1,234</h2>
+                <p>Total Points</p>
+                <small style="color: green;">+120 this week</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">✅</div>
+                <h2>45</h2>
+                <p>Activities Completed</p>
+                <small style="color: green;">5 new</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">🏆</div>
+                <h2>#12</h2>
+                <p>Leaderboard Rank</p>
+                <small style="color: green;">Up 3 places</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">👋</div>
+                <h2>87%</h2>
+                <p>Sign Accuracy</p>
+                <small style="color: green;">+5%</small>
+            </div>
+        </div>
+
+        <!-- Learning Progress -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3>📚 Learning Progress</h3>
+            <br>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Basic FSL Signs</span>
+                    <span>90%</span>
+                </div>
+                <div style="background: #e0e0e0; height: 20px; border-radius: 10px; margin-top: 5px;">
+                    <div style="background: #4169e1; height: 20px; width: 90%; border-radius: 10px;"></div>
+                </div>
+                <small>45 of 50 signs mastered</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Intermediate Signs</span>
+                    <span>65%</span>
+                </div>
+                <div style="background: #e0e0e0; height: 20px; border-radius: 10px; margin-top: 5px;">
+                    <div style="background: #4169e1; height: 20px; width: 65%; border-radius: 10px;"></div>
+                </div>
+                <small>26 of 40 signs mastered</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Finger-Spelling</span>
+                    <span>75%</span>
+                </div>
+                <div style="background: #e0e0e0; height: 20px; border-radius: 10px; margin-top: 5px;">
+                    <div style="background: #4169e1; height: 20px; width: 75%; border-radius: 10px;"></div>
+                </div>
+                <small>150 words practiced</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Advanced Grammar</span>
+                    <span>30%</span>
+                </div>
+                <div style="background: #e0e0e0; height: 20px; border-radius: 10px; margin-top: 5px;">
+                    <div style="background: #4169e1; height: 20px; width: 30%; border-radius: 10px;"></div>
+                </div>
+                <small>9 of 30 lessons completed</small>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3>📝 Recent Activity</h3>
+            <br>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
+                    🏆 Completed "Basic Greetings" Quiz - Scored 95% 
+                    <span style="float: right; color: green;">+50 points</span>
+                </li>
+                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
+                    📷 Practiced Finger-Spelling - 20 words 
+                    <span style="float: right; color: green;">+30 points</span>
+                </li>
+                <li style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
+                    🏅 Earned "Quick Learner" Badge 
+                    <span style="float: right; color: green;">+100 points</span>
+                </li>
+                <li style="padding: 10px;">
+                    🎮 Completed Year 2 Activity Set 
+                    <span style="float: right; color: green;">+200 points</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Quick Links -->
+        <div style="background: white; padding: 20px; border-radius: 8px;">
+            <h3>🔗 Quick Links</h3>
+            <br>
+            <div style="display: flex; gap: 10px;">
+                <a href="learning.html" style="background: #4169e1; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Start Learning</a>
+                <a href="activities.html" style="background: #10b981; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Do Activities</a>
+                <a href="translator.html" style="background: #f59e0b; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Use Translator</a>
+                <a href="leaderboard.html" style="background: #ec4899; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">View Leaderboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // basic javascript 
+        console.log('Dashboard loaded!');
+    </script>
+
+</body>
+</html>

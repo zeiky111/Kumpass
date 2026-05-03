@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .tab-content {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .announcement-item {
+            background: #f9fafb;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .announcement-item h4 {
+            margin: 0 0 10px 0;
+            color: #1f2937;
+        }
+        
+        .announcement-item p {
+            margin: 0 0 10px 0;
+            color: #6b7280;
+        }
+        
+        .announcement-item small {
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="instructor-dashboard.html" class="nav-link active">Dashboard</a></li>
+            </ul>
+            
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <h3>Instructor Menu</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#overview" class="sidebar-link active" onclick="switchTab('overview')"><i class="fas fa-chart-line"></i> Overview</a></li>
+                <li><a href="#modules" class="sidebar-link" onclick="switchTab('modules')"><i class="fas fa-book"></i> Manage Modules</a></li>
+                <li><a href="#students" class="sidebar-link" onclick="switchTab('students')"><i class="fas fa-users"></i> Monitor Students</a></li>
+                <li><a href="#announcements" class="sidebar-link" onclick="switchTab('announcements')"><i class="fas fa-bell"></i> Announcements</a></li>
+                <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="container-fluid">
+                <!-- Welcome Section -->
+                <div class="dashboard-welcome">
+                    <div>
+                        <h1 id="instructorWelcomeTitle">Welcome, Instructor! 👋</h1>
+                        <p id="instructorWelcomeCopy">Manage your FSL classes and track student progress</p>
+                    </div>
+                </div>
+
+                <!-- Overview Tab -->
+                <div id="overview" class="tab-content active">
+                    <!-- Stats -->
+                    <div class="stats-grid grid grid-4">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #3b82f6;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="instructorTotalStudents">0</div>
+                                <div class="stat-label">Total Students</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #10b981;">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="instructorModulesCreated">0</div>
+                                <div class="stat-label">Modules Created</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #f59e0b;">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="instructorAverageCompletion">0%</div>
+                                <div class="stat-label">Avg. Completion</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: #8b5cf6;">
+                                <i class="fas fa-award"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="instructorAnnouncementsCount">0</div>
+                                <div class="stat-label">Announcements</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manage Modules Tab -->
+                <div id="modules" class="tab-content" style="display: none;">
+                    <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Manage Learning Modules</h3>
+                        <button class="btn btn-primary btn-sm" onclick="openModuleModal()">+ Add Module</button>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Module Title</th>
+                                    <th>Year Level</th>
+                                    <th>Status</th>
+                                    <th>Students</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instructorModulesTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Monitor Students Tab -->
+                <div id="students" class="tab-content" style="display: none;">
+                    <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Monitor Student Progress</h3>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Year Level</th>
+                                    <th>Modules Completed</th>
+                                    <th>Overall Progress</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instructorStudentsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Announcements Tab -->
+                <div id="announcements" class="tab-content" style="display: none;">
+                    <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Announcements</h3>
+                        <button class="btn btn-primary btn-sm" onclick="openAnnouncementModal()">+ Create Announcement</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="instructorAnnouncementsList" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="moduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="moduleModalTitle">Add New Module</h2>
+                <button class="modal-close" onclick="closeModal('moduleModal')">&times;</button>
+            </div>
+            <form onsubmit="saveModule(event)">
+                <input type="hidden" id="moduleId">
+                <div class="form-group">
+                    <label class="form-label">Module Title</label>
+                    <input type="text" id="moduleTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Year Level</label>
+                    <select id="moduleYearLevel" class="form-input" required>
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Activities Count</label>
+                    <input type="number" id="moduleActivitiesCount" class="form-input" min="0" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="moduleStatus" class="form-input" required>
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sort Order</label>
+                    <input type="number" id="moduleSortOrder" class="form-input" min="0" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="moduleDescription" class="form-input" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Upload Files (PDF, PPT, Video, etc.)</label>
+                    <input type="file" id="moduleFile" class="form-input" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.jpg,.jpeg,.png,.mp3,.wav,.zip,.rar,.7z,.txt,.xls,.xlsx">
+                    <small style="color: #6b7280;">Supported: PDF, Word, PowerPoint, Video, Images, Audio, Archives</small>
+                    <div id="moduleFileList" style="margin-top: 10px; padding: 10px; background: #f3f4f6; border-radius: 4px; display: none;">
+                        <small style="color: #6b7280;">Files to upload:</small>
+                        <ul id="moduleFileItems" style="list-style: none; padding: 0; margin: 5px 0;"></ul>
+                    </div>
+                </div>
+                <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('moduleModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Module</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="announcementModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="announcementModalTitle">Create Announcement</h2>
+                <button class="modal-close" onclick="closeModal('announcementModal')">&times;</button>
+            </div>
+            <form onsubmit="saveAnnouncement(event)">
+                <input type="hidden" id="announcementId">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" id="announcementTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea id="announcementMessage" class="form-input" rows="5" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox" style="display:flex;align-items:center;gap:10px;">
+                        <input type="checkbox" id="announcementPublished" checked>
+                        Published
+                    </label>
+                </div>
+                <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('announcementModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Announcement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+
+        function getCurrentUser() {
+            try {
+                const stored = JSON.parse(localStorage.getItem('currentUser'));
+                if (stored && stored.email) {
+                    return stored;
+                }
+            } catch (_) {
+                // ignore
+            }
+
+            return { name: 'Instructor', email: '', role: 'instructor' };
+        }
+
+        async function requestJson(path, options = {}) {
+            const response = await fetch(`${API_BASE}${path}`, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            });
+
+            let data = {};
+            let text = '';
+            try {
+                data = await response.json();
+            } catch (_) {
+                try {
+                    text = await response.text();
+                } catch (__) {
+                    text = '';
+                }
+                data = {};
+            }
+
+            if (!response.ok) {
+                const message = typeof data.error === 'object'
+                    ? Object.values(data.error).flat().join(' ')
+                    : data.error || text || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+
+            return data;
+        }
+
+        function safeText(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatYearLabel(yearLevel) {
+            const normalized = String(yearLevel || '').trim();
+            const labels = { '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year' };
+            return labels[normalized] || normalized || 'Student';
+        }
+
+        function formatDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'published') {
+                return '<span style="background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:4px;font-size:0.85rem;">Published</span>';
+            }
+            if (status === 'archived') {
+                return '<span style="background:#e5e7eb;color:#374151;padding:4px 8px;border-radius:4px;font-size:0.85rem;">Archived</span>';
+            }
+            return '<span style="background:#fef3c7;color:#b45309;padding:4px 8px;border-radius:4px;font-size:0.85rem;">Draft</span>';
+        }
+
+        function setOverviewStats(summary) {
+            document.getElementById('instructorTotalStudents').textContent = summary.totalStudents ?? 0;
+            document.getElementById('instructorModulesCreated').textContent = summary.totalModules ?? 0;
+            document.getElementById('instructorAverageCompletion').textContent = `${summary.averageCompletion ?? 0}%`;
+            document.getElementById('instructorAnnouncementsCount').textContent = summary.totalAnnouncements ?? 0;
+        }
+
+        function renderModules(modules) {
+            const target = document.getElementById('instructorModulesTable');
+            if (!target) return;
+
+            target.innerHTML = (modules && modules.length)
+                ? modules.map(module => {
+                    const filesCount = Array.isArray(module.files) ? module.files.length : 0;
+                    const filesIndicator = filesCount > 0 ? `<span style="color: #10b981; font-size: 0.75rem; margin-left: 4px;">📎 ${filesCount}</span>` : '';
+                    return `
+                    <tr>
+                        <td>${safeText(module.title)}${filesIndicator}</td>
+                        <td>${safeText(formatYearLabel(module.year_level))}</td>
+                        <td>${getStatusBadge(module.status)}</td>
+                        <td>${Number(module.studentCount || 0)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
+                        </td>
+                    </tr>
+                `}).join('')
+                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No modules found in the database.</td></tr>';
+        }
+
+        function renderStudents(students) {
+            const target = document.getElementById('instructorStudentsTable');
+            if (!target) return;
+
+            target.innerHTML = (students && students.length)
+                ? students.map(student => `
+                    <tr>
+                        <td>${safeText(student.name)}</td>
+                        <td>${safeText(student.yearLabel || formatYearLabel(student.yearLevel))}</td>
+                        <td>${Number(student.modulesCompleted || 0)} of ${Number(student.totalModules || 0)}</td>
+                        <td>
+                            <div class="progress-mini-inline">
+                                <div class="progress-bar" style="width: ${Number(student.overallProgress || 0)}%;"></div>
+                            </div>
+                            ${Number(student.overallProgress || 0)}%
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="viewStudentProfile('${safeText(student.email)}')">View Profile</button>
+                        </td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No student progress records found yet.</td></tr>';
+        }
+
+        function renderAnnouncements(announcements) {
+            const target = document.getElementById('instructorAnnouncementsList');
+            if (!target) return;
+
+            target.innerHTML = (announcements && announcements.length)
+                ? announcements.map(item => `
+                    <div class="announcement-item">
+                        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                            <div>
+                                <h4>${safeText(item.title)}</h4>
+                                <p>${safeText(item.message)}</p>
+                                <small>Updated: ${safeText(formatDateTime(item.updated_at) || formatDateTime(item.created_at))}</small>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                                <button class="btn btn-sm btn-secondary" onclick="openAnnouncementModal(${item.id})">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(${item.id})">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')
+                : '<div style="padding:16px;color:#6b7280;">No announcements posted yet.</div>';
+        }
+
+        function populateModuleForm(module) {
+            document.getElementById('moduleId').value = module ? module.id : '';
+            document.getElementById('moduleTitle').value = module ? module.title || '' : '';
+            document.getElementById('moduleYearLevel').value = module ? module.year_level || '1' : '1';
+            document.getElementById('moduleActivitiesCount').value = module ? module.activities_count || 0 : 0;
+            document.getElementById('moduleStatus').value = module ? module.status || 'draft' : 'draft';
+            document.getElementById('moduleSortOrder').value = module ? module.sort_order || 0 : 0;
+            document.getElementById('moduleDescription').value = module ? module.description || '' : '';
+        }
+
+        function populateAnnouncementForm(announcement) {
+            document.getElementById('announcementId').value = announcement ? announcement.id : '';
+            document.getElementById('announcementTitle').value = announcement ? announcement.title || '' : '';
+            document.getElementById('announcementMessage').value = announcement ? announcement.message || '' : '';
+            document.getElementById('announcementPublished').checked = announcement ? Boolean(announcement.is_published) : true;
+        }
+
+        async function refreshInstructorDashboard() {
+            const currentUser = getCurrentUser();
+            
+            // Redirect to login if no email (not logged in)
+            if (!currentUser.email) {
+                alert('Please log in first to access the instructor dashboard.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const response = await requestJson(`/instructor/dashboard/?email=${encodeURIComponent(currentUser.email)}`);
+                window.__instructorModules = Array.isArray(response.modules) ? response.modules : [];
+                window.__instructorAnnouncements = Array.isArray(response.announcements) ? response.announcements : [];
+                const welcomeTitle = document.getElementById('instructorWelcomeTitle');
+                const welcomeCopy = document.getElementById('instructorWelcomeCopy');
+                if (welcomeTitle) {
+                    welcomeTitle.textContent = `Welcome, ${response.currentUser?.name || currentUser.name || 'Instructor'}! 👋`;
+                }
+                if (welcomeCopy) {
+                    welcomeCopy.textContent = 'Manage your FSL modules, announcements, and student progress from live database records.';
+                }
+
+                setOverviewStats(response.summary || {});
+                renderModules(response.modules || []);
+                renderStudents(response.students || []);
+                renderAnnouncements(response.announcements || []);
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                alert(`Failed to load instructor dashboard: ${error.message}\n\nMake sure Django server is running: python manage.py runserver 127.0.0.1:8000`);
+            }
+        }
+
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(t => t.style.display = 'none');
+
+            const selectedTab = document.getElementById(tab);
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
+
+            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+            sidebarLinks.forEach(link => link.classList.remove('active'));
+
+            const activeLink = document.querySelector(`.sidebar-link[onclick="switchTab('${tab}')"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        }
+
+        function openModuleModal(moduleId = '') {
+            const currentModules = window.__instructorModules || [];
+            const module = moduleId ? currentModules.find(item => Number(item.id) === Number(moduleId)) : null;
+            populateModuleForm(module || null);
+            const title = document.getElementById('moduleModalTitle');
+            if (title) {
+                title.textContent = module ? 'Edit Module' : 'Add New Module';
+            }
+            openModal('moduleModal');
+        }
+
+        function openAnnouncementModal(announcementId = '') {
+            const currentAnnouncements = window.__instructorAnnouncements || [];
+            const announcement = announcementId ? currentAnnouncements.find(item => Number(item.id) === Number(announcementId)) : null;
+            populateAnnouncementForm(announcement || null);
+            const title = document.getElementById('announcementModalTitle');
+            if (title) {
+                title.textContent = announcement ? 'Edit Announcement' : 'Create Announcement';
+            }
+            openModal('announcementModal');
+        }
+
+        async function saveModule(event) {
+            event.preventDefault();
+            const currentUser = getCurrentUser();
+            const moduleId = document.getElementById('moduleId').value;
+            const payload = {
+                email: currentUser.email,
+                title: document.getElementById('moduleTitle').value.trim(),
+                year_level: document.getElementById('moduleYearLevel').value,
+                activities_count: Number(document.getElementById('moduleActivitiesCount').value || 0),
+                status: document.getElementById('moduleStatus').value,
+                sort_order: Number(document.getElementById('moduleSortOrder').value || 0),
+                description: document.getElementById('moduleDescription').value.trim(),
+            };
+
+            if (!payload.title) {
+                alert('Module title is required.');
+                return;
+            }
+
+            try {
+                const path = moduleId ? `/instructor/modules/${moduleId}/` : '/instructor/modules/';
+                const method = moduleId ? 'PATCH' : 'POST';
+                const moduleResponse = await requestJson(path, { method, body: JSON.stringify(payload) });
+                
+                // Upload files if any were selected
+                const fileInput = document.getElementById('moduleFile');
+                if (fileInput && fileInput.files.length > 0) {
+                    const finalModuleId = moduleResponse.id || moduleId;
+                    await uploadModuleFiles(finalModuleId, fileInput.files);
+                }
+                
+                closeModal('moduleModal');
+                await refreshInstructorDashboard();
+            } catch (error) {
+                alert(`Failed to save module: ${error.message}`);
+            }
+        }
+
+        async function uploadModuleFiles(moduleId, files) {
+            const currentUser = getCurrentUser();
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('email', currentUser.email);
+                formData.append('description', file.name);
+                
+                try {
+                    const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error(`Failed to upload ${file.name}:`, errorData);
+                    } else {
+                        console.log(`Successfully uploaded ${file.name}`);
+                    }
+                } catch (error) {
+                    console.error(`Error uploading ${file.name}:`, error);
+                }
+            }
+        }
+
+        async function saveAnnouncement(event) {
+            event.preventDefault();
+            const currentUser = getCurrentUser();
+            const announcementId = document.getElementById('announcementId').value;
+            const payload = {
+                email: currentUser.email,
+                title: document.getElementById('announcementTitle').value.trim(),
+                message: document.getElementById('announcementMessage').value.trim(),
+                is_published: document.getElementById('announcementPublished').checked,
+            };
+
+            if (!payload.title || !payload.message) {
+                alert('Title and message are required.');
+                return;
+            }
+
+            const path = announcementId ? `/instructor/announcements/${announcementId}/` : '/instructor/announcements/';
+            const method = announcementId ? 'PATCH' : 'POST';
+            await requestJson(path, { method, body: JSON.stringify(payload) });
+            closeModal('announcementModal');
+            await refreshInstructorDashboard();
+        }
+
+        async function deleteModule(moduleId) {
+            if (!confirm('Delete this module? This will remove it from the database.')) {
+                return;
+            }
+
+            const currentUser = getCurrentUser();
+            await requestJson(`/instructor/modules/${moduleId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ email: currentUser.email }),
+            });
+            await refreshInstructorDashboard();
+        }
+
+        async function deleteAnnouncement(announcementId) {
+            if (!confirm('Delete this announcement?')) {
+                return;
+            }
+
+            const currentUser = getCurrentUser();
+            await requestJson(`/instructor/announcements/${announcementId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ email: currentUser.email }),
+            });
+            await refreshInstructorDashboard();
+        }
+
+        function viewStudentProfile(email) {
+            alert(`Viewing live database profile for ${email}`);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            // Clear file input when closing module modal
+            if (modalId === 'moduleModal') {
+                const fileInput = document.getElementById('moduleFile');
+                if (fileInput) {
+                    fileInput.value = '';
+                    document.getElementById('moduleFileList').style.display = 'none';
+                }
+            }
+        }
+
+        // Handle file input change
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'moduleFile') {
+                const files = e.target.files;
+                const fileList = document.getElementById('moduleFileList');
+                const fileItems = document.getElementById('moduleFileItems');
+                
+                if (files.length > 0) {
+                    fileList.style.display = 'block';
+                    fileItems.innerHTML = '';
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const size = (files[i].size / 1024).toFixed(2);
+                        const item = document.createElement('li');
+                        item.style.cssText = 'padding: 4px; font-size: 0.85rem; color: #374151;';
+                        item.innerHTML = `📄 ${safeText(files[i].name)} (${size} KB)`;
+                        fileItems.appendChild(item);
+                    }
+                } else {
+                    fileList.style.display = 'none';
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const currentUser = getCurrentUser();
+            const welcomeTitle = document.getElementById('instructorWelcomeTitle');
+            if (welcomeTitle) {
+                welcomeTitle.textContent = `Welcome, ${currentUser.name || 'Instructor'}! 👋`;
+            }
+            const welcomeCopy = document.getElementById('instructorWelcomeCopy');
+            if (welcomeCopy) {
+                welcomeCopy.textContent = 'Manage your FSL modules, announcements, and student progress from live database records.';
+            }
+
+            try {
+                await refreshInstructorDashboard();
+            } catch (error) {
+                alert(`Failed to load instructor dashboard: ${error.message}`);
+            }
+            switchTab('overview');
+        });
+    </script>
+</body>
+</html>

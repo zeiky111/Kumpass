@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-container">
+            <!-- Sidebar -->
+            <div class="auth-sidebar">
+                <div class="logo">
+                    <span>Kumpas</span>
+                </div>
+                <h2>Join Kumpas Today!</h2>
+                <p>Create your account and start learning Filipino Sign Language through interactive games, real-time translation, and personalized learning paths.</p>
+                <div class="auth-illustration">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div class="auth-form-container">
+                <div class="auth-header">
+                    <h1>Create Account</h1>
+                    <p>Sign up to begin your FSL learning journey</p>
+                </div>
+
+                <form class="auth-form" id="registerForm">
+                    <div class="form-group">
+                        <label for="fullname" class="form-label">Full Name</label>
+                        <input type="text" id="fullname" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" id="email" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role" class="form-label">Account Type</label>
+                        <select id="role" class="form-select" required>
+                            <option value="student" selected>Student</option>
+                            <option value="instructor">Instructor</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="yearLevelGroup">
+                        <label for="yearLevel" class="form-label">Year Level</label>
+                        <select id="yearLevel" class="form-select" required>
+                            <option value="">Select your year level</option>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="registerPinGroup" style="display: none;">
+                        <label for="registerSecurityPin" class="form-label">Instructor/Admin PIN</label>
+                        <input type="password" id="registerSecurityPin" class="form-input" inputmode="numeric" maxlength="12">
+                        <div class="form-help">Leave blank for a student account. Use the PIN only if you are creating an instructor or admin account.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" id="password" class="form-input" required>
+                        <div class="form-help">Password must be at least 8 characters</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <input type="password" id="confirmPassword" class="form-input" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="login.html">Sign In</a></p>
+                    <p style="margin-top: 1rem;"><a href="index.html">← Back to Home</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

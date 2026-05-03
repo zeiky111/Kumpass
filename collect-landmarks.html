@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collect Finger-Spelling Landmarks</title>
+    <style>
+        body { font-family: Segoe UI, sans-serif; margin: 24px; background: #f4f7fb; color: #1f2a37; }
+        .wrap { max-width: 960px; margin: 0 auto; }
+        .panel { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .controls { display: grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 8px; margin-top: 12px; }
+        button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; background: #2563eb; color: #fff; }
+        button.secondary { background: #475569; }
+        button.warn { background: #dc2626; }
+        video { width: 100%; max-height: 480px; object-fit: cover; border-radius: 10px; background: #000; }
+        .meta { margin-top: 10px; font-size: 14px; }
+        .letter-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 10px; }
+        .letter-btn { background: #0f766e; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Finger-Spelling Data Collector</h1>
+    <p>Collect landmark rows for labels A, B, D, F, I, L, W, Y then export CSV for SVC training.</p>
+
+    <div class="panel">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="meta">
+            <strong>Current Label:</strong> <span id="currentLabel">A</span>
+            <span style="margin-left:16px"><strong>Rows:</strong> <span id="rowCount">0</span></span>
+            <span style="margin-left:16px"><strong>Hand:</strong> <span id="handedness">-</span></span>
+        </div>
+
+        <div class="letter-grid">
+            <button class="letter-btn" onclick="setLabel('A')">A</button>
+            <button class="letter-btn" onclick="setLabel('B')">B</button>
+            <button class="letter-btn" onclick="setLabel('D')">D</button>
+            <button class="letter-btn" onclick="setLabel('F')">F</button>
+            <button class="letter-btn" onclick="setLabel('I')">I</button>
+            <button class="letter-btn" onclick="setLabel('L')">L</button>
+            <button class="letter-btn" onclick="setLabel('W')">W</button>
+            <button class="letter-btn" onclick="setLabel('Y')">Y</button>
+        </div>
+
+        <div class="controls">
+            <button onclick="startCamera()">Start Camera</button>
+            <button class="secondary" onclick="captureOne()">Capture One</button>
+            <button class="secondary" onclick="captureBurst()">Capture Burst</button>
+            <button onclick="downloadCsv()">Download CSV</button>
+            <button class="warn" onclick="clearRows()">Clear</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script>
+let hands = null;
+let stream = null;
+let latestLandmarks = null;
+let latestHandedness = 'Right';
+let currentLabel = 'A';
+let rows = [];
+
+function setLabel(label) {
+    currentLabel = label;
+    document.getElementById('currentLabel').textContent = label;
+}
+
+function updateRowCount() {
+    document.getElementById('rowCount').textContent = String(rows.length);
+}
+
+function makeHeader() {
+    const cols = ['label', 'handedness'];
+    for (let i = 0; i < 21; i++) {
+        cols.push(`x${i}`, `y${i}`, `z${i}`);
+    }
+    return cols;
+}
+
+function makeRow() {
+    if (!latestLandmarks) return null;
+    const row = [currentLabel, latestHandedness];
+    for (let i = 0; i < 21; i++) {
+        const p = latestLandmarks[i];
+        row.push(p.x.toFixed(6), p.y.toFixed(6), p.z.toFixed(6));
+    }
+    return row;
+}
+
+function captureOne() {
+    const row = makeRow();
+    if (!row) return;
+    rows.push(row);
+    updateRowCount();
+}
+
+function captureBurst() {
+    let count = 0;
+    const id = setInterval(() => {
+        const row = makeRow();
+        if (row) {
+            rows.push(row);
+            updateRowCount();
+        }
+        count += 1;
+        if (count >= 25) clearInterval(id);
+    }, 120);
+}
+
+function clearRows() {
+    rows = [];
+    updateRowCount();
+}
+
+function downloadCsv() {
+    const header = makeHeader();
+    const lines = [header.join(',')];
+    for (const row of rows) {
+        lines.push(row.join(','));
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'landmarks.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function startCamera() {
+    if (!window.Hands) {
+        alert('MediaPipe Hands failed to load. Check internet connection.');
+        return;
+    }
+
+    if (!hands) {
+        hands = new window.Hands({
+            locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        hands.onResults(results => {
+            if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                latestLandmarks = null;
+                document.getElementById('handedness').textContent = '-';
+                return;
+            }
+            latestLandmarks = results.multiHandLandmarks[0];
+            latestHandedness = (results.multiHandedness && results.multiHandedness[0]) ? results.multiHandedness[0].label : 'Right';
+            document.getElementById('handedness').textContent = latestHandedness;
+        });
+    }
+
+    if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+
+        setInterval(async () => {
+            if (video.readyState >= 2) {
+                await hands.send({ image: video });
+            }
+        }, 120);
+    }
+}
+</script>
+</body>
+</html>

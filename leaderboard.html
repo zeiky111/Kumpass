@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="learning.html">Learn</a></li>
+                <li><a href="translator.html">Translator</a></li>
+                <li><a href="leaderboard.html" class="active">Leaderboard</a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="index.html" class="logout-btn">Logout</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="header-content">
+            <h1>Global Leaderboard</h1>
+            <p>Compete and see where you stand in the Kumpas community</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="leaderboard-container">
+        <!-- Your Ranking Card -->
+        <section class="your-ranking">
+            <div class="ranking-card">
+                <h2>Your Current Ranking</h2>
+                <div class="ranking-display">
+                    <div class="rank-position">
+                        <div class="rank-number" id="leaderboardRankNumber">--</div>
+                        <p class="rank-label" id="leaderboardRankLabel">Loading rank...</p>
+                    </div>
+                    <div class="rank-stats">
+                        <div class="rank-stat">
+                            <span class="stat-label">Total Points</span>
+                            <span class="stat-value" id="leaderboardPointsValue">0</span>
+                        </div>
+                        <div class="rank-stat">
+                            <span class="stat-label">Modules Completed</span>
+                            <span class="stat-value" id="leaderboardModulesValue">0/0</span>
+                        </div>
+                        <div class="rank-stat">
+                            <span class="stat-label">Accuracy Rate</span>
+                            <span class="stat-value" id="leaderboardAccuracyValue">0%</span>
+                        </div>
+                        <div class="rank-stat">
+                            <span class="stat-label">Current Streak</span>
+                            <span class="stat-value" id="leaderboardStreakValue">0 days</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="next-milestone">
+                    <p id="leaderboardNextMilestone">Loading next milestone...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="leaderboardProgressFill" style="width: 0%;"></div>
+                    </div>
+                    <p id="leaderboardProgressText" style="font-size: 0.85rem; color: #666;">Waiting for leaderboard data...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filter & Sort Options -->
+        <section class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="timeRange">Time Period:</label>
+                    <select id="timeRange" class="select-input" onchange="updateLeaderboard()">
+                        <option value="all-time">All Time</option>
+                        <option value="monthly">This Month</option>
+                        <option value="weekly">This Week</option>
+                        <option value="daily">Today</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="yearLevel">Year Level:</label>
+                    <select id="yearLevel" class="select-input" onchange="updateLeaderboard()">
+                        <option value="all">All Levels</option>
+                        <option value="1st">1st Year</option>
+                        <option value="2nd">2nd Year</option>
+                        <option value="3rd">3rd Year</option>
+                        <option value="4th">4th Year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sortBy">Sort By:</label>
+                    <select id="sortBy" class="select-input" onchange="updateLeaderboard()">
+                        <option value="points">Total Points</option>
+                        <option value="streak">Current Streak</option>
+                        <option value="accuracy">Accuracy Rate</option>
+                        <option value="recent">Recently Active</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Table -->
+        <section class="leaderboard-section">
+            <h2>Top Players</h2>
+            <div class="leaderboard-table">
+                <div class="table-header">
+                    <div class="col-rank">Rank</div>
+                    <div class="col-user">User</div>
+                    <div class="col-level">Level</div>
+                    <div class="col-points">Points</div>
+                    <div class="col-streak">Streak</div>
+                    <div class="col-accuracy">Accuracy</div>
+                    <div class="col-action">Action</div>
+                </div>
+
+                <!-- Top 3 Podium -->
+                <div class="podium-section" id="leaderboardPodium"></div>
+
+                <!-- Leaderboard Rows -->
+                <div class="table-body" id="leaderboardRows"></div>
+            </div>
+
+            <!-- Load More Button -->
+            <div class="load-more">
+                <button class="btn-secondary" id="leaderboardLoadMoreBtn" onclick="loadMorePlayers()">Load More Players</button>
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section class="statistics-section">
+            <h2>Community Statistics</h2>
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <h3>Total Players</h3>
+                    <p class="stat-number" id="leaderboardTotalPlayers">0</p>
+                    <p class="stat-subtitle">Active this month</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <h3>Avg. Accuracy</h3>
+                    <p class="stat-number" id="leaderboardAverageAccuracy">0%</p>
+                    <p class="stat-subtitle">Community average</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <h3>Longest Streak</h3>
+                    <p class="stat-number" id="leaderboardLongestStreak">0 days</p>
+                    <p class="stat-subtitle">Record holder</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <h3>Total Points</h3>
+                    <p class="stat-number" id="leaderboardTotalPoints">0</p>
+                    <p class="stat-subtitle">Community total</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Kumpas - Sign Language Learning System. City College of Calapan</p>
+        </div>
+    </footer>
+
+    <script src="js/portal.js"></script>
+
+    <style>
+        .leaderboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            color: #1f2937;
+        }
+
+        .your-ranking {
+            margin-bottom: 3rem;
+        }
+
+        .ranking-card {
+            background: linear-gradient(135deg, #173a8a 0%, #244ec4 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 12px 28px rgba(23, 58, 138, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .ranking-card h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .ranking-display {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 2rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .rank-position {
+            text-align: center;
+        }
+
+        .rank-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .rank-label {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .rank-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .rank-stat {
+            background: rgba(255,255,255,0.14);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .rank-stat .stat-label {
+            font-size: 0.8rem;
+            display: block;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .rank-stat .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .next-milestone {
+            background: rgba(255,255,255,0.12);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .next-milestone p:last-child {
+            color: rgba(255, 255, 255, 0.92) !important;
+        }
+
+        .next-milestone p {
+            margin: 0.5rem 0;
+        }
+
+        .filter-section {
+            background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e6ebf5;
+        }
+
+        .filter-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .select-input {
+            padding: 0.75rem;
+            border: 2px solid #cfd8ea;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: white;
+            color: #1f2937;
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .leaderboard-section {
+            background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            margin-bottom: 2rem;
+            border: 1px solid #e6ebf5;
+        }
+
+        .leaderboard-section h2 {
+            padding: 2rem 2rem 1rem;
+            margin: 0;
+        }
+
+        .leaderboard-table {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .podium-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #eef4ff 0%, #e8eefc 100%);
+        }
+
+        .podium-position {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 2px solid #d8e0f2;
+            transition: all 0.3s ease;
+        }
+
+        .podium-position.first-place {
+            border-color: #ffd700;
+            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .podium-position.second-place {
+            border-color: #c0c0c0;
+            box-shadow: 0 4px 8px rgba(192, 192, 192, 0.1);
+        }
+
+        .podium-position.third-place {
+            border-color: #cd7f32;
+            box-shadow: 0 4px 8px rgba(205, 127, 50, 0.1);
+        }
+
+        .medal {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .position-info h3 {
+            margin: 0.5rem 0 0;
+            color: #16233f;
+        }
+
+        .username {
+            margin: 0.3rem 0;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .level-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin: 0.5rem 0 1rem 0;
+        }
+
+        .position-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.8rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .position-stats .stat {
+            background: #f2f6ff;
+            padding: 0.8rem;
+            border-radius: 8px;
+        }
+
+        .position-stats .label {
+            display: block;
+            font-size: 0.75rem;
+            color: #4b5563;
+            margin-bottom: 0.3rem;
+        }
+
+        .position-stats .value {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #173a8a;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 100px 100px 100px 100px 80px;
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: #eef3ff;
+            border-bottom: 2px solid #d8e0f2;
+            font-weight: 600;
+            color: #16233f;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .table-body {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 100px 100px 100px 100px 80px;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e6ebf5;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .table-row:hover {
+            background: #f4f7ff;
+        }
+
+        .table-row.your-row {
+            background: linear-gradient(90deg, rgba(23, 58, 138, 0.06), rgba(36, 78, 196, 0.1));
+            border-left: 4px solid var(--primary);
+        }
+
+        .rank-badge {
+            background: #dbe5ff;
+            color: #16233f;
+            padding: 0.5rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+
+        .rank-badge.current {
+            background: var(--primary);
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .user-details {
+            text-align: left;
+        }
+
+        .user-name {
+            margin: 0;
+            font-weight: 600;
+            color: #16233f;
+        }
+
+        .user-program {
+            margin: 0.2rem 0 0 0;
+            font-size: 0.8rem;
+            color: #5b6475;
+        }
+
+        .accuracy-badge {
+            background: #e9f7ef;
+            color: #177245;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .btn-small {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-small:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .load-more {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .statistics-section {
+            background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e6ebf5;
+        }
+
+        .statistics-section h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 2rem;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: #f3f7ff;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid #dfe7f7;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #16233f;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #173a8a;
+            margin: 0.5rem 0;
+        }
+
+        .stat-subtitle {
+            margin: 0;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 1024px) {
+            .podium-section {
+                grid-template-columns: 1fr;
+            }
+
+            .podium-position.first-place {
+                transform: scale(1);
+            }
+
+            .ranking-display {
+                grid-template-columns: 1fr;
+            }
+
+            .rank-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .table-header,
+            .table-row {
+                grid-template-columns: 50px 1fr 80px 80px 80px 60px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .podium-section {
+                padding: 1rem;
+            }
+
+            .table-header,
+            .table-row {
+                grid-template-columns: 40px 1fr 70px 60px;
+                gap: 0.5rem;
+                padding: 0.8rem;
+            }
+
+            .col-streak,
+            .col-accuracy,
+            .col-level {
+                display: none;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+
+    <script>
+        (function () {
+            const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+            const DEFAULT_LIMIT = 7;
+
+            const leaderboardState = {
+                limit: DEFAULT_LIMIT,
+                payload: null,
+            };
+
+            function getCurrentUser() {
+                if (window.KumpasPortal && typeof window.KumpasPortal.getCurrentUser === 'function') {
+                    return window.KumpasPortal.getCurrentUser();
+                }
+
+                try {
+                    const stored = JSON.parse(localStorage.getItem('currentUser'));
+                    if (stored && stored.email) {
+                        return stored;
+                    }
+                } catch (_) {
+                    // ignore
+                }
+
+                return { name: 'Learner', email: '', yearLevel: '1', role: 'student' };
+            }
+
+            function escapeHtml(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function formatPoints(value) {
+                return Number(value || 0).toLocaleString();
+            }
+
+            function getRankEmoji(rank) {
+                if (rank === 1) return '🥇';
+                if (rank === 2) return '🥈';
+                if (rank === 3) return '🥉';
+                return `#${rank}`;
+            }
+
+            function getYearLabel(yearLevel) {
+                const normalized = String(yearLevel || '').trim();
+                const labels = {
+                    '1': '1st Year',
+                    '2': '2nd Year',
+                    '3': '3rd Year',
+                    '4': '4th Year',
+                };
+                return labels[normalized] || normalized || 'Student';
+            }
+
+            function getFilters() {
+                const timeRange = document.getElementById('timeRange') ? document.getElementById('timeRange').value : 'all-time';
+                const yearLevel = document.getElementById('yearLevel') ? document.getElementById('yearLevel').value : 'all';
+                const sortBy = document.getElementById('sortBy') ? document.getElementById('sortBy').value : 'points';
+                return { timeRange, yearLevel, sortBy };
+            }
+
+            function buildFallbackPayload() {
+                const currentUser = getCurrentUser();
+                const portalState = window.KumpasPortal && typeof window.KumpasPortal.getState === 'function'
+                    ? window.KumpasPortal.getState()
+                    : null;
+
+                const current = {
+                    email: currentUser.email,
+                    name: currentUser.name || 'Learner',
+                    yearLevel: String(currentUser.yearLevel || '1'),
+                    yearLabel: getYearLabel(currentUser.yearLevel),
+                    role: currentUser.role || 'student',
+                    points: portalState ? portalState.points : 0,
+                    rank: portalState ? portalState.rank : 0,
+                    streak: portalState ? portalState.streak : 0,
+                    accuracy: portalState ? portalState.accuracy : 0,
+                    completedActivities: portalState ? portalState.completedActivities : 0,
+                    practiceMinutes: portalState ? portalState.practiceMinutes : 0,
+                    modulesCompleted: portalState && portalState.moduleProgress
+                        ? Object.values(portalState.moduleProgress).filter(value => Number(value) >= 100).length
+                        : 0,
+                    updatedAt: new Date().toISOString(),
+                    isCurrentUser: true,
+                };
+
+                return {
+                    players: [current],
+                    totalPlayers: 1,
+                    currentUser: current,
+                    nextHigher: null,
+                    nextLower: null,
+                    summary: {
+                        totalPlayers: 1,
+                        averageAccuracy: current.accuracy,
+                        longestStreak: current.streak,
+                        totalPoints: current.points,
+                    },
+                    limit: leaderboardState.limit,
+                };
+            }
+
+            async function fetchLeaderboard() {
+                const filters = getFilters();
+                const options = Object.assign({}, filters, { limit: leaderboardState.limit });
+
+                if (window.KumpasPortal && typeof window.KumpasPortal.loadLeaderboardFromBackend === 'function') {
+                    const payload = await window.KumpasPortal.loadLeaderboardFromBackend(options);
+                    return payload || buildFallbackPayload();
+                }
+
+                const currentUser = getCurrentUser();
+                const params = new URLSearchParams();
+                if (currentUser.email) {
+                    params.set('email', currentUser.email);
+                }
+                if (filters.yearLevel && filters.yearLevel !== 'all') {
+                    params.set('yearLevel', filters.yearLevel);
+                }
+                if (filters.sortBy) {
+                    params.set('sortBy', filters.sortBy);
+                }
+                if (filters.timeRange) {
+                    params.set('timeRange', filters.timeRange);
+                }
+                params.set('limit', String(leaderboardState.limit));
+
+                try {
+                    const response = await fetch(`${API_BASE}/leaderboard/?${params.toString()}`);
+                    if (!response.ok) {
+                        return buildFallbackPayload();
+                    }
+                    const payload = await response.json();
+                    return payload || buildFallbackPayload();
+                } catch (_) {
+                    return buildFallbackPayload();
+                }
+            }
+
+            function renderMilestone(currentUser, nextHigher) {
+                const rankNumber = document.getElementById('leaderboardRankNumber');
+                const rankLabel = document.getElementById('leaderboardRankLabel');
+                const pointsValue = document.getElementById('leaderboardPointsValue');
+                const modulesValue = document.getElementById('leaderboardModulesValue');
+                const accuracyValue = document.getElementById('leaderboardAccuracyValue');
+                const streakValue = document.getElementById('leaderboardStreakValue');
+                const nextMilestone = document.getElementById('leaderboardNextMilestone');
+                const progressFill = document.getElementById('leaderboardProgressFill');
+                const progressText = document.getElementById('leaderboardProgressText');
+
+                const rank = currentUser ? Number(currentUser.rank || 0) : 0;
+                const points = currentUser ? Number(currentUser.points || 0) : 0;
+                const modulesCompleted = currentUser ? Number(currentUser.modulesCompleted || 0) : 0;
+                const totalModules = window.KumpasPortal && Array.isArray(window.KumpasPortal.MODULES)
+                    ? window.KumpasPortal.MODULES.length
+                    : 8;
+                const accuracy = currentUser ? Number(currentUser.accuracy || 0) : 0;
+                const streak = currentUser ? Number(currentUser.streak || 0) : 0;
+
+                if (rankNumber) {
+                    rankNumber.textContent = rank > 0 ? `${getRankEmoji(rank)} #${rank}` : '--';
+                }
+                if (rankLabel) {
+                    rankLabel.textContent = rank > 0 ? 'Live leaderboard rank' : 'Waiting for live rank';
+                }
+                if (pointsValue) pointsValue.textContent = formatPoints(points);
+                if (modulesValue) modulesValue.textContent = `${modulesCompleted}/${totalModules}`;
+                if (accuracyValue) accuracyValue.textContent = `${accuracy}%`;
+                if (streakValue) streakValue.textContent = `${streak} days`;
+
+                if (!nextMilestone || !progressFill || !progressText) {
+                    return;
+                }
+
+                if (!currentUser || !rank) {
+                    nextMilestone.textContent = 'Complete activities and games to appear on the leaderboard.';
+                    progressFill.style.width = '0%';
+                    progressText.textContent = 'Start learning to earn your first rank.';
+                    return;
+                }
+
+                if (!nextHigher) {
+                    nextMilestone.textContent = 'You are currently #1 on the leaderboard.';
+                    progressFill.style.width = '100%';
+                    progressText.textContent = 'Keep the streak going to stay ahead.';
+                    return;
+                }
+
+                const pointsToGo = Math.max(0, Number(nextHigher.points || 0) - points + 1);
+                const nextRank = Math.max(1, Number(rank) - 1);
+                const progress = nextHigher.points > 0 ? Math.min(100, Math.round((points / Number(nextHigher.points || 1)) * 100)) : 0;
+
+                nextMilestone.innerHTML = `Next rank: <strong>#${nextRank}</strong> at <strong>${formatPoints(Number(nextHigher.points || 0) + 1)} points</strong>`;
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${formatPoints(pointsToGo)} points to go to overtake #${nextRank}.`;
+            }
+
+            function buildPodiumCard(entry, position) {
+                const classes = ['podium-position'];
+                if (position === 1) classes.push('first-place');
+                if (position === 2) classes.push('second-place');
+                if (position === 3) classes.push('third-place');
+
+                return `
+                    <div class="${classes.join(' ')}">
+                        <div class="medal">${position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉'}</div>
+                        <div class="position-info">
+                            <h3>#${entry.rank}</h3>
+                            <p class="username">${escapeHtml(entry.name)}</p>
+                            <p class="level-badge">${escapeHtml(entry.yearLabel || getYearLabel(entry.yearLevel))}</p>
+                        </div>
+                        <div class="position-stats">
+                            <div class="stat">
+                                <span class="label">Points</span>
+                                <span class="value">${formatPoints(entry.points)}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Streak</span>
+                                <span class="value">${Number(entry.streak || 0)} days</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Accuracy</span>
+                                <span class="value">${Number(entry.accuracy || 0)}%</span>
+                            </div>
+                        </div>
+                        <button class="btn-outline" data-email="${escapeHtml(entry.email)}">View Profile</button>
+                    </div>
+                `;
+            }
+
+            function buildRow(entry, isCurrentUser) {
+                return `
+                    <div class="table-row${isCurrentUser ? ' your-row' : ''}" data-email="${escapeHtml(entry.email)}">
+                        <div class="col-rank"><span class="rank-badge${isCurrentUser ? ' current' : ''}">${entry.rank}</span></div>
+                        <div class="col-user">
+                            <div class="user-info">
+                                <div class="user-avatar"${isCurrentUser ? ' style="background: var(--primary); color: white;"' : ''}>${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</div>
+                                <div class="user-details">
+                                    <p class="user-name">${isCurrentUser ? '<strong>You</strong>' : escapeHtml(entry.name)}</p>
+                                    <p class="user-program">${escapeHtml(entry.role || 'student')}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-level">${escapeHtml(entry.yearLabel || getYearLabel(entry.yearLevel))}</div>
+                        <div class="col-points">${formatPoints(entry.points)}</div>
+                        <div class="col-streak">${Number(entry.streak || 0)} days</div>
+                        <div class="col-accuracy"><span class="accuracy-badge">${Number(entry.accuracy || 0)}%</span></div>
+                        <div class="col-action"><button class="btn-small" data-email="${escapeHtml(entry.email)}">Profile</button></div>
+                    </div>
+                `;
+            }
+
+            function renderLeaderboard(payload) {
+                leaderboardState.payload = payload || buildFallbackPayload();
+                const players = Array.isArray(leaderboardState.payload.players) ? leaderboardState.payload.players : [];
+                const currentUser = leaderboardState.payload.currentUser || null;
+                const nextHigher = leaderboardState.payload.nextHigher || null;
+                const summary = leaderboardState.payload.summary || {};
+
+                renderMilestone(currentUser, nextHigher);
+
+                const podiumTarget = document.getElementById('leaderboardPodium');
+                if (podiumTarget) {
+                    const topThree = players.slice(0, 3);
+                    podiumTarget.innerHTML = topThree.length
+                        ? topThree.map((entry, index) => buildPodiumCard(entry, index + 1)).join('')
+                        : '<div style="padding: 1rem 0; color: #666;">No players available yet.</div>';
+
+                    podiumTarget.querySelectorAll('[data-email]').forEach(button => {
+                        button.addEventListener('click', function (event) {
+                            event.stopPropagation();
+                            viewProfile(this.getAttribute('data-email') || '');
+                        });
+                    });
+                }
+
+                const rowTarget = document.getElementById('leaderboardRows');
+                if (rowTarget) {
+                    const renderedEmails = new Set(players.map(entry => String(entry.email || '').toLowerCase()));
+                    const rows = players.slice(3).slice();
+                    if (currentUser && !renderedEmails.has(String(currentUser.email || '').toLowerCase())) {
+                        rows.push(currentUser);
+                    }
+
+                    rowTarget.innerHTML = rows.length
+                        ? rows.map(entry => buildRow(entry, Boolean(currentUser && String(entry.email || '').toLowerCase() === String(currentUser.email || '').toLowerCase()))).join('')
+                        : '<div style="padding: 1rem 2rem; color: #666;">No leaderboard entries match the selected filters.</div>';
+
+                    rowTarget.querySelectorAll('[data-email]').forEach(button => {
+                        button.addEventListener('click', function (event) {
+                            event.stopPropagation();
+                            viewProfile(this.getAttribute('data-email') || '');
+                        });
+                    });
+
+                    rowTarget.querySelectorAll('.table-row').forEach(row => {
+                        row.addEventListener('click', function () {
+                            highlightRow(this);
+                        });
+                    });
+                }
+
+                const totalPlayers = document.getElementById('leaderboardTotalPlayers');
+                const averageAccuracy = document.getElementById('leaderboardAverageAccuracy');
+                const longestStreak = document.getElementById('leaderboardLongestStreak');
+                const totalPoints = document.getElementById('leaderboardTotalPoints');
+
+                if (totalPlayers) totalPlayers.textContent = formatPoints(summary.totalPlayers || players.length);
+                if (averageAccuracy) averageAccuracy.textContent = `${Number(summary.averageAccuracy || 0)}%`;
+                if (longestStreak) longestStreak.textContent = `${Number(summary.longestStreak || 0)} days`;
+                if (totalPoints) totalPoints.textContent = formatPoints(summary.totalPoints || 0);
+
+                const loadMoreButton = document.getElementById('leaderboardLoadMoreBtn');
+                if (loadMoreButton) {
+                    if (players.length >= Number(leaderboardState.payload.totalPlayers || players.length)) {
+                        loadMoreButton.textContent = 'All Players Loaded';
+                        loadMoreButton.disabled = true;
+                    } else {
+                        loadMoreButton.textContent = 'Load More Players';
+                        loadMoreButton.disabled = false;
+                    }
+                }
+            }
+
+            async function refreshLeaderboard() {
+                const payload = await fetchLeaderboard();
+                renderLeaderboard(payload);
+            }
+
+            function updateLeaderboard() {
+                leaderboardState.limit = DEFAULT_LIMIT;
+                refreshLeaderboard();
+            }
+
+            function highlightRow(row) {
+                document.querySelectorAll('.table-row').forEach(r => r.style.background = '');
+                row.style.background = '#e8efff';
+            }
+
+            function viewProfile(userEmail) {
+                const currentUser = getCurrentUser();
+                if (userEmail && String(userEmail).toLowerCase() !== String(currentUser.email || '').toLowerCase()) {
+                    localStorage.setItem('kumpasViewedProfile', String(userEmail).toLowerCase());
+                }
+                window.location.href = 'profile.html';
+            }
+
+            function loadMorePlayers() {
+                if (leaderboardState.payload && Array.isArray(leaderboardState.payload.players) && leaderboardState.payload.players.length >= Number(leaderboardState.payload.totalPlayers || 0)) {
+                    return;
+                }
+
+                leaderboardState.limit += 5;
+                refreshLeaderboard();
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                refreshLeaderboard();
+            });
+
+            window.updateLeaderboard = updateLeaderboard;
+            window.highlightRow = highlightRow;
+            window.viewProfile = viewProfile;
+            window.loadMorePlayers = loadMorePlayers;
+        })();
+    </script>
+</body>
+</html>

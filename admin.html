@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="admin.html" class="active">Admin Dashboard</a></li>
+                <li><a href="index.html" class="logout-btn">Exit Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="admin-container">
+        <!-- Sidebar Navigation -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <h3>Dashboard</h3>
+                    <ul>
+                        <li><a href="#overview" class="menu-link active" onclick="loadSection('overview')">📊 Overview</a></li>
+                        <li><a href="#analytics" class="menu-link" onclick="loadSection('analytics')">📈 Analytics</a></li>
+                    </ul>
+                </div>
+                <div class="menu-section">
+                    <h3>Management</h3>
+                    <ul>
+                        <li><a href="#users" class="menu-link" onclick="loadSection('users')">👥 Users</a></li>
+                        <li><a href="#modules" class="menu-link" onclick="loadSection('modules')">📚 Learning Modules</a></li>
+                        <li><a href="#activities" class="menu-link" onclick="loadSection('activities')">🎮 Activities</a></li>
+                        <li><a href="#content" class="menu-link" onclick="loadSection('content')">📝 Content</a></li>
+                    </ul>
+                </div>
+                <div class="menu-section">
+                    <h3>System</h3>
+                    <ul>
+                        <li><a href="#reports" class="menu-link" onclick="loadSection('reports')">📋 Reports</a></li>
+                        <li><a href="#settings" class="menu-link" onclick="loadSection('settings')">⚙️ Settings</a></li>
+                        <li><a href="#security" class="menu-link" onclick="loadSection('security')">🔒 Security</a></li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <section class="admin-main">
+            <!-- Page Header -->
+            <div class="admin-header">
+                <h1>Admin Dashboard</h1>
+                <div class="header-actions">
+                    <button class="btn-secondary">🔔 Notifications</button>
+                    <button class="btn-secondary">⚙️ Settings</button>
+                </div>
+            </div>
+
+            <!-- Overview Section -->
+            <section id="overview" class="admin-section active">
+                <h2>System Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <p class="stat-number">1,245</p>
+                        <p class="stat-change">↑ 45 this week</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Sessions</h3>
+                        <p class="stat-number">342</p>
+                        <p class="stat-change">Online now</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Points Earned</h3>
+                        <p class="stat-number">42.5M</p>
+                        <p class="stat-change">↑ 1.2M this week</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg. Completion Rate</h3>
+                        <p class="stat-number">68%</p>
+                        <p class="stat-change">↑ 3% this month</p>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="section-content">
+                    <h3>Recent User Activity</h3>
+                    <div class="activity-table">
+                        <div class="table-header">
+                            <div>User</div>
+                            <div>Action</div>
+                            <div>Time</div>
+                            <div>Status</div>
+                        </div>
+                        <div class="table-row">
+                            <div>John Reyes</div>
+                            <div>Completed Lesson 3</div>
+                            <div>5 min ago</div>
+                            <div><span class="badge success">✓ Success</span></div>
+                        </div>
+                        <div class="table-row">
+                            <div>Maria Santos</div>
+                            <div>Logged In</div>
+                            <div>12 min ago</div>
+                            <div><span class="badge info">Active</span></div>
+                        </div>
+                        <div class="table-row">
+                            <div>Alex Johnson</div>
+                            <div>Quiz Completed</div>
+                            <div>1 hour ago</div>
+                            <div><span class="badge success">✓ Success</span></div>
+                        </div>
+                        <div class="table-row">
+                            <div>Lisa Chen</div>
+                            <div>Finger-Spelling Practice</div>
+                            <div>2 hours ago</div>
+                            <div><span class="badge success">✓ Success</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Management Section -->
+            <section id="users" class="admin-section">
+                <h2>User Management</h2>
+                <div class="section-actions">
+                    <button class="btn-primary" onclick="addUser()">+ Add New User</button>
+                    <input type="text" placeholder="Search users..." class="search-input">
+                </div>
+                <div class="users-table">
+                    <div class="table-header">
+                        <div style="width: 200px">Name</div>
+                        <div style="width: 180px">Email</div>
+                        <div style="width: 100px">Year Level</div>
+                        <div style="width: 100px">Status</div>
+                        <div style="width: 150px">Actions</div>
+                    </div>
+                    <div class="table-row">
+                        <div>John Michael Reyes</div>
+                        <div>john.reyes@ccca.edu.ph</div>
+                        <div>2nd Year</div>
+                        <div><span class="badge success">Active</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editUser('john')">Edit</button>
+                            <button class="btn-small danger" onclick="suspendUser('john')">Suspend</button>
+                        </div>
+                    </div>
+                    <div class="table-row">
+                        <div>Maria Santos</div>
+                        <div>maria.santos@ccca.edu.ph</div>
+                        <div>3rd Year</div>
+                        <div><span class="badge success">Active</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editUser('maria')">Edit</button>
+                            <button class="btn-small danger" onclick="suspendUser('maria')">Suspend</button>
+                        </div>
+                    </div>
+                    <div class="table-row">
+                        <div>Christian Lee</div>
+                        <div>christian.lee@ccca.edu.ph</div>
+                        <div>2nd Year</div>
+                        <div><span class="badge warning">Inactive</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editUser('christian')">Edit</button>
+                            <button class="btn-small success" onclick="activateUser('christian')">Activate</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Modules Management Section -->
+            <section id="modules" class="admin-section">
+                <h2>Learning Modules Management</h2>
+                <div class="section-actions">
+                    <button class="btn-primary" onclick="addModule()">+ Create New Module</button>
+                </div>
+                <div class="modules-table">
+                    <div class="table-header">
+                        <div style="width: 250px">Module Name</div>
+                        <div style="width: 100px">Year Level</div>
+                        <div style="width: 100px">Activities</div>
+                        <div style="width: 100px">Status</div>
+                        <div>Actions</div>
+                    </div>
+                    <div class="table-row">
+                        <div>Lesson 1: Basic Finger Spelling</div>
+                        <div>1st Year</div>
+                        <div>4</div>
+                        <div><span class="badge success">Published</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editModule('lesson1')">Edit</button>
+                            <button class="btn-small" onclick="viewAnalytics('lesson1')">Analytics</button>
+                        </div>
+                    </div>
+                    <div class="table-row">
+                        <div>Lesson 2: Common Everyday Signs</div>
+                        <div>1st Year</div>
+                        <div>5</div>
+                        <div><span class="badge success">Published</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editModule('lesson2')">Edit</button>
+                            <button class="btn-small" onclick="viewAnalytics('lesson2')">Analytics</button>
+                        </div>
+                    </div>
+                    <div class="table-row">
+                        <div>Lesson 3: Greetings & Polite Expressions</div>
+                        <div>1st Year</div>
+                        <div>3</div>
+                        <div><span class="badge warning">Draft</span></div>
+                        <div class="action-buttons">
+                            <button class="btn-small" onclick="editModule('lesson3')">Edit</button>
+                            <button class="btn-small" onclick="publishModule('lesson3')">Publish</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activities Management Section -->
+            <section id="activities" class="admin-section">
+                <h2>Activities Management</h2>
+                <div class="section-actions">
+                    <button class="btn-primary" onclick="addActivity()">+ Create New Activity</button>
+                </div>
+                <div class="activities-grid">
+                    <div class="activity-card">
+                        <h3>Quiz: Sign Recognition</h3>
+                        <p class="meta">Module: Lesson 1 | Type: Quiz</p>
+                        <div class="stats">
+                            <span>👥 234 users completed</span>
+                            <span>⭐ 4.5/5 rating</span>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-small" onclick="editActivity('quiz1')">Edit</button>
+                            <button class="btn-small danger" onclick="deleteActivity('quiz1')">Delete</button>
+                        </div>
+                    </div>
+                    <div class="activity-card">
+                        <h3>Finger-Spelling Practice</h3>
+                        <p class="meta">Module: Lesson 1 | Type: Practice</p>
+                        <div class="stats">
+                            <span>👥 189 users attempted</span>
+                            <span>⭐ 4.3/5 rating</span>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-small" onclick="editActivity('practice1')">Edit</button>
+                            <button class="btn-small danger" onclick="deleteActivity('practice1')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="admin-section">
+                <h2>System Analytics</h2>
+                <div class="analytics-grid">
+                    <div class="chart-card">
+                        <h3>User Growth</h3>
+                        <div class="chart-placeholder">
+                            <p style="text-align: center; padding: 2rem;">📈 Growth Chart</p>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Activity Distribution</h3>
+                        <div class="chart-placeholder">
+                            <p style="text-align: center; padding: 2rem;">📊 Distribution Chart</p>
+                        </div>
+                    </div>
+                    <div class="chart-card full-width">
+                        <h3>Performance Metrics</h3>
+                        <div class="metrics-list">
+                            <div class="metric-item">
+                                <span>Average Session Duration</span>
+                                <span class="metric-value">45 minutes</span>
+                            </div>
+                            <div class="metric-item">
+                                <span>Daily Active Users</span>
+                                <span class="metric-value">324 users</span>
+                            </div>
+                            <div class="metric-item">
+                                <span>Module Completion Rate</span>
+                                <span class="metric-value">68%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span>System Uptime</span>
+                                <span class="metric-value">99.9%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports" class="admin-section">
+                <h2>System Reports</h2>
+                <div class="reports-list">
+                    <div class="report-card">
+                        <h3>User Performance Report</h3>
+                        <p>Detailed breakdown of user progress and achievements</p>
+                        <button class="btn-secondary" onclick="generateReport('performance')">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Content Usage Report</h3>
+                        <p>Analytics on which modules and activities are most used</p>
+                        <button class="btn-secondary" onclick="generateReport('content')">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>System Health Report</h3>
+                        <p>System performance, uptime, and technical metrics</p>
+                        <button class="btn-secondary" onclick="generateReport('health')">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Financial Report</h3>
+                        <p>License usage and subscription information</p>
+                        <button class="btn-secondary" onclick="generateReport('financial')">Generate Report</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="admin-section">
+                <h2>System Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>System Name</label>
+                        <input type="text" value="Kumpas Sign Language Learning System" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Administrator Email</label>
+                        <input type="email" value="admin@kumpas.edu.ph" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Maximum Users</label>
+                        <input type="number" value="5000" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Enable User Registration</label>
+                        <label class="checkbox">
+                            <input type="checkbox" checked>
+                            Allow new users to register
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Enable Email Notifications</label>
+                        <label class="checkbox">
+                            <input type="checkbox" checked>
+                            Send system notifications via email
+                        </label>
+                    </div>
+                    <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+            </section>
+
+            <!-- Security Section -->
+            <section id="security" class="admin-section">
+                <h2>Security Management</h2>
+                <div class="security-cards">
+                    <div class="security-card">
+                        <h3>🔒 System Security</h3>
+                        <p>Last security check: 2 hours ago</p>
+                        <p style="color: #27ae60; font-weight: 600;">✓ All systems secure</p>
+                        <button class="btn-secondary" onclick="runSecurityCheck()">Run Security Check</button>
+                    </div>
+                    <div class="security-card">
+                        <h3>🛡️ Backup Status</h3>
+                        <p>Last backup: Today 2:00 AM</p>
+                        <p style="color: #27ae60; font-weight: 600;">✓ Backup successful</p>
+                        <button class="btn-secondary" onclick="runBackup()">Run Backup Now</button>
+                    </div>
+                    <div class="security-card">
+                        <h3>📊 Activity Logs</h3>
+                        <p>Latest activity logged and monitored</p>
+                        <button class="btn-secondary" onclick="viewLogs()">View Logs</button>
+                    </div>
+                </div>
+                <div class="security-form">
+                    <h3>Two-Factor Authentication</h3>
+                    <p>Enable additional security for admin accounts</p>
+                    <label class="checkbox">
+                        <input type="checkbox">
+                        Require 2FA for all admin accounts
+                    </label>
+                    <button class="btn-primary" onclick="save2FA()">Update 2FA Settings</button>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: calc(100vh - 60px);
+            background: #f8f9fa;
+        }
+
+        .admin-sidebar {
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 2rem 0;
+            position: sticky;
+            top: 60px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .menu-section h3 {
+            padding: 0 1.5rem;
+            margin: 0 0 0.8rem 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .menu-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .menu-section li {
+            margin: 0;
+        }
+
+        .menu-link {
+            display: block;
+            padding: 0.8rem 1.5rem;
+            color: #555;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .menu-link:hover {
+            background: #f8f9fa;
+            color: var(--primary);
+        }
+
+        .menu-link.active {
+            background: #e8efff;
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .admin-main {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .admin-header h1 {
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
+        }
+
+        .admin-section h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+
+        .stat-change {
+            margin: 0;
+            color: #27ae60;
+            font-size: 0.9rem;
+        }
+
+        .section-content {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .activity-table,
+        .users-table,
+        .modules-table {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .table-header {
+            display: grid;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .activity-table .table-header,
+        .activity-table .table-row {
+            grid-template-columns: 200px 200px 150px 1fr;
+        }
+
+        .users-table .table-header,
+        .users-table .table-row {
+            grid-template-columns: 200px 180px 100px 100px auto;
+        }
+
+        .modules-table .table-header,
+        .modules-table .table-row {
+            grid-template-columns: 250px 100px 100px 100px 1fr;
+        }
+
+        .table-row {
+            display: grid;
+            padding: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+            align-items: center;
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: #e8f5e9;
+            color: #27ae60;
+        }
+
+        .badge.warning {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+
+        .badge.info {
+            background: #e3f2fd;
+            color: var(--primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-small:hover {
+            background: #5568d3;
+        }
+
+        .btn-small.danger {
+            background: #e74c3c;
+        }
+
+        .btn-small.danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-small.success {
+            background: #27ae60;
+        }
+
+        .activities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .activity-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .activity-card h3 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .activity-card .meta {
+            color: #999;
+            font-size: 0.85rem;
+            margin: 0 0 1rem 0;
+        }
+
+        .activity-card .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .activity-card .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-placeholder {
+            background: #f8f9fa;
+            border-radius: 8px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .metrics-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .metric-item span:first-child {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .reports-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .report-card h3 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .report-card p {
+            margin: 0 0 1rem 0;
+            color: #666;
+        }
+
+        .settings-form {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            margin-bottom: 0.8rem;
+        }
+
+        .checkbox input {
+            cursor: pointer;
+        }
+
+        .security-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .security-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .security-card h3 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .security-card p {
+            margin: 0.5rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .security-form {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-sidebar {
+                position: relative;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .analytics-grid,
+            .reports-list,
+            .security-cards,
+            .metrics-list {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        function loadSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active class from menu links
+            document.querySelectorAll('.menu-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Add active class to clicked menu link
+            event.target.classList.add('active');
+        }
+
+        function addUser() {
+            alert('Open modal to add new user');
+        }
+
+        function editUser(userId) {
+            alert(`Edit user: ${userId}`);
+        }
+
+        function suspendUser(userId) {
+            alert(`Suspend user: ${userId}`);
+        }
+
+        function activateUser(userId) {
+            alert(`Activate user: ${userId}`);
+        }
+
+        function addModule() {
+            alert('Open modal to create new module');
+        }
+
+        function editModule(moduleId) {
+            alert(`Edit module: ${moduleId}`);
+        }
+
+        function publishModule(moduleId) {
+            alert(`Publish module: ${moduleId}`);
+        }
+
+        function viewAnalytics(moduleId) {
+            alert(`View analytics for: ${moduleId}`);
+        }
+
+        function addActivity() {
+            alert('Open modal to create new activity');
+        }
+
+        function editActivity(activityId) {
+            alert(`Edit activity: ${activityId}`);
+        }
+
+        function deleteActivity(activityId) {
+            if (confirm('Are you sure?')) {
+                alert(`Delete activity: ${activityId}`);
+            }
+        }
+
+        function generateReport(reportType) {
+            alert(`Generating ${reportType} report...`);
+        }
+
+        function saveSettings() {
+            alert('Settings saved successfully!');
+        }
+
+        function runSecurityCheck() {
+            alert('Running security check...');
+        }
+
+        function runBackup() {
+            alert('Running backup...');
+        }
+
+        function viewLogs() {
+            alert('View activity logs...');
+        }
+
+        function save2FA() {
+            alert('2FA settings updated!');
+        }
+    </script>
+</body>
+</html>

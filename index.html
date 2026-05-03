@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumpas - Interactive Sign Language Learning System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="logo">
+                <img src="images/kumpas_logo1.png" alt="Kumpas Logo" class="logo-image" style="width:75px;height:75px;object-fit:contain;">
+                <span>Kumpas</span>
+            </a>
+            
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="login.html" class="btn btn-primary btn-sm">Login</a></li>
+            </ul>
+            
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-background">
+            <div class="hero-blob blob-1"></div>
+            <div class="hero-blob blob-2"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        Learn Filipino Sign Language
+                    </h1>
+                    <p class="hero-description">
+                        Master sign language with Kumpas - an innovative web-based learning platform designed for City College of Calapan. Practice with engaging games, real-time translation tools, and track your progress on the leaderboard.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="login.html" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt"></i> Get Started
+                        </a>
+                        <a href="register.html" class="btn btn-outline btn-lg">
+                            <i class="fas fa-user-plus"></i> Create Account
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-illustration">
+                    <div class="illustration-card">
+                        <div class="illustration-content">
+                            <img src="images/kumpas_logo.png" alt="Kumpas" style="width:250px;height:250px;object-fit:contain;">
+                            <h3>Start Learning</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Key Features</span>
+                <h2>Comprehensive Learning Tools</h2>
+                <p>Everything you need to master Filipino Sign Language</p>
+            </div>
+            
+            <div class="features-grid">
+                <!-- Feature 1: Progressive Practice -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3>Progressive Learning</h3>
+                    <p>Structured sign language practice arranged from basic to advanced levels with game-based instructions.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> FSL Curriculum</li>
+                        <li><i class="fas fa-check"></i> Year-Level Activities</li>
+                        <li><i class="fas fa-check"></i> Real-time Feedback</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 2: Game-Based Learning -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #0d9488 0%, #10b981 100%);">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <h3>Game-Based Activities</h3>
+                    <p>Engaging mini-games designed to improve sign recognition and practice accuracy with immediate feedback.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Quiz Games</li>
+                        <li><i class="fas fa-check"></i> Sign Recognition</li>
+                        <li><i class="fas fa-check"></i> Gamification</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 3: Finger-Spelling -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #f97316 0%, #ec4899 100%);">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h3>Finger-Spelling Practice</h3>
+                    <p>Camera-assisted feature allowing learners to practice basic and commonly used words with organized categories.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Camera Recognition</li>
+                        <li><i class="fas fa-check"></i> Word Categories</li>
+                        <li><i class="fas fa-check"></i> Instant Feedback</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 4: Text-to-Sign Translator -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);">
+                        <i class="fas fa-pen-fancy"></i>
+                    </div>
+                    <h3>Text-to-Sign Translator</h3>
+                    <p>Input text and instantly view its corresponding sign language representation for everyday communication.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Real-time Translation</li>
+                        <li><i class="fas fa-check"></i> Visual Demonstrations</li>
+                        <li><i class="fas fa-check"></i> Multiple Angles</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 5: Sign-to-Text Translator -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <h3>Sign-to-Text Translator</h3>
+                    <p>Recognize hand signs through the camera and convert them to text for two-way communication.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Hand Recognition</li>
+                        <li><i class="fas fa-check"></i> Real-time Conversion</li>
+                        <li><i class="fas fa-check"></i> Accuracy Rate</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 6: Dashboard & Progress -->
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0d9488 100%);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Dashboard & Analytics</h3>
+                    <p>Track your progress with detailed statistics, progress charts, ranking, and performance summaries.</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Learning Statistics</li>
+                        <li><i class="fas fa-check"></i> Progress Charts</li>
+                        <li><i class="fas fa-check"></i> Leaderboard Ranking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>Kumpas</h4>
+                    <p>Interactive Sign Language Learning System for City College of Calapan BSNED Program</p>
+                    <div class="social-links">
+                        <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
+                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Quick Links</h5>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="login.html">Login</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Resources</h5>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Support</a></li>
+                        <li><a href="#">Community</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Contact</h5>
+                    <ul>
+                        <li><i class="fas fa-map-marker"></i> City College of Calapan</li>
+                        <li><i class="fas fa-envelope"></i> <a href="mailto:info@kumpas.edu.ph">info@kumpas.edu.ph</a></li>
+                        <li><i class="fas fa-phone"></i> <a href="tel:+63000000000">+63 (0) 000-0000</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 Kumpas - Interactive Sign Language Learning System. All rights reserved.</p>
+                <div class="footer-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Accessibility</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

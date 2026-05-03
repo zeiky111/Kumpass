@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="learning.html">Learn</a></li>
+                <li><a href="translator.html">Translator</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><a href="profile.html" class="active">Profile</a></li>
+                <li><a href="index.html" class="logout-btn">Logout</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="profile-container">
+        <!-- Profile Header -->
+        <section class="profile-header">
+            <div class="header-content">
+                <div class="profile-avatar">
+                    <div class="avatar-placeholder">👤</div>
+                    <button class="upload-btn" onclick="uploadPhoto()">📷 Change Photo</button>
+                </div>
+                <div class="profile-info">
+                    <h1>Your Profile</h1>
+                    <h2 id="profileDisplayName">John Michael Reyes</h2>
+                    <p class="user-meta">
+                        <span class="badge" id="profileYearLevel">2nd Year BSNED</span>
+                        <span class="badge primary" id="profileRole">Member since Jan 2025</span>
+                    </p>
+                </div>
+                <div class="profile-rank">
+                    <div class="rank-item">
+                        <span class="rank-label">Global Rank</span>
+                        <span class="rank-value" id="profileRank">🥇 #15</span>
+                    </div>
+                    <div class="rank-item">
+                        <span class="rank-label">Total Points</span>
+                        <span class="rank-value" id="profilePoints">4,850</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="profile-content">
+            <!-- Left Sidebar -->
+            <aside class="profile-sidebar">
+                <div class="sidebar-card">
+                    <h3>Quick Stats</h3>
+                    <div class="stats-list">
+                        <div class="stat-item">
+                            <span class="stat-icon">📚</span>
+                            <span class="stat-label">Modules Completed</span>
+                            <span class="stat-value" id="profileModulesCompleted">5/8</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">⭐</span>
+                            <span class="stat-label">Accuracy Rate</span>
+                            <span class="stat-value" id="profileAccuracy">87%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">🔥</span>
+                            <span class="stat-label">Current Streak</span>
+                            <span class="stat-value" id="profileStreak">12 days</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">⏱️</span>
+                            <span class="stat-label">Time Invested</span>
+                            <span class="stat-value" id="profilePracticeTime">48 hrs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-card">
+                    <h3>Activity Summary</h3>
+                    <div class="activity-summary" id="profileActivitySummary"></div>
+                </div>
+
+                <div class="sidebar-card">
+                    <h3>Achievements</h3>
+                    <div class="achievements-list" id="profileAchievementsList"></div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <section class="profile-main">
+                <!-- Edit Profile Section -->
+                <div class="profile-section">
+                    <div class="section-header">
+                        <h2>Personal Information</h2>
+                        <button class="btn-text" onclick="toggleEditProfile()">✏️ Edit</button>
+                    </div>
+
+                    <div id="profileView" class="profile-view">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="label">Full Name</span>
+                                <span class="value" id="profileFullName">John Michael Reyes</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Email Address</span>
+                                <span class="value" id="profileEmail">john.reyes@ccca.edu.ph</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Student ID</span>
+                                <span class="value" id="profileStudentId">2023-BSNED-1234</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Year Level</span>
+                                <span class="value" id="profileYearText">2nd Year</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Contact Number</span>
+                                <span class="value" id="profileContactNumber">Not set</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="label">Hearing Status</span>
+                                <span class="value badge secondary" id="profileHearingStatus">Not set</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="profileEdit" class="profile-edit" style="display: none;">
+                        <form class="edit-form">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="profileEditFullName" value="" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="profileEditEmail" value="" class="form-input" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Student ID</label>
+                                <input type="text" id="profileEditStudentId" value="" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Year Level</label>
+                                <input type="text" id="profileEditYearLevel" value="" class="form-input" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number</label>
+                                <input type="tel" id="profileEditContact" value="" class="form-input" placeholder="+63 9XX XXX XXXX">
+                            </div>
+                            <div class="form-group">
+                                <label>Hearing Status</label>
+                                <select class="form-input" id="profileEditHearingStatus">
+                                    <option value="Hearing">Hearing</option>
+                                    <option value="Deaf">Deaf</option>
+                                    <option value="Hard of Hearing">Hard of Hearing</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-primary" onclick="saveProfile()">Save Changes</button>
+                                <button type="button" class="btn-secondary" onclick="toggleEditProfile()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Learning Progress -->
+                <div class="profile-section">
+                    <h2>Learning Progress</h2>
+                    <div class="progress-cards">
+                        <div class="progress-card">
+                            <h3>Module Progress</h3>
+                            <div id="profileModuleProgress"></div>
+                        </div>
+
+                        <div class="progress-card">
+                            <h3>Skill Breakdown</h3>
+                            <div id="profileSkillBreakdown"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="profile-section">
+                    <h2>Account Settings</h2>
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Password & Security</h3>
+                                <p>Update your password and manage security settings</p>
+                            </div>
+                            <button class="btn-secondary" onclick="changePassword()">Manage</button>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Email Notifications</h3>
+                                <p>Control what updates you receive via email</p>
+                            </div>
+                            <button class="btn-secondary" onclick="manageNotifications()">Configure</button>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Privacy Settings</h3>
+                                <p>Manage your profile visibility and data sharing</p>
+                            </div>
+                            <button class="btn-secondary" onclick="managePrivacy()">Privacy Options</button>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h3>Connected Accounts</h3>
+                                <p>Manage your linked social media and Google accounts</p>
+                            </div>
+                            <button class="btn-secondary" onclick="manageConnections()">Manage Connections</button>
+                        </div>
+                        <div class="setting-item danger">
+                            <div class="setting-info">
+                                <h3>Delete Account</h3>
+                                <p>Permanently delete your account and all associated data</p>
+                            </div>
+                            <button class="btn-danger" onclick="deleteAccount()">Delete Account</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences -->
+                <div class="profile-section">
+                    <h2>Learning Preferences</h2>
+                    <div class="preferences-grid">
+                        <div class="preference-group">
+                            <label>Preferred Learning Speed</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="speed" checked> Slow</label>
+                                <label><input type="radio" name="speed"> Normal</label>
+                                <label><input type="radio" name="speed"> Fast</label>
+                            </div>
+                        </div>
+                        <div class="preference-group">
+                            <label>Difficulty Level</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="difficulty"> Beginner</label>
+                                <label><input type="radio" name="difficulty" checked> Intermediate</label>
+                                <label><input type="radio" name="difficulty"> Advanced</label>
+                            </div>
+                        </div>
+                        <div class="preference-group">
+                            <label>Theme Preference</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="theme" checked> Light</label>
+                                <label><input type="radio" name="theme"> Dark</label>
+                                <label><input type="radio" name="theme"> Auto</label>
+                            </div>
+                        </div>
+                        <div class="preference-group">
+                            <label>Notifications</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" checked> Daily Reminders</label>
+                                <label><input type="checkbox" checked> Achievement Badges</label>
+                                <label><input type="checkbox"> Marketing Emails</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="savePreferences()">Save Preferences</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Kumpas - Sign Language Learning System. City College of Calapan</p>
+        </div>
+    </footer>
+
+    <script src="js/portal.js"></script>
+
+    <style>
+        .profile-container {
+            min-height: calc(100vh - 60px);
+            background: #f8f9fa;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #5568d3 100%);
+            color: white;
+            padding: 3rem 2rem;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: auto 1fr 200px;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .profile-avatar {
+            text-align: center;
+        }
+
+        .avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            margin: 0 auto 1rem;
+        }
+
+        .upload-btn {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .profile-info h1 {
+            margin: 0;
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .profile-info h2 {
+            margin: 0.5rem 0 1rem;
+            font-size: 1.8rem;
+        }
+
+        .user-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .badge.primary {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .badge.secondary {
+            background: #e0e0e0;
+            color: var(--dark);
+        }
+
+        .profile-rank {
+            text-align: center;
+        }
+
+        .rank-item {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
+
+        .rank-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .rank-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .profile-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+        }
+
+        .profile-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-card h3 {
+            margin-top: 0;
+            color: var(--dark);
+        }
+
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+        }
+
+        .stat-label {
+            flex: 1;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .activity-summary,
+        .achievements-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .achievement {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .achievement-icon {
+            font-size: 1.5rem;
+        }
+
+        .achievement-name {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .profile-main {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .profile-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h2 {
+            margin: 0;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.95rem;
+            text-decoration: none;
+        }
+
+        .btn-text:hover {
+            text-decoration: underline;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-item .label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .info-item .value {
+            color: var(--dark);
+            font-size: 1rem;
+        }
+
+        .profile-edit {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .edit-form {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group:nth-child(3) {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .form-input {
+            padding: 0.8rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-actions {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .progress-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .progress-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .progress-card h3 {
+            margin: 0;
+        }
+
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .progress-item span:first-child {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        .progress-status {
+            font-size: 0.85rem;
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .skill-name {
+            min-width: 120px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .skill-meter {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .skill-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #27ae60);
+        }
+
+        .skill-value {
+            min-width: 40px;
+            text-align: right;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .settings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .setting-item:hover {
+            border-color: var(--primary);
+            background: #f8f9fa;
+        }
+
+        .setting-item.danger {
+            border-color: #e74c3c;
+        }
+
+        .setting-info h3 {
+            margin: 0 0 0.3rem 0;
+            color: var(--dark);
+        }
+
+        .setting-info p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .preferences-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .preference-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .preference-group label {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .radio-group label,
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-group input,
+        .checkbox-group input {
+            cursor: pointer;
+        }
+
+        @media (max-width: 1024px) {
+            .header-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .progress-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .edit-form {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group:nth-child(3) {
+                grid-column: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-content {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .setting-item {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .setting-item .btn-secondary,
+            .setting-item .btn-danger {
+                width: 100%;
+            }
+        }
+    </style>
+
+    <script>
+        function getProfileExtrasKey() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const email = String(currentUser.email || '').trim().toLowerCase();
+                return `kumpasProfileExtras:${email || 'guest'}`;
+            } catch (_) {
+                return 'kumpasProfileExtras:guest';
+            }
+        }
+
+        function getProfileExtras() {
+            try {
+                return JSON.parse(localStorage.getItem(getProfileExtrasKey()) || '{}');
+            } catch (_) {
+                return {};
+            }
+        }
+
+        function setProfileExtras(next) {
+            localStorage.setItem(getProfileExtrasKey(), JSON.stringify(next || {}));
+        }
+
+        function bindProfileEditValues() {
+            const fullNameView = document.getElementById('profileFullName');
+            const emailView = document.getElementById('profileEmail');
+            const studentIdView = document.getElementById('profileStudentId');
+            const yearLevelView = document.getElementById('profileYearText');
+            const contactView = document.getElementById('profileContactNumber');
+            const hearingView = document.getElementById('profileHearingStatus');
+
+            const fullNameInput = document.getElementById('profileEditFullName');
+            const emailInput = document.getElementById('profileEditEmail');
+            const studentIdInput = document.getElementById('profileEditStudentId');
+            const yearLevelInput = document.getElementById('profileEditYearLevel');
+            const contactInput = document.getElementById('profileEditContact');
+            const hearingInput = document.getElementById('profileEditHearingStatus');
+
+            const extras = getProfileExtras();
+            const fullName = fullNameView ? fullNameView.textContent.trim() : '';
+            const email = emailView ? emailView.textContent.trim() : '';
+            const studentId = studentIdView ? studentIdView.textContent.trim() : '';
+            const yearLevel = yearLevelView ? yearLevelView.textContent.trim() : '';
+            const contact = extras.contactNumber || (contactView ? contactView.textContent.trim() : '');
+            const hearing = extras.hearingStatus || (hearingView ? hearingView.textContent.trim() : 'Hearing');
+
+            if (fullNameInput) fullNameInput.value = fullName;
+            if (emailInput) emailInput.value = email;
+            if (studentIdInput) studentIdInput.value = extras.studentId || studentId;
+            if (yearLevelInput) yearLevelInput.value = yearLevel;
+            if (contactInput) contactInput.value = contact === 'Not set' ? '' : contact;
+            if (hearingInput) hearingInput.value = hearing && hearing !== 'Not set' ? hearing : 'Hearing';
+
+            if (contactView && extras.contactNumber) contactView.textContent = extras.contactNumber;
+            if (hearingView && extras.hearingStatus) hearingView.textContent = extras.hearingStatus;
+        }
+
+        function toggleEditProfile() {
+            const view = document.getElementById('profileView');
+            const edit = document.getElementById('profileEdit');
+            if (edit.style.display === 'none') {
+                bindProfileEditValues();
+            }
+            view.style.display = view.style.display === 'none' ? 'block' : 'none';
+            edit.style.display = edit.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function saveProfile() {
+            const fullNameInput = document.getElementById('profileEditFullName');
+            const emailInput = document.getElementById('profileEditEmail');
+            const studentIdInput = document.getElementById('profileEditStudentId');
+            const contactInput = document.getElementById('profileEditContact');
+            const hearingInput = document.getElementById('profileEditHearingStatus');
+
+            const fullName = fullNameInput ? fullNameInput.value.trim() : '';
+            const email = emailInput ? emailInput.value.trim() : '';
+            const studentId = studentIdInput ? studentIdInput.value.trim() : '';
+            const contact = contactInput ? contactInput.value.trim() : '';
+            const hearing = hearingInput ? hearingInput.value : '';
+
+            if (!fullName) {
+                alert('Full name is required.');
+                return;
+            }
+
+            const displayName = document.getElementById('profileDisplayName');
+            const fullNameView = document.getElementById('profileFullName');
+            const studentIdView = document.getElementById('profileStudentId');
+            if (displayName) displayName.textContent = fullName;
+            if (fullNameView) fullNameView.textContent = fullName;
+            if (studentIdView) studentIdView.textContent = studentId || 'Not set';
+
+            const contactView = document.getElementById('profileContactNumber');
+            const hearingView = document.getElementById('profileHearingStatus');
+            if (contactView) contactView.textContent = contact || 'Not set';
+            if (hearingView) hearingView.textContent = hearing || 'Not set';
+
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                currentUser.name = fullName;
+                if (email) currentUser.email = email;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            } catch (_) {
+                // ignore storage parse issues
+            }
+
+            setProfileExtras({
+                studentId: studentId,
+                contactNumber: contact,
+                hearingStatus: hearing
+            });
+
+            if (window.KumpasPortal && typeof window.KumpasPortal.renderProfile === 'function') {
+                window.KumpasPortal.renderProfile();
+            }
+
+            alert('Profile updated successfully!');
+            toggleEditProfile();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            bindProfileEditValues();
+        });
+
+        function uploadPhoto() {
+            alert('Photo upload feature coming soon!');
+        }
+
+        function changePassword() {
+            alert('Redirecting to password change page...');
+        }
+
+        function manageNotifications() {
+            alert('Redirecting to notification settings...');
+        }
+
+        function managePrivacy() {
+            alert('Redirecting to privacy settings...');
+        }
+
+        function manageConnections() {
+            alert('Redirecting to connected accounts...');
+        }
+
+        function deleteAccount() {
+            if (confirm('Are you sure? This action cannot be undone.')) {
+                alert('Account deletion process initiated...');
+            }
+        }
+
+        function savePreferences() {
+            alert('Learning preferences saved!');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="admin-dashboard.html" class="nav-link active">Admin Panel</a></li>
+            </ul>
+            
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <h3>Admin Menu</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#overview" class="sidebar-link active" onclick="switchTab('overview')"><i class="fas fa-chart-line"></i> Overview</a></li>
+                <li><a href="#users" class="sidebar-link" onclick="switchTab('users')"><i class="fas fa-users"></i> Manage Users</a></li>
+                <li><a href="#roles" class="sidebar-link" onclick="switchTab('roles')"><i class="fas fa-shield"></i> Role Management</a></li>
+                <li><a href="#reports" class="sidebar-link" onclick="switchTab('reports')"><i class="fas fa-chart-bar"></i> System Reports</a></li>
+                <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <div class="container-fluid">
+                <!-- Welcome Section -->
+                <div class="dashboard-welcome">
+                    <div>
+                        <h1>Welcome, Admin! 👋</h1>
+                        <p>System Administration & Monitoring Dashboard</p>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid grid grid-4">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #3b82f6;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">128</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #10b981;">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">95</div>
+                            <div class="stat-label">Active Students</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f59e0b;">
+                            <i class="fas fa-chalkboard-user"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">18</div>
+                            <div class="stat-label">Instructors</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #8b5cf6;">
+                            <i class="fas fa-activity"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">92%</div>
+                            <div class="stat-label">System Uptime</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manage Users -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Manage Users</h3>
+                        <div>
+                            <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ Add User</button>
+                            <select class="form-input" style="width: 150px; display: inline-block; margin-left: 10px;">
+                                <option>Filter by Role</option>
+                                <option>All</option>
+                                <option>Students</option>
+                                <option>Instructors</option>
+                                <option>Admins</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>#U001</td>
+                                    <td>Juan Dela Cruz</td>
+                                    <td>juan@ccnc.edu.ph</td>
+                                    <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Student</span></td>
+                                    <td><span style="color: #10b981;">Active</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
+                                        <button class="btn btn-sm btn-danger">Deactivate</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#I001</td>
+                                    <td>Ms. Maria Santos</td>
+                                    <td>maria@ccnc.edu.ph</td>
+                                    <td><span style="background: #fef3c7; color: #b45309; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Instructor</span></td>
+                                    <td><span style="color: #10b981;">Active</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
+                                        <button class="btn btn-sm btn-danger">Deactivate</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>#A001</td>
+                                    <td>Admin User</td>
+                                    <td>admin@ccnc.edu.ph</td>
+                                    <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Admin</span></td>
+                                    <td><span style="color: #10b981;">Active</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
+                                        <button class="btn btn-sm btn-danger">Deactivate</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Role Management -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Role Management</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
+                                <h4 style="margin-top: 0;">Student</h4>
+                                <p style="font-size: 0.9rem; color: #666;">Access to learning modules, games, and translation tools.</p>
+                                <p style="margin: 10px 0; font-size: 0.85rem;">
+                                    <strong>Permissions:</strong><br>
+                                    • View Modules<br>
+                                    • Play Games<br>
+                                    • Use Translators<br>
+                                    • View Progress
+                                </p>
+                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Student role permissions')">Edit Permissions</button>
+                            </div>
+
+                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
+                                <h4 style="margin-top: 0;">Instructor</h4>
+                                <p style="font-size: 0.9rem; color: #666;">Can create modules, manage announcements, and monitor student progress.</p>
+                                <p style="margin: 10px 0; font-size: 0.85rem;">
+                                    <strong>Permissions:</strong><br>
+                                    • Create Modules<br>
+                                    • Monitor Students<br>
+                                    • Post Announcements<br>
+                                    • View Reports
+                                </p>
+                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Instructor role permissions')">Edit Permissions</button>
+                            </div>
+
+                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
+                                <h4 style="margin-top: 0;">Admin</h4>
+                                <p style="font-size: 0.9rem; color: #666;">Full system access, user management, and system configuration.</p>
+                                <p style="margin: 10px 0; font-size: 0.85rem;">
+                                    <strong>Permissions:</strong><br>
+                                    • Manage All Users<br>
+                                    • Manage Roles<br>
+                                    • System Reports<br>
+                                    • Full Access
+                                </p>
+                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Admin role permissions')">Edit Permissions</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Reports -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">System Reports</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                            <!-- User Activity Report -->
+                            <div>
+                                <h4>User Activity Report</h4>
+                                <div class="chart-placeholder">
+                                    <div class="chart-bars">
+                                        <div class="chart-bar" style="height: 70%;" data-value="70"></div>
+                                        <div class="chart-bar" style="height: 85%;" data-value="85"></div>
+                                        <div class="chart-bar" style="height: 60%;" data-value="60"></div>
+                                        <div class="chart-bar" style="height: 90%;" data-value="90"></div>
+                                        <div class="chart-bar" style="height: 75%;" data-value="75"></div>
+                                    </div>
+                                    <div class="chart-legend">
+                                        <span>Mon</span>
+                                        <span>Tue</span>
+                                        <span>Wed</span>
+                                        <span>Thu</span>
+                                        <span>Fri</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;">Download Report</button>
+                            </div>
+
+                            <!-- Learning Performance Report -->
+                            <div>
+                                <h4>Learning Performance Report</h4>
+                                <div class="chart-placeholder">
+                                    <div class="chart-bars">
+                                        <div class="chart-bar" style="height: 80%;" data-value="80"></div>
+                                        <div class="chart-bar" style="height: 75%;" data-value="75"></div>
+                                        <div class="chart-bar" style="height: 90%;" data-value="90"></div>
+                                        <div class="chart-bar" style="height: 65%;" data-value="65"></div>
+                                        <div class="chart-bar" style="height: 85%;" data-value="85"></div>
+                                    </div>
+                                    <div class="chart-legend">
+                                        <span>Basic</span>
+                                        <span>Intermediate</span>
+                                        <span>Advanced</span>
+                                        <span>Expert</span>
+                                        <span>Master</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;">Download Report</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New User</h2>
+                <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <form onsubmit="handleAddUser(event)">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-input" required>
+                        <option>Student</option>
+                        <option>Instructor</option>
+                        <option>Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Temporary Password</label>
+                    <input type="text" class="form-input" value="Temp123!" readonly>
+                </div>
+                <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        function switchTab(tab) {
+            // Simple navigation between tabs
+            console.log('Switching to:', tab);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function handleAddUser(e) {
+            e.preventDefault();
+            alert('User added successfully!');
+            closeModal('addUserModal');
+        }
+    </script>
+</body>
+</html>

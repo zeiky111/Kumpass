@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Games - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        
+        .navbar a:hover {
+            opacity: 0.8;
+        }
+        
+        .navbar a.logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navbar .logo img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+        
+        .navbar a.logout-btn {
+            float: right;
+            margin-right: 0;
+        }
+        
+        .navbar a.profile-link {
+            float: right;
+            margin-right: 20px;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .page-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .page-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        /* Games Grid */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        /* Game Card */
+        .game-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        
+        .game-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .game-card h2 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .year-badge {
+            font-size: 12px;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .game-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            line-height: 1.6;
+        }
+        
+        .game-btn {
+            background: #4169e1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .game-btn:hover {
+            background: #2e52b8;
+            transform: scale(1.05);
+        }
+        
+        .game-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" class="profile-link">Profile</a>
+        <a href="index.html" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>🎮 Interactive Games</h1>
+            <p>Learn sign language through fun and interactive games</p>
+        </div>
+
+        <!-- Games Grid -->
+        <div class="games-grid">
+            <!-- Game 1: Sign Match -->
+            <div class="game-card">
+                <div class="game-icon">🎯</div>
+                <div class="year-badge">1st Year</div>
+                <h2>Sign Match Game</h2>
+                <p>Match signs to their correct definitions. Test your understanding of sign language vocabulary and improve your recognition skills.</p>
+                <a href="sign-match-game.html" class="game-btn">Play Game</a>
+            </div>
+
+            <!-- Game 2: Sign-to-Word Typing -->
+            <div class="game-card">
+                <div class="game-icon">⌨️</div>
+                <div class="year-badge">2nd Year</div>
+                <h2>Sign-to-Word Typing</h2>
+                <p>See a sign and type the correct word. Improve your speed and accuracy in recognizing and typing sign translations.</p>
+                <a href="typing-game.html" class="game-btn">Play Game</a>
+            </div>
+
+            <!-- Game 3: Sentence Builder -->
+            <div class="game-card">
+                <div class="game-icon">🏗️</div>
+                <div class="year-badge">3rd Year</div>
+                <h2>Sentence Builder</h2>
+                <p>Construct proper FSL sentences from word cards. Learn grammar and sentence structure while having fun with interactive challenges.</p>
+                <a href="sentence-game.html" class="game-btn">Play Game</a>
+            </div>
+
+            <!-- Game 4: Scenario-Based -->
+            <div class="game-card">
+                <div class="game-icon">🎭</div>
+                <div class="year-badge">4th Year</div>
+                <h2>Scenario-Based Game</h2>
+                <p>Navigate real-life situations using FSL. Practice conversations and communication skills in practical, scenario-based challenges.</p>
+                <a href="scenario-game.html" class="game-btn">Play Game</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Sign Translator - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" style="float: right;">Profile</a>
+        <a href="index.html" style="float: right;">Logout</a>
+    </div>
+
+    <!-- GE Selection Overlay -->
+    <div class="ge-overlay" id="geOverlay" aria-modal="true" role="dialog">
+        <div class="ge-modal">
+            <div class="ge-header">
+                <h2>Select GE Subject</h2>
+                <p>Choose a General Education subject to continue.</p>
+            </div>
+            <div class="ge-grid" id="geGrid"></div>
+            <div class="ge-actions">
+<button class="btn-primary" type="button" id="geContinueBtn" disabled>Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="padding: 20px;">
+        <h1>Text-to-Sign Translator</h1>
+        <p>Convert text to sign language demonstrations for learning and communication</p>
+        <br>
+    </div>
+
+    <!-- Main Content -->
+    <main class="translator-container" id="translatorMain">
+        <div class="translator-grid">
+            <!-- Input Section -->
+            <section class="translator-panel input-panel">
+                <h2>📝 Input Text</h2>
+                <div class="input-wrapper">
+                    <textarea 
+                        id="textInput" 
+                        class="text-input" 
+                        placeholder="Type your text here... (max 200 characters)"
+                        maxlength="200"
+                    ></textarea>
+                    <div class="input-counter">
+                        <span id="charCount">0</span>/200
+                    </div>
+                </div>
+
+                <div class="translator-options">
+<div class="option-group">
+                        <label for="categorySelect">Category:</label>
+                        <select id="categorySelect" class="select-input">
+                            <option value="all">All Categories</option>
+                            <option value="greetings">Greetings</option>
+                            <option value="everyday">Everyday Words</option>
+                            <option value="family">Family</option>
+                            <option value="numbers">Numbers</option>
+                            <option value="emotions">Emotions</option>
+                            <option value="school">School</option>
+                        </select>
+                    <div class="option-group">
+                        <label>GE Subject:</label>
+                        <div class="chip-group" id="geChips">
+                            <button class="chip ge-chip is-active" type="button" data-ge="all">All GE</button>
+                            <button class="chip ge-chip" type="button" data-ge="ge1">GE 1</button>
+                            <button class="chip ge-chip" type="button" data-ge="ge2">GE 2</button>
+                            <button class="chip ge-chip" type="button" data-ge="ge3">GE 3</button>
+                            <button class="chip ge-chip" type="button" data-ge="ge4">GE 4</button>
+                        </div>
+                        <div class="chip-hint">Pick a GE subject to filter the quick examples.</div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="translateText()">
+                        <span>▶</span> Translate to Sign
+                    </button>
+                    <button class="btn-secondary" onclick="clearInput()">Clear</button>
+                </div>
+
+                <div class="quick-examples">
+                    <h3>Quick Examples: <span class="ge-badge" id="geLabel">All GE</span></h3>
+                    <div class="example-chips" id="exampleChips"></div>
+                </div>
+            </section>
+
+            <!-- Output Section -->
+            <section class="translator-panel output-panel">
+                <h2>🤟 Sign Language Demonstration</h2>
+                
+                <div id="translationResult" class="translation-result">
+                    <div class="demo-placeholder">
+                        <div class="demo-icon">👋</div>
+                        <p>Enter text and click "Translate to Sign" to see the demonstration</p>
+                    </div>
+                </div>
+
+                <!-- Translation Details -->
+                <div id="translationDetails" class="translation-details" style="display: none;">
+                    <h3>Translation Details</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Words Translated:</span>
+                            <span id="wordCount" class="detail-value">0</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Duration:</span>
+                            <span id="duration" class="detail-value">0s</span>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="speedControl">Playback Speed:</label>
+                        <div class="slider-container">
+                            <input id="speedControl" class="slider" type="range" min="0.5" max="2" value="1" step="0.1">
+                            <span id="speedValue">Normal (1x)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div id="actionButtons" class="action-buttons" style="display: none;">
+                    <button class="btn-secondary" onclick="repeatSign()">🔄 Repeat</button>
+                    <button class="btn-secondary" onclick="slowMotion()">🐢 Slow Motion</button>
+                    <button class="btn-secondary" onclick="downloadSign()">⬇️ Download</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Help Section -->
+        <section class="help-section">
+            <h2>ℹ️ How to Use</h2>
+            <div class="help-cards">
+                <div class="help-card">
+                    <div class="help-number">1</div>
+                    <h3>Enter Text</h3>
+                    <p>Type or paste the text you want to translate into sign language (up to 200 characters)</p>
+                </div>
+                <div class="help-card">
+                    <div class="help-number">2</div>
+                    <h3>Adjust Settings</h3>
+                    <p>Customize the category to match your learning needs</p>
+                </div>
+                <div class="help-card">
+                    <div class="help-number">3</div>
+                    <h3>Click Translate</h3>
+                    <p>Press "Translate to Sign" to see the sign language demonstration</p>
+                </div>
+                <div class="help-card">
+                    <div class="help-number">4</div>
+                    <h3>Learn & Practice</h3>
+                    <p>Watch the demonstration, repeat the signs, and master the movements</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Kumpas - Sign Language Learning System. City College of Calapan</p>
+        </div>
+    </footer>
+
+    <style>
+        /* Navbar Styles */
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+        }
+
+        .translator-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .ge-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            padding: 1.5rem;
+        }
+
+        .ge-overlay.hidden {
+            display: none;
+        }
+
+        .ge-modal {
+            width: min(920px, 100%);
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+        }
+
+        .ge-header h2 {
+            margin: 0 0 0.25rem 0;
+            color: var(--dark-navy);
+        }
+
+        .ge-header p {
+            margin: 0 0 1.5rem 0;
+            color: var(--medium-gray);
+        }
+
+        .ge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .ge-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            text-align: left;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-weight: 600;
+            color: var(--dark-navy);
+        }
+
+        .ge-card small {
+            display: block;
+            font-weight: 500;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+
+        .ge-card:hover {
+            border-color: var(--primary-blue);
+            transform: translateY(-2px);
+            background: #eef2ff;
+        }
+
+        .ge-card.is-selected {
+            border-color: var(--primary-blue);
+            background: #e0e7ff;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.2);
+        }
+
+        .ge-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .translator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .translator-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .translator-panel h2 {
+            margin-top: 0;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .text-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-counter {
+            text-align: right;
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 0.5rem;
+        }
+
+        .translator-options {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .option-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .option-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider {
+            flex: 1;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-blue);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--primary-blue);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        #speedValue {
+            font-size: 0.9rem;
+            color: #666;
+            min-width: 100px;
+        }
+
+        .select-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: white;
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .button-group .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .quick-examples {
+            background: #fff8f0;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .quick-examples h3 {
+            margin-top: 0;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .chip.is-active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+
+        .chip-hint {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        .ge-badge {
+            display: inline-block;
+            background: #eef2ff;
+            color: #4338ca;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .chip {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .chip:hover {
+            background: var(--primary-blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .translation-result {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 2rem;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .demo-placeholder {
+            text-align: center;
+            color: #999;
+        }
+
+        .demo-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .signs-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .signs-container h3 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .signs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .sign-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sign-card:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .sign-video,
+        .sign-video-placeholder {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 8px;
+            margin-bottom: 0.6rem;
+            background: #111827;
+        }
+
+        .sign-video {
+            display: block;
+            object-fit: cover;
+        }
+
+        .sign-video-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #e5e7eb;
+            font-size: 0.75rem;
+        }
+
+        .sign-card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sign-card-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .sign-card-meta {
+            margin-top: 0.3rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .translation-details {
+            background: #e8f5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .translation-details h3 {
+            margin-top: 0;
+            font-size: 1rem;
+            color: var(--dark);
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .detail-value {
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 3rem;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .history-header h2 {
+            margin: 0;
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: underline;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .history-item:hover {
+            background: #f0f0f0;
+            transform: translateX(4px);
+        }
+
+        .history-text {
+            display: block;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .history-date {
+            display: block;
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .help-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .help-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .help-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .help-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .help-number {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .help-card h3 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .help-card p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .ge-modal {
+                padding: 1.5rem;
+            }
+
+            .translator-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="js/main.js"></script>
+    <script>
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        const exampleChips = document.getElementById('exampleChips');
+        const geLabel = document.getElementById('geLabel');
+        const geOverlay = document.getElementById('geOverlay');
+        const geGrid = document.getElementById('geGrid');
+        const geContinueBtn = document.getElementById('geContinueBtn');
+
+        const signLibrary = {
+            'are you deaf or hearing': { label: 'Are you deaf or hearing', category: 'everyday', video: 'vid/are%20you%20deaf%20or%20hearing.mp4', fallback: '🤟' },
+            'come here': { label: 'Come here', category: 'everyday', video: 'vid/come%20here.mp4', fallback: '👉' },
+            'come lets eat': { label: 'Come lets eat', category: 'everyday', video: 'vid/come%20lets%20eat.mp4', fallback: '🍽️' },
+            'excuse': { label: 'Excuse', category: 'everyday', video: 'vid/excuse%20.mp4', fallback: '🙋' },
+            'hello': { label: 'Hello', category: 'greetings', video: 'vid/hello.mp4', fallback: '👋' },
+            'how are you': { label: 'How are you', category: 'greetings', video: 'vid/how%20are%20you.mp4', fallback: '🙂' },
+            'i love you': { label: 'I love you', category: 'emotions', video: 'vid/iloveyou.mp4', fallback: '❤️' },
+            'iloveyou': { label: 'I love you', category: 'emotions', video: 'vid/iloveyou.mp4', fallback: '❤️' },
+            'im sorry': { label: 'Im sorry', category: 'emotions', video: 'vid/im%20sorry.mp4', fallback: '🙏' },
+            "i'm sorry": { label: 'Im sorry', category: 'emotions', video: 'vid/im%20sorry.mp4', fallback: '🙏' },
+            'try again': { label: 'Try again', category: 'school', video: 'vid/try%20again.mp4', fallback: '🔁' },
+            'whats your name': { label: 'Whats your name', category: 'greetings', video: 'vid/whats%20your%20name.mp4', fallback: '❓' },
+            "what's your name": { label: 'Whats your name', category: 'greetings', video: 'vid/whats%20your%20name.mp4', fallback: '❓' }
+        };
+
+        const geExamples = {
+            all: { label: 'All GE', examples: ['Hello', 'How are you', 'Whats your name', 'Im sorry', 'I love you'] },
+            ge1: { label: 'GE 1', examples: ['Hello', 'How are you', 'Whats your name'] },
+            ge2: { label: 'GE 2', examples: ['Are you deaf or hearing', 'Excuse', 'Try again'] },
+            ge3: { label: 'GE 3', examples: ['Come here', 'Come lets eat', 'Im sorry'] },
+            ge4: { label: 'GE 4', examples: ['I love you', 'Try again', 'How are you'] }
+        };
+
+        let selectedGe = null;
+        let lastTranslation = [];
+        let currentSpeed = 1;
+
+        function setSpeedLabel(value) {
+            const map = {
+                '0.5': '0.5x Slow',
+                '0.6': '0.6x',
+                '0.7': '0.7x',
+                '0.8': '0.8x',
+                '0.9': '0.9x',
+                '1.0': 'Normal (1x)',
+                '1.1': '1.1x',
+                '1.2': '1.2x',
+                '1.3': '1.3x',
+                '1.4': '1.4x',
+                '1.5': '1.5x',
+                '1.6': '1.6x',
+                '1.7': '1.7x',
+                '1.8': '1.8x',
+                '1.9': '1.9x',
+                '2.0': '2x Fast'
+            };
+            speedValue.textContent = map[Number(value).toFixed(1)] || `${value}x`;
+        }
+
+        function buildAllExamples() {
+            const all = Object.keys(geExamples)
+                .filter(key => key !== 'all')
+                .flatMap(key => geExamples[key].examples);
+            geExamples.all.examples = Array.from(new Set(all)).slice(0, 10);
+        }
+
+        function renderExampleChips(examples) {
+            exampleChips.innerHTML = '';
+            examples.forEach(text => {
+                const button = document.createElement('button');
+                button.className = 'chip';
+                button.type = 'button';
+                button.textContent = text;
+                button.addEventListener('click', () => setExample(text));
+                exampleChips.appendChild(button);
+            });
+        }
+
+        function renderGeOverlay() {
+            geGrid.innerHTML = '';
+            Object.keys(geExamples)
+                .filter(key => key !== 'all')
+                .forEach(key => {
+                    const item = geExamples[key];
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'ge-card';
+                    button.dataset.ge = key;
+                    button.innerHTML = `${item.label}<small>Tap to select</small>`;
+                    button.addEventListener('click', () => {
+                        selectedGe = key;
+                        document.querySelectorAll('.ge-card').forEach(card => {
+                            card.classList.toggle('is-selected', card.dataset.ge === key);
+                        });
+                        geContinueBtn.disabled = false;
+                    });
+                    geGrid.appendChild(button);
+                });
+        }
+
+        function setActiveGe(key) {
+            const config = geExamples[key] || geExamples.all;
+            document.querySelectorAll('.ge-chip').forEach(chip => {
+                chip.classList.toggle('is-active', chip.dataset.ge === key);
+            });
+            geLabel.textContent = config.label;
+            renderExampleChips(config.examples);
+        }
+
+        function normalizeWord(word) {
+            return word
+                .toLowerCase()
+                .replace(/[^a-z0-9\s']/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function lookupSign(word) {
+            const clean = normalizeWord(word);
+            return signLibrary[clean] || null;
+        }
+
+        function splitWords(text) {
+            return normalizeWord(text)
+                .split(/\s+/)
+                .filter(Boolean);
+        }
+
+        function buildTranslationUnits(text) {
+            const tokens = splitWords(text);
+            const units = [];
+            let index = 0;
+
+            while (index < tokens.length) {
+                let match = null;
+                let size = 0;
+
+                for (let len = 5; len >= 1; len--) {
+                    const phrase = tokens.slice(index, index + len).join(' ');
+                    if (phrase && signLibrary[phrase]) {
+                        match = signLibrary[phrase];
+                        size = len;
+                        break;
+                    }
+                }
+
+                if (match) {
+                    const sourceText = tokens.slice(index, index + size).join(' ');
+                    units.push({ sourceText, sign: match });
+                    index += size;
+                    continue;
+                }
+
+                const token = tokens[index];
+                units.push({
+                    sourceText: token,
+                    sign: {
+                        label: token,
+                        category: 'unknown',
+                        video: '',
+                        fallback: '🔤'
+                    }
+                });
+                index += 1;
+            }
+
+            return units;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function renderSignCard(word, sign, index) {
+            const mediaBlock = sign.video
+                ? `<video class="sign-video" controls playsinline preload="metadata" data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="video/mp4"></video>`
+                : `<div class="sign-video-placeholder"><div class="demo-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${sign.fallback}</div><span>Add video later</span></div>`;
+
+            return `
+                <article class="sign-card" data-sign-word="${escapeHtml(word)}" data-sign-index="${index}">
+                    ${mediaBlock}
+                    <div class="sign-card-text">${escapeHtml(sign.label)}</div>
+                    <div class="sign-card-meta">${escapeHtml(word)}</div>
+                </article>
+            `;
+        }
+
+        function getRenderedVideos() {
+            return Array.from(document.querySelectorAll('#translationResult .sign-video'));
+        }
+
+        function updateDurationEstimate() {
+            const videos = getRenderedVideos();
+            if (!videos.length) {
+                document.getElementById('duration').textContent = `${Math.max(2, Math.round(lastTranslation.length * (2 / currentSpeed)))}s`;
+                return;
+            }
+
+            let totalSeconds = 0;
+            videos.forEach(video => {
+                const duration = Number(video.duration);
+                if (Number.isFinite(duration) && duration > 0) {
+                    totalSeconds += duration / Math.max(currentSpeed, 0.1);
+                } else {
+                    totalSeconds += 2 / Math.max(currentSpeed, 0.1);
+                }
+            });
+
+            document.getElementById('duration').textContent = `${Math.max(1, Math.round(totalSeconds))}s`;
+        }
+
+        function applyPlaybackSpeed() {
+            getRenderedVideos().forEach(video => {
+                video.playbackRate = currentSpeed;
+                video.defaultPlaybackRate = currentSpeed;
+            });
+            updateDurationEstimate();
+        }
+
+        async function playSignSequence() {
+            const videos = getRenderedVideos();
+            if (!videos.length) {
+                return;
+            }
+
+            for (const video of videos) {
+                video.pause();
+                video.currentTime = 0;
+                video.playbackRate = currentSpeed;
+                video.defaultPlaybackRate = currentSpeed;
+
+                try {
+                    await video.play();
+                } catch (_) {
+                    continue;
+                }
+
+                await new Promise(resolve => {
+                    const onDone = () => {
+                        video.removeEventListener('ended', onDone);
+                        video.removeEventListener('error', onDone);
+                        resolve();
+                    };
+
+                    video.addEventListener('ended', onDone, { once: true });
+                    video.addEventListener('error', onDone, { once: true });
+                });
+            }
+        }
+
+        function renderTranslationResult(units) {
+            const resultDiv = document.getElementById('translationResult');
+            const translationDetails = document.getElementById('translationDetails');
+            const actionButtons = document.getElementById('actionButtons');
+
+            const cardsHtml = units.map((unit, index) => {
+                return renderSignCard(unit.sourceText, unit.sign, index);
+            }).join('');
+
+            resultDiv.innerHTML = `
+                <div class="signs-container">
+                    <h3>Sign Demonstration</h3>
+                    <div class="signs-grid">${cardsHtml}</div>
+                </div>
+            `;
+
+            document.getElementById('wordCount').textContent = units.length;
+
+            getRenderedVideos().forEach(video => {
+                video.addEventListener('loadedmetadata', updateDurationEstimate);
+            });
+
+            applyPlaybackSpeed();
+            translationDetails.style.display = 'block';
+            actionButtons.style.display = 'grid';
+        }
+
+        function translateText() {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('Please enter some text to translate');
+                return;
+            }
+
+            lastTranslation = buildTranslationUnits(text);
+            renderTranslationResult(lastTranslation);
+            document.getElementById('translationDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function clearInput() {
+            textInput.value = '';
+            charCount.textContent = '0';
+            lastTranslation = [];
+            document.getElementById('translationResult').innerHTML = `
+                <div class="demo-placeholder">
+                    <div class="demo-icon">👋</div>
+                    <p>Enter text and click "Translate to Sign" to see the demonstration</p>
+                </div>
+            `;
+            document.getElementById('translationDetails').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+        }
+
+        function setExample(text) {
+            textInput.value = text;
+            charCount.textContent = text.length;
+            translateText();
+        }
+
+        function repeatSign() {
+            if (!lastTranslation.length) return;
+            playSignSequence();
+        }
+
+        function slowMotion() {
+            currentSpeed = currentSpeed === 1 ? 0.5 : 1;
+            speedControl.value = String(currentSpeed);
+            setSpeedLabel(currentSpeed);
+            if (lastTranslation.length) applyPlaybackSpeed();
+        }
+
+        function downloadSign() {
+            if (!lastTranslation.length) {
+                alert('Translate text first.');
+                return;
+            }
+
+            const payload = {
+                text: textInput.value.trim(),
+                words: lastTranslation.map(item => item.sourceText),
+                generatedAt: new Date().toISOString(),
+                note: 'Video files can be added later by setting the video field in signLibrary.'
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'text-to-sign-output.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        buildAllExamples();
+        setActiveGe('all');
+        renderGeOverlay();
+        setSpeedLabel(speedControl.value);
+
+        document.querySelectorAll('.ge-chip').forEach(chip => {
+            chip.addEventListener('click', () => setActiveGe(chip.dataset.ge));
+        });
+
+        geContinueBtn.addEventListener('click', () => {
+            if (!selectedGe) return;
+            setActiveGe(selectedGe);
+            geOverlay.classList.add('hidden');
+        });
+
+        textInput.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+
+        speedControl.addEventListener('input', function() {
+            currentSpeed = Number(this.value);
+            setSpeedLabel(this.value);
+            if (lastTranslation.length) applyPlaybackSpeed();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

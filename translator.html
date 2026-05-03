@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translator Tools - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+    <style>
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .navbar a:hover {
+            opacity: 0.8;
+        }
+        .navbar a.logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 30px;
+        }
+        .navbar a.logout-btn {
+            float: right;
+            margin-right: 0;
+        }
+        .navbar a.profile-link {
+            float: right;
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" class="profile-link">Profile</a>
+        <a href="index.html" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="header-content">
+            <h1>Translator Tools</h1>
+            <p>Convert between text and sign language for seamless communication</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="translator-hub-container">
+        <!-- Quick Access Tools -->
+        <section class="tools-section">
+            <h2>Translation Tools</h2>
+            <div class="tools-grid">
+                <!-- Text to Sign -->
+                <div class="tool-card">
+                    <div class="tool-icon">📝 → 🤟</div>
+                    <h3>Text-to-Sign Translator</h3>
+                    <p>Convert written text into sign language video demonstrations. Perfect for learning specific words and phrases.</p>
+                    <div class="tool-features">
+                        <ul>
+                            <li>Real-time translation</li>
+                            <li>Adjustable playback speed</li>
+                            <li>Category filtering</li>
+                            <li>Word-by-word breakdown</li>
+                        </ul>
+                    </div>
+                    <button class="btn-primary" onclick="navigateTo('text-to-sign.html')">Open Translator</button>
+                </div>
+
+                <!-- Sign to Text -->
+                <div class="tool-card">
+                    <div class="tool-icon">🤟 → 📝</div>
+                    <h3>Sign-to-Text Translator</h3>
+                    <p>Use your camera to recognize sign language and convert it to text. Excellent for sign recognition practice.</p>
+                    <div class="tool-features">
+                        <ul>
+                            <li>Camera-based recognition</li>
+                            <li>Real-time detection</li>
+                            <li>Confidence scoring</li>
+                            <li>Alternative suggestions</li>
+                        </ul>
+                    </div>
+                    <button class="btn-primary" onclick="navigateTo('sign-to-text.html')">Open Translator</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .translator-hub-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tools-section h2 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--dark);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+        }
+
+        .tool-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tool-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--dark);
+        }
+
+        .tool-card > p {
+            color: #666;
+            margin: 0 0 1rem 0;
+            flex-grow: 1;
+        }
+
+        .tool-features {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tool-features ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tool-features li {
+            color: #555;
+            padding: 0.4rem 0;
+            font-size: 0.9rem;
+        }
+
+        .tool-features li:before {
+            content: "✓ ";
+            color: var(--primary-blue);
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+
+        .tool-card .btn-primary {
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="js/main.js"></script>
+    <script>
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+    </script>
+</body>
+</html>
+

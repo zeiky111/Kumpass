@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hands"></i>
+                </div>
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="learning.html" class="active">Learn</a></li>
+                <li><a href="translator.html">Translator</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="index.html" class="logout-btn">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Activity Container -->
+    <main class="activity-container">
+        <!-- Progress Bar -->
+        <div class="activity-progress">
+            <div class="progress-header">
+                <span class="lesson-title">Lesson 1: Basic Finger Spelling - Activity 2 of 4</span>
+                <button class="close-activity" onclick="exitActivity()">✕</button>
+            </div>
+            <div class="progress-bar-large">
+                <div class="progress-fill" style="width: 50%;"></div>
+            </div>
+        </div>
+
+        <!-- Activity Content -->
+        <div class="activity-content">
+            <!-- Video Demo Section -->
+            <section class="demo-section">
+                <div class="demo-card">
+                    <h2>Watch & Learn</h2>
+                    <div class="video-container">
+                        <div class="video-placeholder">
+                            <div class="video-icon">📹</div>
+                            <p>Sign Language Demonstration Video</p>
+                            <p style="font-size: 0.9rem; opacity: 0.7;">Shows how to perform the sign correctly</p>
+                        </div>
+                    </div>
+                    <div class="sign-info">
+                        <h3>Sign: "Hello"</h3>
+                        <p><strong>Category:</strong> Greetings</p>
+                        <p><strong>Description:</strong> Move your open right hand from your forehead downward, with fingers extended. The palm faces left.</p>
+                        <p><strong>Tips:</strong> Keep your hand movement smooth and deliberate. The expression on your face is important!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Practice Section -->
+            <section class="practice-section">
+                <div class="practice-card">
+                    <h2>Your Turn to Practice</h2>
+                    <div class="camera-container">
+                        <div class="camera-placeholder">
+                            <div class="camera-icon">📷</div>
+                            <p>Camera Feed</p>
+                            <button class="btn-primary" onclick="startCamera()">Start Camera</button>
+                        </div>
+                    </div>
+                    <div class="practice-feedback">
+                        <p class="feedback-text">Ready to practice? Click "Start Camera" to begin.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activity Type: Quiz -->
+            <section class="quiz-section">
+                <div class="quiz-card">
+                    <h2>Quiz: Identify the Sign</h2>
+                    <div class="quiz-question">
+                        <h3 id="questionText">Which sign means "Thank You"?</h3>
+                        <div class="quiz-options">
+                            <div class="quiz-option" onclick="selectAnswer(this, false)">
+                                <div class="option-icon">👋</div>
+                                <p>Waving Motion</p>
+                            </div>
+                            <div class="quiz-option" onclick="selectAnswer(this, true)">
+                                <div class="option-icon">🙏</div>
+                                <p>Hand to Chest (Correct)</p>
+                            </div>
+                            <div class="quiz-option" onclick="selectAnswer(this, false)">
+                                <div class="option-icon">☝️</div>
+                                <p>Pointing Up</p>
+                            </div>
+                            <div class="quiz-option" onclick="selectAnswer(this, false)">
+                                <div class="option-icon">👍</div>
+                                <p>Thumbs Up</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Feedback Section -->
+            <section id="feedbackSection" class="feedback-section" style="display: none;">
+                <div class="feedback-card success">
+                    <div class="feedback-icon">✓</div>
+                    <h3>Excellent!</h3>
+                    <p>You correctly identified the sign "Thank You"!</p>
+                    <p class="points-earned">+10 Points</p>
+                    <button class="btn-primary" onclick="nextActivity()">Next Activity</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Side Panel: Instructions -->
+        <aside class="activity-sidebar">
+            <div class="sidebar-card">
+                <h3>📋 Instructions</h3>
+                <ol class="instructions-list">
+                    <li>Watch the video demonstration carefully</li>
+                    <li>Read the sign description and tips</li>
+                    <li>Practice the sign using your camera (optional)</li>
+                    <li>Answer the quiz question correctly</li>
+                    <li>Earn points and advance to next activity</li>
+                </ol>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>💡 Quick Tips</h3>
+                <ul class="tips-list">
+                    <li>Pay attention to hand position</li>
+                    <li>Note the movement pattern</li>
+                    <li>Facial expressions matter!</li>
+                    <li>Practice multiple times</li>
+                    <li>Be patient with yourself</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>📊 Activity Stats</h3>
+                <div class="stats-list">
+                    <div class="stat-item">
+                        <span class="stat-label">Points Earned:</span>
+                        <span class="stat-value">25/50</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Accuracy:</span>
+                        <span class="stat-value">85%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Time Spent:</span>
+                        <span class="stat-value">8:45</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <style>
+        .activity-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+        }
+
+        .activity-progress {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .lesson-title {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .close-activity {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--dark);
+        }
+
+        .activity-content {
+            flex: 1;
+            margin-top: 120px;
+        }
+
+        .demo-section, .practice-section, .quiz-section, .feedback-section {
+            margin-bottom: 2rem;
+        }
+
+        .demo-card, .practice-card, .quiz-card, .feedback-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .video-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .video-placeholder {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            min-height: 300px;
+        }
+
+        .video-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .sign-info {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .sign-info h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .camera-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .camera-placeholder {
+            background: #f0f4ff;
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        .camera-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .practice-feedback {
+            background: #fffbf0;
+            border-left: 4px solid #ff9500;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .quiz-question {
+            margin-bottom: 1.5rem;
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .quiz-option {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .quiz-option.selected {
+            border-color: var(--primary);
+            background: #e8efff;
+        }
+
+        .quiz-option.correct {
+            border-color: #27ae60;
+            background: #e8f5e9;
+        }
+
+        .quiz-option.incorrect {
+            border-color: #e74c3c;
+            background: #ffebee;
+        }
+
+        .option-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-card {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .feedback-card.success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+        }
+
+        .feedback-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .points-earned {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 1rem 0;
+        }
+
+        .activity-sidebar {
+            width: 300px;
+            margin-top: 120px;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .sidebar-card h3 {
+            margin-top: 0;
+            color: var(--dark);
+        }
+
+        .instructions-list, .tips-list {
+            padding-left: 1.5rem;
+            margin: 0;
+        }
+
+        .instructions-list li, .tips-list li {
+            margin-bottom: 0.8rem;
+            color: #555;
+        }
+
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .stat-value {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .activity-container {
+                flex-direction: column;
+            }
+
+            .activity-sidebar {
+                width: 100%;
+                margin-top: 0;
+            }
+
+            .quiz-options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+
+    <script src="js/portal.js"></script>
+    <script>
+        const queryParams = new URLSearchParams(window.location.search);
+        const currentModuleId = queryParams.get('module') || 'lesson3';
+        const lessonTitleMap = {
+            lesson1: 'Lesson 1: Basic Finger Spelling',
+            lesson2: 'Lesson 2: Common Everyday Signs',
+            lesson3: 'Lesson 3: Greetings & Polite Expressions',
+            lesson4: 'Lesson 4: Family & Relationships',
+            lesson5: 'Lesson 5: Numbers & Counting',
+            lesson6: 'Lesson 6: Sign Language Grammar',
+            lesson7: 'Lesson 7: Emotions & Expressions',
+            lesson8: 'Lesson 8: Complex Conversations'
+        };
+
+        let quizPassed = false;
+
+        function awardActivityProgress() {
+            if (!window.KumpasPortal || typeof window.KumpasPortal.recordProgress !== 'function') {
+                return;
+            }
+
+            window.KumpasPortal.recordProgress({
+                moduleId: currentModuleId,
+                points: 10,
+                progressDelta: 25,
+                completed: true,
+                practiceMinutes: 5,
+                activityName: 'Activity Quiz',
+                activityText: 'Completed activity quiz',
+                activityMeta: '+10 points',
+                icon: '✅'
+            });
+        }
+
+        function syncActivityHeader() {
+            const lessonTitle = document.querySelector('.lesson-title');
+            const title = lessonTitleMap[currentModuleId] || lessonTitleMap.lesson3;
+            if (lessonTitle) {
+                lessonTitle.textContent = `${title} - Activity 1 of 1`;
+            }
+
+            const progressFill = document.querySelector('.activity-progress .progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+            }
+
+            const questionText = document.getElementById('questionText');
+            const signTitle = document.querySelector('.sign-info h3');
+            const signDesc = document.querySelector('.sign-info p:nth-of-type(2)');
+            const signTips = document.querySelector('.sign-info p:nth-of-type(3)');
+
+            if (currentModuleId === 'lesson1') {
+                if (questionText) questionText.textContent = 'Which letter handshape is shown in the lesson?';
+                if (signTitle) signTitle.textContent = 'Sign: "Finger Spelling A"';
+                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Form the letter A with a closed fist and thumb resting at the side.';
+                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Keep your fingers neat and steady. Focus on the thumb position.';
+            } else if (currentModuleId === 'lesson2' || currentModuleId === 'lesson3') {
+                if (questionText) questionText.textContent = 'Which sign means "Thank You"?';
+                if (signTitle) signTitle.textContent = 'Sign: "Thank You"';
+                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Move your hand from the chin outward in a smooth motion.';
+                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Keep the movement clear and add a polite facial expression.';
+            } else {
+                if (questionText) questionText.textContent = 'Which sign best matches the lesson?';
+                if (signTitle) signTitle.textContent = 'Sign: "Hello"';
+                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Use the sign shown in the current lesson and keep your movement deliberate.';
+                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Focus on handshape, movement, and expression.';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', syncActivityHeader);
+
+        function startCamera() {
+            alert('Camera access would be enabled here. This is a demo interface.');
+        }
+
+        function selectAnswer(element, isCorrect) {
+            const options = document.querySelectorAll('.quiz-option');
+            options.forEach(opt => {
+                opt.classList.remove('selected', 'correct', 'incorrect');
+            });
+
+            element.classList.add('selected');
+            element.classList.add(isCorrect ? 'correct' : 'incorrect');
+
+            if (isCorrect) {
+                if (!quizPassed) {
+                    quizPassed = true;
+                    awardActivityProgress();
+                }
+                setTimeout(() => {
+                    document.getElementById('feedbackSection').style.display = 'block';
+                }, 500);
+            }
+        }
+
+        function nextActivity() {
+            if (!quizPassed) {
+                alert('Answer the quiz correctly first to save your progress.');
+                return;
+            }
+            window.location.href = 'learning.html';
+        }
+
+        function exitActivity() {
+            if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
+                window.location.href = 'learning.html';
+            }
+        }
+    </script>
+</body>
+</html>

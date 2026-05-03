@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+        }
+        
+        /* Card Styles */
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        .card-body {
+            padding: 0;
+        }
+        .link-btn {
+            color: #4169e1;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .link-btn:hover {
+            text-decoration: underline;
+        }
+        
+        /* Achievement Badges */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        .achievement-badge {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+        .achievement-badge.earned {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        .achievement-badge.locked {
+            opacity: 0.5;
+        }
+        .achievement-badge:hover {
+            transform: translateY(-2px);
+        }
+        .achievement-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            background: #e5e7eb;
+            color: white;
+            font-size: 24px;
+        }
+        .achievement-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        /* Chart Styles */
+        .chart-filters {
+            display: flex;
+            gap: 10px;
+        }
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            background: #f3f4f6;
+        }
+        .filter-btn.active {
+            background: #4169e1;
+            color: white;
+            border-color: #4169e1;
+        }
+        .chart-placeholder {
+            margin: 20px 0;
+        }
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            height: 200px;
+            padding: 20px 0;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 100%);
+            border-radius: 6px 6px 0 0;
+            min-height: 20px;
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+        .chart-bar.active {
+            background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+        }
+        .chart-legend {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        .chart-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #374151;
+        }
+        .summary-item i {
+            color: #4169e1;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dashboard Page -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" style="float: right;">Profile</a>
+        <a href="index.html" style="float: right;">Logout</a>
+    </div>
+
+    
+    <div style="padding: 20px;">
+        <h1 id="dashboardWelcomeName">Welcome back, Juan! 👋</h1>
+        <p id="dashboardWelcomeMessage">Ready to continue your FSL learning journey?</p>
+        <br>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <h3 class="card-title">Learner Profile Snapshot</h3>
+            </div>
+            <div class="card-body" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                <div>
+                    <div style="font-size: 13px; color: #6b7280;">Name</div>
+                    <div id="dashboardProfileName" style="font-weight: 700; color: #111827;">Juan</div>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: #6b7280;">Email</div>
+                    <div id="dashboardProfileEmail" style="font-weight: 700; color: #111827;">juan@example.com</div>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: #6b7280;">Year Level</div>
+                    <div id="dashboardProfileYear" style="font-weight: 700; color: #111827;">1st Year</div>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: #6b7280;">Role</div>
+                    <div id="dashboardProfileRole" style="font-weight: 700; color: #111827;">student</div>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- Stats -->
+        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">⭐</div>
+                <h2 id="dashboardPointsValue">1,234</h2>
+                <p>Total Points</p>
+                <small id="dashboardPointsMeta" style="color: green;">Live from your saved progress</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">✅</div>
+                <h2 id="dashboardModulesValue">45</h2>
+                <p>Activities Completed</p>
+                <small id="dashboardModulesMeta" style="color: green;">Saved in the database per user</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">🏆</div>
+                <h2 id="dashboardRankValue">#12</h2>
+                <p>Leaderboard Rank</p>
+                <small id="dashboardRankMeta" style="color: green;">Live ranking from the backend</small>
+            </div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; flex: 1;">
+                <div style="font-size: 32px;">👋</div>
+                <h2 id="dashboardAccuracyValue">87%</h2>
+                <p>Sign Accuracy</p>
+                <small id="dashboardAccuracyMeta" style="color: green;">From your current learner profile</small>
+            </div>
+        </div>
+
+        
+        <!-- Learning Progress -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3>📚 Learning Progress</h3>
+            <br>
+            <div id="dashboardProgressList"></div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3>📝 Recent Activity</h3>
+            <br>
+            <ul id="dashboardRecentActivityList" style="list-style: none; padding: 0;"></ul>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <h3 class="card-title">Performance Summary</h3>
+            </div>
+            <div class="card-body" id="dashboardPerformanceSummary"></div>
+        </div>
+        
+        <!-- Recent Achievements -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Achievements</h3>
+                <a href="profile.html#achievements" class="link-btn">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="achievements-grid" id="dashboardAchievementsGrid"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Top Learners</h3>
+            </div>
+            <div class="card-body">
+                <ol id="dashboardLeaderboardList" style="margin: 0; padding-left: 18px;"></ol>
+            </div>
+        </div>
+
+                <!-- Weekly Summary Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Weekly Activity</h3>
+                        <div class="chart-filters">
+                            <button class="filter-btn active">This Week</button>
+                            <button class="filter-btn">This Month</button>
+                            <button class="filter-btn">All Time</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-placeholder">
+                            <div class="chart-bars" id="dashboardWeeklyBars"></div>
+                            <div class="chart-legend" id="dashboardWeeklyLegend">
+                                <span>Mon</span>
+                                <span>Tue</span>
+                                <span>Wed</span>
+                                <span>Thu</span>
+                                <span>Fri</span>
+                                <span>Sat</span>
+                                <span>Sun</span>
+                            </div>
+                        </div>
+                        <div class="chart-summary" id="dashboardWeeklySummary">
+                            <div class="summary-item"><i class="fas fa-clock"></i><span>4h 32min total practice time</span></div>
+                            <div class="summary-item"><i class="fas fa-check-circle"></i><span>12 activities completed</span></div>
+                            <div class="summary-item"><i class="fas fa-star"></i><span>385 points earned</span></div>
+                        </div>
+                    </div>
+                </div>
+
+    </div>
+
+    <script src="js/portal.js"></script>
+    <script>
+        // simple navbar stuff
+        function showProfile() {
+            alert('Profile clicked!');
+        }
+    </script>
+
+</body>
+</html>
+
