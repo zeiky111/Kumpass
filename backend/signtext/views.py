@@ -1,5 +1,6 @@
 import base64
 import os
+import random
 from typing import Any
 from django.db import DatabaseError, OperationalError
 from django.contrib.auth import authenticate
@@ -467,30 +468,26 @@ def signup(request: Any) -> Response:
     data = serializer.validated_data
     email = data["email"].strip().lower()
     fullname = data["fullname"].strip()
-    role = str(data.get("role") or "student").strip().lower()
+    # Force student signup: role selection and PIN removed from public signup
+    role = "student"
     year_level = str(data.get("yearLevel") or "").strip()
     password = data["password"]
     confirm_password = data["confirmPassword"]
-    security_pin = data.get("securityPin", "").strip()
-
     if password != confirm_password:
         return Response({"error": "Passwords do not match"}, status=400)
 
     if User.objects.filter(username=email).exists():
         return Response({"error": "Email is already registered"}, status=409)
 
-    if role not in {"student", "instructor", "admin"}:
-        return Response({"error": "Invalid role selected"}, status=400)
-
-    if role in {"instructor", "admin"} and not security_pin:
-        return Response({"error": "Security PIN is required for instructor/admin accounts"}, status=400)
-
-    if role == "student" and not year_level:
+    if not year_level:
         return Response({"error": "Year level is required for student accounts"}, status=400)
 
-    role = _signup_role_from_selection(role, security_pin)
-    if role is None:
-        return Response({"error": "Invalid PIN for selected role"}, status=400)
+    # Simple sanitization: disallow angle brackets in name
+    if "<" in fullname or ">" in fullname:
+        return Response({"error": "Invalid characters in fullname"}, status=400)
+
+    # Normalize year level to canonical 1-4 using helper
+    year_level = _normalize_year_level_filter(year_level)
 
     user = User.objects.create_user(
         username=email,
@@ -503,7 +500,7 @@ def signup(request: Any) -> Response:
         full_name=fullname,
         year_level=year_level if role == "student" else "",
         role=role,
-        security_pin=security_pin if role in {"instructor", "admin"} else "",
+        security_pin="",
     )
     _get_learning_state_for_user(user)
 
@@ -530,9 +527,7 @@ def login(request: Any) -> Response:
 
     data = serializer.validated_data
     email = data["email"].strip().lower()
-    role = data["role"].strip().lower()
-    security_pin = data.get("securityPin", "").strip()
-
+    # Authenticate with email/password only. Role and PIN are no longer required from client.
     user = authenticate(username=email, password=data["password"])
     if not user:
         return Response({"error": "Invalid email or password"}, status=401)
@@ -546,18 +541,6 @@ def login(request: Any) -> Response:
         },
     )
     _get_learning_state_for_user(user)
-
-    if role not in {"student", "instructor", "admin"}:
-        return Response({"error": "Invalid role selected"}, status=400)
-
-    if profile.role != role:
-        return Response({"error": "Selected role does not match your account"}, status=403)
-
-    if role in {"instructor", "admin"}:
-        if not security_pin:
-            return Response({"error": "Security PIN is required"}, status=400)
-        if profile.security_pin != security_pin:
-            return Response({"error": "Invalid security PIN"}, status=401)
 
     return Response(
         {
@@ -602,6 +585,157 @@ def learning_state(request: Any) -> Response:
 
 def _request_email(request: Any) -> str:
     return str(request.query_params.get("email") or request.data.get("email") or "").strip().lower()
+
+
+def _default_student_modules() -> list[dict[str, Any]]:
+    return [
+        {
+            "module_key": "lesson1",
+            "title": "Lesson 1: Basic Finger Spelling",
+            "year_level": "1",
+            "description": "Start with alphabet hand shapes and spelling drills.",
+            "activities_count": 4,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 1,
+        },
+        {
+            "module_key": "lesson2",
+            "title": "Lesson 2: Common Everyday Signs",
+            "year_level": "1",
+            "description": "Build essential sign vocabulary for daily communication.",
+            "activities_count": 5,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 2,
+        },
+        {
+            "module_key": "lesson3",
+            "title": "Lesson 3: Greetings and Polite Expressions",
+            "year_level": "2",
+            "description": "Practice polite conversational signs.",
+            "activities_count": 4,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 3,
+        },
+        {
+            "module_key": "lesson4",
+            "title": "Lesson 4: Family and Relationships",
+            "year_level": "2",
+            "description": "Describe people and relationships around you.",
+            "activities_count": 5,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 4,
+        },
+        {
+            "module_key": "lesson5",
+            "title": "Lesson 5: Numbers and Counting",
+            "year_level": "3",
+            "description": "Use numerical signs accurately in context.",
+            "activities_count": 6,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 5,
+        },
+        {
+            "module_key": "lesson6",
+            "title": "Lesson 6: Sign Language Grammar",
+            "year_level": "3",
+            "description": "Build clear sentence structure and grammar.",
+            "activities_count": 6,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 6,
+        },
+        {
+            "module_key": "lesson7",
+            "title": "Lesson 7: Emotions and Expressions",
+            "year_level": "4",
+            "description": "Express emotions naturally through signs.",
+            "activities_count": 7,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 7,
+        },
+        {
+            "module_key": "lesson8",
+            "title": "Lesson 8: Complex Conversations",
+            "year_level": "4",
+            "description": "Handle practical real-life sign conversations.",
+            "activities_count": 8,
+            "status": LearningModule.STATUS_PUBLISHED,
+            "sort_order": 8,
+        },
+    ]
+
+
+def _game_access_for_year(year_level: str) -> list[dict[str, Any]]:
+    year_to_game = {
+        "1": ("sign-match-game.html", "Sign Match Game"),
+        "2": ("typing-game.html", "Sign-to-Word Typing"),
+        "3": ("sentence-game.html", "Sentence Builder"),
+        "4": ("scenario-game.html", "Scenario-Based Game"),
+    }
+    game_route, game_title = year_to_game.get(str(year_level), ("sign-match-game.html", "Sign Match Game"))
+
+    def _difficulty_payload(level_name: str) -> dict[str, Any]:
+        levels = [1, 2, 3]
+        return {
+            "difficulty": level_name,
+            "levels": levels,
+            "randomLevel": random.choice(levels),
+        }
+
+    return [
+        {
+            "yearLevel": str(year_level),
+            "title": game_title,
+            "route": game_route,
+            "difficulties": [
+                _difficulty_payload("easy"),
+                _difficulty_payload("medium"),
+                _difficulty_payload("hard"),
+            ],
+        }
+    ]
+
+
+@api_view(["GET"])
+def student_content(request: Any) -> Response:
+    email = _request_email(request)
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+
+    try:
+        user = User.objects.select_related("profile").get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    profile = getattr(user, "profile", None)
+    if not profile or str(profile.role or "student").lower() != "student":
+        return Response({"error": "Student access required"}, status=403)
+
+    year_level = _normalize_year_level_filter(getattr(profile, "year_level", "1") or "1")
+    if year_level not in {"1", "2", "3", "4"}:
+        year_level = "1"
+
+    modules = list(
+        LearningModule.objects.filter(year_level=year_level, status=LearningModule.STATUS_PUBLISHED)
+        .order_by("sort_order", "title")
+        .all()
+    )
+
+    if modules:
+        modules_payload = LearningModuleSerializer(modules, many=True).data
+    else:
+        modules_payload = [
+            module
+            for module in _default_student_modules()
+            if str(module.get("year_level") or "") == year_level
+        ]
+
+    return Response(
+        {
+            "yearLevel": year_level,
+            "modules": modules_payload,
+            "gameAccess": _game_access_for_year(year_level),
+        }
+    )
 
 
 def _get_instructor_actor(request: Any):
@@ -740,6 +874,14 @@ def instructor_dashboard(request: Any) -> Response:
 
     students.sort(key=lambda item: (item["points"], item["overallProgress"], item["accuracy"]), reverse=True)
 
+    # Pagination for student list
+    page = _safe_int(request.query_params.get("page"), 1)
+    page_size = _safe_int(request.query_params.get("pageSize"), 25)
+    total_students = len(students)
+    start = max(0, (page - 1) * page_size)
+    end = start + page_size
+    students_page = students[start:end]
+
     summary = {
         "totalStudents": len(student_profiles),
         "activeStudents": active_students,
@@ -765,7 +907,12 @@ def instructor_dashboard(request: Any) -> Response:
             }
             for module in modules
         ],
-        "students": students,
+        "students": students_page,
+        "pagination": {
+            "page": page,
+            "pageSize": page_size,
+            "total": total_students,
+        },
         "announcements": AnnouncementSerializer(announcements, many=True).data,
     }
     return Response(payload)

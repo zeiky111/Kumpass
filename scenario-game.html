@@ -349,7 +349,7 @@
         }
     </style>
 </head>
-<body>
+<body data-required-year="4">
     <!-- Navigation -->
     <div class="navbar">
         <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
@@ -383,6 +383,7 @@
                     <button class="difficulty-btn" onclick="setDifficulty('medium', this)">Medium (Realistic situations)</button>
                     <button class="difficulty-btn" onclick="setDifficulty('hard', this)">Hard (Complex + No hints)</button>
                 </div>
+                <div style="margin-top: 10px; color: #555; font-size: 13px;">Random Level: <strong id="randomLevelTag">Level 1</strong></div>
             </div>
 
             <!-- Score Section -->
@@ -431,6 +432,7 @@
         </div>
     </div>
 
+    <script src="js/year-access.js"></script>
     <script src="js/portal.js"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -542,10 +544,40 @@
         ];
 
         let difficulty = 'easy';
+        let currentLevel = 1;
         let score = 0;
         let correct = 0;
         let total = scenarios.length;
+        let activeScenarios = [];
         let currentIndex = 0;
+
+        function shuffle(array) {
+            return array
+                .map(value => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(item => item.value);
+        }
+
+        function chooseRandomLevel() {
+            const levels = [1, 2, 3];
+            currentLevel = levels[Math.floor(Math.random() * levels.length)];
+            const levelTag = document.getElementById('randomLevelTag');
+            if (levelTag) {
+                levelTag.textContent = `Level ${currentLevel}`;
+            }
+        }
+
+        function getScenarioLimit() {
+            if (difficulty === 'easy') return Math.min(scenarios.length, 3 + currentLevel);
+            if (difficulty === 'medium') return Math.min(scenarios.length, 4 + currentLevel);
+            return Math.min(scenarios.length, 5 + currentLevel);
+        }
+
+        function getPointValue() {
+            if (difficulty === 'easy') return 20 + currentLevel;
+            if (difficulty === 'medium') return 25 + currentLevel;
+            return 30 + currentLevel;
+        }
 
         function setDifficulty(level, button) {
             difficulty = level;
@@ -555,19 +587,23 @@
         }
 
         function resetGame() {
+            chooseRandomLevel();
             score = 0;
             correct = 0;
             currentIndex = 0;
+            activeScenarios = shuffle(scenarios.slice()).slice(0, getScenarioLimit());
+            total = activeScenarios.length;
             updateScores();
             nextQuestion();
         }
 
         function nextQuestion() {
-            if (currentIndex >= total) {
-                currentIndex = 0;
+            if (currentIndex >= activeScenarios.length) {
+                resetGame();
+                return;
             }
             
-            const scenario = scenarios[currentIndex];
+            const scenario = activeScenarios[currentIndex];
             document.getElementById('scenario-text').textContent = scenario.scenario;
             document.getElementById('scenario-question').textContent = scenario.question;
             
@@ -626,12 +662,13 @@
             const isCorrect = selected.dataset.correct === 'true';
             
             if (isCorrect) {
+                const points = getPointValue();
                 correct++;
-                score += 25;
+                score += points;
                 feedbackDiv.classList.remove('incorrect');
                 feedbackDiv.classList.add('correct', 'show');
                 feedbackDiv.textContent = '✓ Correct! You chose the right sign language response!';
-                awardGameProgress(25, 15, currentIndex + 1 >= total);
+                awardGameProgress(points, 15, currentIndex + 1 >= total);
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');

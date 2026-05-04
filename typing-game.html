@@ -292,7 +292,7 @@
         }
     </style>
 </head>
-<body>
+<body data-required-year="2">
     <!-- Navigation -->
     <div class="navbar">
         <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
@@ -326,6 +326,7 @@
                     <button class="difficulty-btn" onclick="setDifficulty('medium', this)">Medium (Mixed words)</button>
                     <button class="difficulty-btn" onclick="setDifficulty('hard', this)">Hard (Complex + Time)</button>
                 </div>
+                <div style="margin-top: 10px; color: #555; font-size: 13px;">Random Level: <strong id="randomLevelTag">Level 1</strong></div>
             </div>
 
             <!-- Score Section -->
@@ -362,6 +363,7 @@
         </div>
     </div>
 
+    <script src="js/year-access.js"></script>
     <script src="js/portal.js"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -393,11 +395,41 @@
         ];
 
         let difficulty = 'easy';
+        let currentLevel = 1;
         let score = 0;
         let correct = 0;
         let total = questions.length;
+        let activeQuestions = [];
         let currentIndex = 0;
         let startTime = Date.now();
+
+        function shuffle(array) {
+            return array
+                .map(value => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(item => item.value);
+        }
+
+        function chooseRandomLevel() {
+            const levels = [1, 2, 3];
+            currentLevel = levels[Math.floor(Math.random() * levels.length)];
+            const levelTag = document.getElementById('randomLevelTag');
+            if (levelTag) {
+                levelTag.textContent = `Level ${currentLevel}`;
+            }
+        }
+
+        function getQuestionLimit() {
+            if (difficulty === 'easy') return Math.min(questions.length, 4 + currentLevel);
+            if (difficulty === 'medium') return Math.min(questions.length, 5 + currentLevel);
+            return Math.min(questions.length, 6 + currentLevel);
+        }
+
+        function getPointValue() {
+            if (difficulty === 'easy') return 8 + currentLevel;
+            if (difficulty === 'medium') return 10 + currentLevel;
+            return 12 + currentLevel;
+        }
 
         function setDifficulty(level, button) {
             difficulty = level;
@@ -415,20 +447,24 @@
         }
 
         function resetGame() {
+            chooseRandomLevel();
             score = 0;
             correct = 0;
             currentIndex = 0;
+            activeQuestions = shuffle(questions.slice()).slice(0, getQuestionLimit());
+            total = activeQuestions.length;
             startTime = Date.now();
             updateScores();
             nextQuestion();
         }
 
         function nextQuestion() {
-            if (currentIndex >= total) {
-                currentIndex = 0;
+            if (currentIndex >= activeQuestions.length) {
+                resetGame();
+                return;
             }
             
-            const question = questions[currentIndex];
+            const question = activeQuestions[currentIndex];
             document.getElementById('sign').innerHTML = `
                 <video class="sign-video" controls playsinline preload="metadata">
                     <source src="${question.video}" type="video/mp4">
@@ -441,7 +477,7 @@
         }
 
         function submitAnswer() {
-            const question = questions[currentIndex];
+            const question = activeQuestions[currentIndex];
             const answer = normalizeInput(document.getElementById('typing-input').value);
             const feedbackDiv = document.getElementById('feedback');
             
@@ -454,12 +490,13 @@
             const isCorrect = acceptedAnswers.includes(answer);
             
             if (isCorrect) {
+                const points = getPointValue();
                 correct++;
-                score += 10;
+                score += points;
                 feedbackDiv.classList.remove('incorrect');
                 feedbackDiv.classList.add('correct', 'show');
                 feedbackDiv.textContent = '✓ Correct! Great typing!';
-                awardGameProgress(10, 10, currentIndex + 1 >= total);
+                awardGameProgress(points, 10, currentIndex + 1 >= total);
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');

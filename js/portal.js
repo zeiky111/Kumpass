@@ -4,6 +4,7 @@
   const DEFAULT_USER_NAME = 'Learner';
   const DEFAULT_USER_EMAIL = 'student@kumpas.local';
   let hydratedState = null;
+  let studentContentCache = null;
 
   const MODULES = [
     {
@@ -177,6 +178,52 @@
     return mapping[normalized] || normalized || 'Student';
   }
 
+  function getYearNumberFromLevel(level) {
+    const value = String(level || '').toLowerCase().trim();
+    if (value === '1st' || value === '1') return '1';
+    if (value === '2nd' || value === '2') return '2';
+    if (value === '3rd' || value === '3') return '3';
+    if (value === '4th' || value === '4') return '4';
+    return '1';
+  }
+
+  function getLevelTextFromYear(yearLevel) {
+    const normalized = String(yearLevel || '').trim();
+    const map = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th' };
+    return map[normalized] || '1st';
+  }
+
+  function mapBackendModule(module, index) {
+    const key = String((module && module.module_key) || '').trim() || `module${index + 1}`;
+    const title = String((module && module.title) || `Module ${index + 1}`).trim();
+    const description = String((module && module.description) || 'Structured sign language practice.').trim();
+    const activities = Number((module && module.activities_count) || 4);
+    const yearLevel = String((module && module.year_level) || '1').trim();
+    const level = getLevelTextFromYear(yearLevel);
+
+    return {
+      id: key,
+      level,
+      title,
+      outcome: `Focus area for ${getYearLabel(yearLevel)} learners.`,
+      description,
+      activities: Number.isFinite(activities) ? activities : 4,
+      minutes: Math.max(20, (Number.isFinite(activities) ? activities : 4) * 15),
+      progressKey: key,
+      unlocks: 'Unlocks the next guided activities and game challenges.'
+    };
+  }
+
+  function getVisibleModules() {
+    if (studentContentCache && Array.isArray(studentContentCache.modules) && studentContentCache.modules.length) {
+      return studentContentCache.modules.map(mapBackendModule);
+    }
+
+    const currentUser = getCurrentUser();
+    const ownYear = getLevelTextFromYear(currentUser.yearLevel || '1');
+    return MODULES.filter(module => module.level === ownYear);
+  }
+
   function getState() {
     if (hydratedState) {
       return mergeState(hydratedState);
@@ -273,6 +320,31 @@
       return Array.isArray(payload) ? payload : [];
     } catch (_) {
       return [];
+    }
+  }
+
+  async function loadStudentContentFromBackend() {
+    const currentUser = getCurrentUser();
+    const email = String(currentUser.email || '').trim();
+    if (!email) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/student/content/?email=${encodeURIComponent(email)}`);
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = await response.json();
+      if (!payload || !Array.isArray(payload.modules)) {
+        return null;
+      }
+
+      studentContentCache = payload;
+      return payload;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -420,16 +492,18 @@
   }
 
   function getFilteredModules(level) {
+    const modules = getVisibleModules();
     if (!level || level === 'all') {
-      return MODULES;
+      return modules;
     }
 
-    return MODULES.filter(module => module.level === level);
+    return modules.filter(module => module.level === level);
   }
 
   function renderDashboard() {
     const currentUser = getCurrentUser();
     const state = getState();
+    const visibleModules = getVisibleModules();
 
     const welcomeName = document.getElementById('dashboardWelcomeName');
     if (welcomeName) {
@@ -487,7 +561,8 @@
 
     const modulesMeta = document.getElementById('dashboardModulesMeta');
     if (modulesMeta) {
-      modulesMeta.textContent = `${Object.values(state.moduleProgress).filter(value => Number(value) >= 100).length} modules completed across ${MODULES.length} lessons`;
+      const completedVisible = visibleModules.filter(module => getModuleProgress(state, module.id) >= 100).length;
+      modulesMeta.textContent = `${completedVisible} modules completed across ${visibleModules.length} lessons`;
     }
 
     const rankMeta = document.getElementById('dashboardRankMeta');
@@ -502,7 +577,7 @@
 
     const progressContainer = document.getElementById('dashboardProgressList');
     if (progressContainer) {
-      progressContainer.innerHTML = MODULES.map(module => {
+      progressContainer.innerHTML = visibleModules.map(module => {
         const progress = getModuleProgress(state, module.id);
         return `
           <div class="progress-item">
@@ -619,6 +694,8 @@
   function renderLearning() {
     const state = getState();
     const currentUser = getCurrentUser();
+    const ownLevel = getLevelTextFromYear(currentUser.yearLevel || '1');
+    const visibleModules = getVisibleModules();
 
     const overviewFill = document.getElementById('learningOverallProgressFill');
     const overviewText = document.getElementById('learningOverallProgressText');
@@ -626,19 +703,21 @@
     const totalPoints = document.getElementById('learningTotalPoints');
     const streakDays = document.getElementById('learningStreakDays');
 
-    const completedCount = Object.values(state.moduleProgress).filter(value => Number(value) >= 100).length;
-    const averageProgress = Math.round(Object.values(state.moduleProgress).reduce((sum, value) => sum + Number(value || 0), 0) / MODULES.length);
+    const completedCount = visibleModules.filter(module => getModuleProgress(state, module.id) >= 100).length;
+    const averageProgress = visibleModules.length
+      ? Math.round(visibleModules.reduce((sum, module) => sum + getModuleProgress(state, module.id), 0) / visibleModules.length)
+      : 0;
 
     if (overviewFill) overviewFill.style.width = `${averageProgress}%`;
     if (overviewText) overviewText.textContent = `${averageProgress}%`;
-    if (modulesCompleted) modulesCompleted.textContent = `${completedCount}/${MODULES.length}`;
+    if (modulesCompleted) modulesCompleted.textContent = `${completedCount}/${visibleModules.length || 0}`;
     if (totalPoints) totalPoints.textContent = state.points.toLocaleString();
     if (streakDays) streakDays.textContent = `${state.streak} days`;
 
     const target = document.getElementById('learningModulesGrid');
     if (!target) return;
 
-    let activeLevel = target.getAttribute('data-active-level') || 'all';
+    let activeLevel = target.getAttribute('data-active-level') || ownLevel;
     const render = () => {
       const modules = getFilteredModules(activeLevel);
       target.innerHTML = modules.map(module => {
@@ -669,7 +748,16 @@
     render();
 
     const filterButtons = document.querySelectorAll('.filter-btn[data-level]');
+    const currentYearButton = document.getElementById('currentYearOnlyFilter');
+    if (currentYearButton) {
+      currentYearButton.setAttribute('data-level', ownLevel);
+      currentYearButton.textContent = `${ownLevel} Year`;
+    }
     filterButtons.forEach(button => {
+      const buttonLevel = String(button.getAttribute('data-level') || '').trim();
+      if (buttonLevel === 'all' || buttonLevel !== ownLevel) {
+        button.style.display = 'none';
+      }
       button.addEventListener('click', function () {
         filterButtons.forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
@@ -678,6 +766,10 @@
         render();
       });
     });
+
+    target.setAttribute('data-active-level', ownLevel);
+    activeLevel = ownLevel;
+    render();
 
     const moduleSummary = document.getElementById('learningPathSummary');
     if (moduleSummary) {
@@ -787,7 +879,7 @@
 
     const moduleProgressContainer = document.getElementById('profileModuleProgress');
     if (moduleProgressContainer) {
-      moduleProgressContainer.innerHTML = MODULES.slice(0, 4).map(module => {
+      moduleProgressContainer.innerHTML = getVisibleModules().slice(0, 4).map(module => {
         const progress = getModuleProgress(state, module.id);
         return `
           <div class="progress-item">
@@ -873,6 +965,7 @@
 
   async function hydrateAndRender() {
     const backendState = await loadStateFromBackend();
+    await loadStudentContentFromBackend();
     if (backendState) {
       saveState(backendState);
     } else if (!hydratedState) {
@@ -897,6 +990,7 @@
     loadStateFromBackend,
     loadLeaderboardFromBackend,
     loadPublicAnnouncements,
+    loadStudentContentFromBackend,
     saveState,
     updateState,
     recordProgress,

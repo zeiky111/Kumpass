@@ -22,7 +22,7 @@ class SignupSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(max_length=128)
-    role = serializers.CharField(max_length=20)
+    role = serializers.CharField(max_length=20, required=False, allow_blank=True)
     securityPin = serializers.CharField(max_length=12, required=False, allow_blank=True)
 
 

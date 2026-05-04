@@ -304,7 +304,7 @@
         }
     </style>
 </head>
-<body>
+<body data-required-year="1">
     <!-- Navigation -->
     <div class="navbar">
         <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
@@ -338,6 +338,7 @@
                     <button class="difficulty-btn" type="button" onclick="setDifficulty('medium', this)">Medium (4 choices)</button>
                     <button class="difficulty-btn" type="button" onclick="setDifficulty('hard', this)">Hard (6+ choices)</button>
                 </div>
+                <div style="margin-top: 10px; color: #555; font-size: 13px;">Random Level: <strong id="randomLevelTag">Level 1</strong></div>
             </div>
 
             <!-- Score Section -->
@@ -374,6 +375,7 @@
         </div>
     </div>
 
+    <script src="js/year-access.js"></script>
     <script src="js/portal.js"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -405,11 +407,21 @@
         ];
 
         let difficulty = 'easy';
+        let currentLevel = 1;
         let score = 0;
         let correct = 0;
         let total = questions.length;
+        let activeQuestions = [];
         let currentIndex = 0;
-        let roundCompleted = false;
+
+        function chooseRandomLevel() {
+            const levels = [1, 2, 3];
+            currentLevel = levels[Math.floor(Math.random() * levels.length)];
+            const levelTag = document.getElementById('randomLevelTag');
+            if (levelTag) {
+                levelTag.textContent = `Level ${currentLevel}`;
+            }
+        }
 
         function setDifficulty(level, button) {
             difficulty = level;
@@ -419,10 +431,12 @@
         }
 
         function resetGame() {
+            chooseRandomLevel();
             score = 0;
             correct = 0;
             currentIndex = 0;
-            roundCompleted = false;
+            activeQuestions = shuffle(questions.slice()).slice(0, getQuestionLimit());
+            total = activeQuestions.length;
             updateScores();
             nextQuestion();
         }
@@ -435,9 +449,15 @@
         }
 
         function getOptionCount() {
-            if (difficulty === 'easy') return 3;
-            if (difficulty === 'medium') return 4;
-            return 6;
+            if (difficulty === 'easy') return Math.min(4, 2 + currentLevel);
+            if (difficulty === 'medium') return Math.min(6, 3 + currentLevel);
+            return Math.min(8, 5 + currentLevel);
+        }
+
+        function getQuestionLimit() {
+            if (difficulty === 'easy') return Math.min(questions.length, 4 + currentLevel);
+            if (difficulty === 'medium') return Math.min(questions.length, 5 + currentLevel);
+            return Math.min(questions.length, 6 + currentLevel);
         }
 
         function buildOptions(question) {
@@ -452,12 +472,12 @@
         }
 
         function nextQuestion() {
-            if (roundCompleted) {
-                currentIndex = 0;
-                roundCompleted = false;
+            if (currentIndex >= activeQuestions.length) {
+                resetGame();
+                return;
             }
             
-            const question = questions[currentIndex];
+            const question = activeQuestions[currentIndex];
             const signDiv = document.getElementById('sign');
             signDiv.innerHTML = `
                 <video class="sign-video" controls playsinline preload="metadata">
@@ -490,7 +510,7 @@
         }
 
         function submitAnswer() {
-            const question = questions[currentIndex];
+            const question = activeQuestions[currentIndex];
             const selected = document.querySelector('.option-btn.selected');
             const feedbackDiv = document.getElementById('feedback');
             
@@ -518,10 +538,6 @@
 
             setTimeout(() => {
                 currentIndex += 1;
-                if (currentIndex >= total) {
-                    roundCompleted = true;
-                    currentIndex = 0;
-                }
                 nextQuestion();
             }, 900);
         }

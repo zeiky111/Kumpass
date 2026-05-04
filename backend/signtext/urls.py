@@ -16,6 +16,7 @@ from .views import (
     predict_fingerspelling,
     predict_sign,
     recent_predictions,
+    student_content,
     signup,
 )
 
@@ -26,6 +27,7 @@ urlpatterns = [
     path("leaderboard/", leaderboard, name="leaderboard"),
     path("announcements/", public_announcements, name="public-announcements"),
     path("learning/state/", learning_state, name="learning-state"),
+    path("student/content/", student_content, name="student-content"),
     path("instructor/dashboard/", instructor_dashboard, name="instructor-dashboard"),
     path("instructor/modules/", instructor_modules, name="instructor-modules"),
     path("instructor/modules/<int:module_id>/", instructor_module_detail, name="instructor-module-detail"),

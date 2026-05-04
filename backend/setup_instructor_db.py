@@ -54,6 +54,43 @@ def create_instructor_account(email, password, full_name, security_pin='1234'):
         print(f"✗ Error creating instructor: {str(e)}")
         return None
 
+
+def create_admin_account(email, password, full_name):
+    """Create an admin account (only via setup script)."""
+    try:
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=full_name.split()[0] if full_name else "Admin",
+            last_name=" ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
+        )
+
+        profile, created = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'full_name': full_name or "Admin",
+                'role': 'admin',
+                'year_level': 'admin',
+                'security_pin': ''
+            }
+        )
+
+        UserLearningState.objects.get_or_create(
+            user=user,
+            defaults={'state': {}}
+        )
+
+        if created:
+            print(f"✓ Created admin: {email} ({full_name})")
+        else:
+            print(f"✓ Admin already exists: {email}")
+
+        return user
+    except Exception as e:
+        print(f"✗ Error creating admin: {str(e)}")
+        return None
+
 def create_student_account(email, password, full_name, year_level):
     """Create a student account."""
     try:
@@ -178,6 +215,14 @@ def main():
             create_student_account(email, pwd, name, year)
         else:
             print(f"✓ Student already exists: {email}")
+
+    # Ensure a default admin account exists (do not allow admin registration via UI)
+    admin_email = 'admin1@kumpas.local'
+    admin_profile = UserProfile.objects.filter(user__email=admin_email, role='admin').first()
+    if not admin_profile and not User.objects.filter(email=admin_email).exists():
+        create_admin_account(admin_email, 'admin123', 'Admin One')
+    else:
+        print(f"✓ Admin already exists: {admin_email}")
     
     # Verify setup
     verify_database_setup()

@@ -40,54 +40,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle registration form submission
     const registerForm = document.getElementById('registerForm');
-    const registerRoleSelect = document.getElementById('role');
     const yearLevelSelect = document.getElementById('yearLevel');
-    const yearLevelGroup = document.getElementById('yearLevelGroup');
-    const registerPinGroup = document.getElementById('registerPinGroup');
-    const registerSecurityPinInput = document.getElementById('registerSecurityPin');
 
-    function toggleRegisterRoleFields() {
-        if (!registerRoleSelect || !yearLevelSelect || !yearLevelGroup || !registerPinGroup || !registerSecurityPinInput) {
-            return;
-        }
-
-        const selectedRole = registerRoleSelect.value;
-        const requiresPin = selectedRole === 'instructor' || selectedRole === 'admin';
-        const showYearLevel = selectedRole === 'student';
-
-        yearLevelGroup.style.display = showYearLevel ? 'block' : 'none';
-        yearLevelSelect.required = showYearLevel;
-
-        if (!showYearLevel) {
-            yearLevelSelect.value = '';
-        }
-
-        registerPinGroup.style.display = requiresPin ? 'block' : 'none';
-        registerSecurityPinInput.required = requiresPin;
-
-        if (!requiresPin) {
-            registerSecurityPinInput.value = '';
-        }
+    function sanitizeName(value) {
+        return String(value || '')
+            .replace(/[<>]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
-
-    if (registerRoleSelect) {
-        registerRoleSelect.addEventListener('change', toggleRegisterRoleFields);
-    }
-
-    toggleRegisterRoleFields();
     
     if (registerForm) {
         registerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const fullname = document.getElementById('fullname').value;
-            const email = document.getElementById('email').value;
-            const role = registerRoleSelect ? registerRoleSelect.value : 'student';
-            const yearLevel = document.getElementById('yearLevel').value;
-            const signupYearLevel = role === 'student' ? yearLevel : 'n/a';
+            const fullname = sanitizeName(document.getElementById('fullname').value);
+            const email = String(document.getElementById('email').value || '').trim().toLowerCase();
+            const yearLevel = yearLevelSelect ? String(yearLevelSelect.value || '').trim() : '';
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const securityPin = registerSecurityPinInput ? registerSecurityPinInput.value.trim() : '';
             
             // Validation
             if (!fullname || !email || !password || !confirmPassword) {
@@ -95,13 +65,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (role === 'student' && !yearLevel) {
+            if (!yearLevel) {
                 alert('Please select your year level');
-                return;
-            }
-
-            if ((role === 'instructor' || role === 'admin') && !securityPin) {
-                alert('Security PIN is required for instructor/admin accounts');
                 return;
             }
             
@@ -119,11 +84,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await postJson('/auth/signup/', {
                     fullname,
                     email,
-                    role,
-                    yearLevel: signupYearLevel,
+                    yearLevel,
                     password,
-                    confirmPassword,
-                    securityPin
+                    confirmPassword
                 });
 
                 saveCurrentUser(result.user);
@@ -146,55 +109,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle login form submission
     const loginForm = document.getElementById('loginForm');
-    const roleSelect = document.getElementById('role');
-    const securityPinGroup = document.getElementById('securityPinGroup');
-    const securityPinInput = document.getElementById('securityPin');
-
-    function toggleSecurityPinField() {
-        if (!roleSelect || !securityPinGroup || !securityPinInput) {
-            return;
-        }
-
-        const requiresPin = roleSelect.value === 'instructor' || roleSelect.value === 'admin';
-
-        securityPinGroup.style.display = requiresPin ? 'block' : 'none';
-        securityPinInput.required = requiresPin;
-
-        if (!requiresPin) {
-            securityPinInput.value = '';
-        }
-    }
-
-    if (roleSelect) {
-        roleSelect.addEventListener('change', toggleSecurityPinField);
-        toggleSecurityPinField();
-    }
     
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const email = document.getElementById('email').value;
+            const email = String(document.getElementById('email').value || '').trim().toLowerCase();
             const password = document.getElementById('password').value;
-            const role = roleSelect ? roleSelect.value : '';
-            const securityPin = securityPinInput ? securityPinInput.value.trim() : '';
-            
-            if (!role) {
-                alert('Please select a role to continue');
-                return;
-            }
-
-            if ((role === 'instructor' || role === 'admin') && !securityPin) {
-                alert('Please enter your security PIN to continue');
-                return;
-            }
             
             try {
                 const result = await postJson('/auth/login/', {
                     email,
-                    password,
-                    role,
-                    securityPin
+                    password
                 });
 
                 saveCurrentUser(result.user);
