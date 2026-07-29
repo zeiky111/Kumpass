@@ -1,29 +1,119 @@
 import base64
 import os
 import random
+from datetime import timedelta
+from django.utils import timezone
 from typing import Any
 from django.db import DatabaseError, OperationalError
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
-from .models import Announcement, LearningModule, ModuleFile, SignPredictionLog, UserLearningState, UserProfile
+from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
+from .models import (
+    Announcement,
+    GameLevel,
+    GameLevelItem,
+    LearningModule,
+    ModuleFile,
+    QuizQuestion,
+    SignPredictionLog,
+    SignVideo,
+    UserLearningState,
+    UserProfile,
+    EmailOTP,
+)
 from .serializers import (
+    AdminSignVideoSerializer,
     AnnouncementSerializer,
+    GameLevelItemSerializer,
+    GameLevelSerializer,
     LearningModuleSerializer,
     LearningStateSerializer,
     LoginSerializer,
     ModuleFileSerializer,
+    QuizQuestionSerializer,
+    StudentQuizQuestionSerializer,
     SignPredictionLogSerializer,
+    SignVideoSerializer,
     SignupSerializer,
 )
+
+
+AVATAR_PRESET_IDS = {
+    "blue", "purple", "pink", "green", "orange", "teal", "yellow", "red",
+    "indigo", "lime", "cyan", "rose",
+}
+
+
+def _profile_avatar_payload(profile: "UserProfile", request: Any) -> dict:
+    photo_url = ""
+    if profile and profile.photo and hasattr(profile.photo, "url"):
+        photo_url = request.build_absolute_uri(profile.photo.url)
+    return {
+        "photoUrl": photo_url,
+        "avatarId": (profile.avatar_id if profile else "") or "",
+    }
+
+
+@csrf_exempt
+@api_view(["POST", "PATCH"])
+def profile_photo(request: Any) -> Response:
+    """Upload/update a user's profile photo, or set a preset avatar id.
+
+    Accepts either multipart/form-data with a 'photo' file, or an 'avatar_id'
+    field naming one of AVATAR_PRESET_IDS. The two are mutually exclusive:
+    setting one clears the other.
+    """
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    profile = getattr(user, "profile", None)
+    if not profile:
+        profile = UserProfile.objects.create(user=user, full_name=user.first_name or user.username)
+
+    photo_file = request.FILES.get("photo")
+    avatar_id = str(request.data.get("avatar_id") or "").strip().lower()
+
+    if photo_file:
+        profile.photo = photo_file
+        profile.avatar_id = ""
+        profile.save(update_fields=["photo", "avatar_id"])
+    elif avatar_id:
+        if avatar_id not in AVATAR_PRESET_IDS:
+            return Response({"error": "Invalid avatar_id"}, status=400)
+        profile.photo.delete(save=False)
+        profile.avatar_id = avatar_id
+        profile.save(update_fields=["photo", "avatar_id"])
+    elif "avatar_id" in request.data and not avatar_id:
+        # Explicit empty avatar_id clears both photo and preset avatar.
+        profile.photo.delete(save=False)
+        profile.avatar_id = ""
+        profile.save(update_fields=["photo", "avatar_id"])
+    else:
+        return Response({"error": "Missing photo file (field 'photo') or 'avatar_id'"}, status=400)
+
+    payload = _profile_avatar_payload(profile, request)
+    return Response({"message": "Photo updated", **payload})
 
 
 @api_view(["GET"])
@@ -174,6 +264,72 @@ def predict_fingerspelling(request: Any) -> Response:
     )
 
 
+@api_view(["POST"])
+def predict_word_sequence(request: Any) -> Response:
+    """Classify a short (~1-3s) two-hand landmark sequence as a locally-trained word/phrase.
+
+    Each frame is {"left": [[x,y,z]]*21|null, "right": [...]|null}. Returns
+    empty/zero-confidence until a real model has been trained from recorded
+    data (see backend/scripts/train_word_model.py) -- there is no synthetic
+    fallback for gestures the way there is for static letters.
+
+    Optionally accepts an "image" (single current-frame JPEG data URL) and
+    "use_ai" flag, mirroring predict_fingerspelling's hybrid pattern: the
+    cloud AI fallback is only consulted when local confidence is low and an
+    OpenRouter API key is configured, to keep the common case fast.
+    """
+    frames = request.data.get("frames", [])
+    image_data = request.data.get("image", "")
+    use_ai = bool(request.data.get("use_ai", False))
+
+    if not isinstance(frames, list):
+        return Response({"error": "frames must be a list"}, status=400)
+
+    word, confidence = predict_word_from_sequence(frames)
+
+    ai_word = ""
+    ai_confidence = 0.0
+    ai_available = False
+    ai_error = ""
+
+    ai_key_present = bool(os.getenv("OPENROUTER_API_KEY", "").strip())
+    low_local_confidence = (not word) or float(confidence) < 40.0
+    if use_ai and ai_key_present and low_local_confidence and isinstance(image_data, str) and image_data.strip():
+        ai_prediction = predict_with_openrouter(image_data)
+        ai_available = ai_prediction is not None
+        if ai_prediction is not None:
+            ai_pred_label, ai_pred_conf, _ai_hand_detected = ai_prediction
+            ai_pred_label = str(ai_pred_label or "").strip().upper()
+            if ai_pred_label and ai_pred_label not in {"NO HAND DETECTED", "NONE"} and ai_pred_conf >= 35:
+                ai_word = ai_pred_label
+                ai_confidence = float(ai_pred_conf)
+        else:
+            ai_error = get_last_ai_error()
+
+    final_word = word
+    final_confidence = float(confidence)
+    if not word and ai_word:
+        final_word = ai_word
+        final_confidence = ai_confidence
+    elif word and ai_word and word != ai_word and ai_confidence > float(confidence):
+        final_word = ai_word
+        final_confidence = ai_confidence
+
+    return Response(
+        {
+            "word": final_word,
+            "confidence": round(final_confidence, 2),
+            "model_available": WORD_MODEL_PATH.exists(),
+            "svc_word": word,
+            "svc_confidence": round(float(confidence), 2),
+            "ai_word": ai_word,
+            "ai_confidence": round(float(ai_confidence), 2),
+            "ai_available": ai_available,
+            "ai_error": ai_error,
+        }
+    )
+
+
 def _redirect_for_role(role: str) -> str:
     if role == "instructor":
         return "instructor-dashboard.html"
@@ -238,7 +394,7 @@ def _safe_bool(value: Any, default: bool = False) -> bool:
     return default
 
 
-def _leaderboard_entry_for_state(learning_state: UserLearningState) -> dict:
+def _leaderboard_entry_for_state(learning_state: UserLearningState, request: Any = None) -> dict:
     user = learning_state.user
     profile = getattr(user, "profile", None)
     state = learning_state.state if isinstance(learning_state.state, dict) else {}
@@ -253,6 +409,7 @@ def _leaderboard_entry_for_state(learning_state: UserLearningState) -> dict:
         "yearLevel": year_level,
         "yearLabel": _get_year_label(year_level),
         "role": getattr(profile, "role", "student") or "student",
+        **(_profile_avatar_payload(profile, request) if request is not None else {"photoUrl": "", "avatarId": ""}),
         "points": _safe_int(state.get("points", 0)),
         "rank": _safe_int(state.get("rank", 0)),
         "streak": _safe_int(state.get("streak", 0)),
@@ -266,11 +423,6 @@ def _leaderboard_entry_for_state(learning_state: UserLearningState) -> dict:
 
 
 def _zero_learning_state_for_user(user: User) -> dict:
-    profile = getattr(user, "profile", None)
-    year_level = str(getattr(profile, "year_level", "") or "")
-    learner_name = getattr(profile, "full_name", "") or user.first_name or user.username
-    year_label = _get_year_label(year_level)
-
     return {
         "points": 0,
         "rank": 0,
@@ -289,59 +441,11 @@ def _zero_learning_state_for_user(user: User) -> dict:
             "lesson7": 0,
             "lesson8": 0,
         },
-        "recentActivity": [
-            {"icon": "📚", "text": f"{learner_name} is ready to start learning", "meta": year_label},
-        ],
-        "achievements": [
-            {"icon": "fas fa-graduation-cap", "name": "Quick Learner", "earned": False},
-            {"icon": "fas fa-star", "name": "Perfect Score", "earned": False},
-            {"icon": "fas fa-lock", "name": "Master Signer", "earned": False},
-            {"icon": "fas fa-lock", "name": "FSL Expert", "earned": False},
-            {"icon": "fas fa-lock", "name": "Champion", "earned": False},
-        ],
+        "recentActivity": [],
+        "achievements": [],
         "leaderboard": [],
-        "performance": [
-            {"label": "Sign Recognition", "value": 0},
-            {"label": "Finger-Spelling", "value": 0},
-            {"label": "Sign Grammar", "value": 0},
-            {"label": "Communication", "value": 0},
-        ],
+        "performance": [],
     }
-
-
-def _is_seeded_learning_state(state: dict) -> bool:
-    if not isinstance(state, dict):
-        return False
-
-    seeded_points = {1180, 2260, 3210, 4120}
-    seeded_completed = {18, 31, 46, 60}
-    seeded_streaks = {3, 5, 7, 9}
-    seeded_accuracy = {79, 84, 88, 91}
-    seeded_practice = {128, 214, 336, 460}
-
-    points = _safe_int(state.get("points", 0))
-    completed = _safe_int(state.get("completedActivities", 0))
-    streak = _safe_int(state.get("streak", 0))
-    accuracy = _safe_int(state.get("accuracy", 0))
-    practice_minutes = _safe_int(state.get("practiceMinutes", 0))
-    recent_activity = state.get("recentActivity", [])
-
-    if points not in seeded_points:
-        return False
-    if completed not in seeded_completed:
-        return False
-    if streak not in seeded_streaks:
-        return False
-    if accuracy not in seeded_accuracy:
-        return False
-    if practice_minutes not in seeded_practice:
-        return False
-    if not isinstance(recent_activity, list) or not recent_activity:
-        return False
-
-    first_item = recent_activity[0] if isinstance(recent_activity[0], dict) else {}
-    first_text = str(first_item.get("text", "")).lower()
-    return "started structured modules" in first_text or "profile synced" in first_text
 
 
 @api_view(["GET"])
@@ -355,7 +459,7 @@ def leaderboard(request: Any) -> Response:
         limit = 10
 
     entries = [
-        _leaderboard_entry_for_state(learning_state)
+        _leaderboard_entry_for_state(learning_state, request)
         for learning_state in UserLearningState.objects.select_related("user", "user__profile").all()
     ]
 
@@ -425,8 +529,6 @@ def public_announcements(request: Any) -> Response:
 
 
 def _default_learning_state_for_user(user: User) -> dict:
-    profile = getattr(user, "profile", None)
-    year_level = str(getattr(profile, "year_level", "1") or "1")
     return _zero_learning_state_for_user(user)
 
 
@@ -448,17 +550,65 @@ def _signup_role_from_selection(role: str, security_pin: str) -> str | None:
     return None
 
 
+def _generate_otp() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+def _create_and_send_otp(user: User, request: Any, minutes_valid: int = 15) -> dict:
+    otp = _generate_otp()
+    expires = timezone.now() + timedelta(minutes=minutes_valid)
+    
+    # Validate that user has an email
+    if not user.email or not user.email.strip():
+        error_msg = f"User {user.username} has no email address set"
+        logger.error(error_msg)
+        return {"ok": False, "error": error_msg}
+    
+    recipient_email = user.email.strip()
+    
+    # Keep only one active OTP window for the user so retries do not stack multiple usable codes.
+    EmailOTP.objects.filter(user=user, expires_at__gte=timezone.now()).delete()
+    EmailOTP.objects.create(user=user, otp=otp, expires_at=expires)
+    
+    # send email with OTP
+    subject = "Your Kumpas verification code"
+    message = f"Your verification code is: {otp}\nIt will expire in {minutes_valid} minutes."
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    
+    try:
+        logger.info(f"Attempting to send OTP {otp} to {recipient_email}")
+        send_mail(subject, message, from_email, [recipient_email], fail_silently=False)
+        logger.info(f"OTP successfully sent to {recipient_email}")
+        return {"ok": True, "error": None}
+    except Exception as e:
+        error_msg = f"Failed to send verification email to {recipient_email}: {str(e)}"
+        logger.exception(error_msg)
+        return {"ok": False, "error": error_msg}
+
+
+def _normalize_name_part(name: str) -> str:
+    normalized = str(name or "").strip()
+    if not normalized:
+        return ""
+    normalized = " ".join(normalized.split())
+    return " ".join(
+        part.capitalize() if part else ""
+        for part in normalized.split(" ")
+    ).strip()
+
+
 def _get_learning_state_for_user(user: User) -> UserLearningState:
     learning_state, created = UserLearningState.objects.get_or_create(
         user=user,
         defaults={"state": _default_learning_state_for_user(user)},
     )
-    if created or not learning_state.state or _is_seeded_learning_state(learning_state.state):
+    if created or not learning_state.state:
         learning_state.state = _default_learning_state_for_user(user)
         learning_state.save(update_fields=["state", "updated_at"])
     return learning_state
 
 
+@csrf_exempt
 @api_view(["POST"])
 def signup(request: Any) -> Response:
     serializer = SignupSerializer(data=request.data)
@@ -467,58 +617,130 @@ def signup(request: Any) -> Response:
 
     data = serializer.validated_data
     email = data["email"].strip().lower()
-    fullname = data["fullname"].strip()
-    # Force student signup: role selection and PIN removed from public signup
-    role = "student"
+    first_name = _normalize_name_part(data["firstName"])
+    middle_name = _normalize_name_part(data.get("middleName") or "")
+    last_name = _normalize_name_part(data["lastName"])
+    suffix = _normalize_name_part(data.get("suffix") or "")
     year_level = str(data.get("yearLevel") or "").strip()
     password = data["password"]
     confirm_password = data["confirmPassword"]
+    # Public signup only creates student accounts
+    role = "student"
+
     if password != confirm_password:
         return Response({"error": "Passwords do not match"}, status=400)
 
-    if User.objects.filter(username=email).exists():
+    existing_user = User.objects.select_related("profile").filter(username=email).first()
+    if existing_user:
+        existing_profile = getattr(existing_user, "profile", None)
+        existing_role = str(getattr(existing_profile, "role", "student") or "student").lower()
+
+        # If the account already exists but is still inactive, treat this as a pending verification case.
+        if not existing_user.is_active and existing_role == "student":
+            result = _create_and_send_otp(existing_user, request)
+            response = {
+                "message": "Account already exists but is still pending verification. A new verification code was sent.",
+                "user": {
+                    "id": existing_user.id,
+                    "name": getattr(existing_profile, "full_name", "") or existing_user.first_name or email.split("@")[0],
+                    "email": email,
+                    "username": existing_user.username,
+                    "yearLevel": getattr(existing_profile, "year_level", year_level) or year_level,
+                    "role": "student",
+                },
+                "redirect": f"verify-email.html?email={email}",
+            }
+            if not result.get("ok"):
+                response["message"] = "Account already exists but verification email could not be sent right now. You can try resending it on the verification page."
+                response["error"] = "email_delivery_failed"
+                response["details"] = "Check server logs for SMTP error."
+            return Response(response, status=201)
+
         return Response({"error": "Email is already registered"}, status=409)
 
     if not year_level:
         return Response({"error": "Year level is required for student accounts"}, status=400)
 
-    # Simple sanitization: disallow angle brackets in name
-    if "<" in fullname or ">" in fullname:
-        return Response({"error": "Invalid characters in fullname"}, status=400)
+    if not first_name or not last_name:
+        return Response({"error": "First name and last name are required"}, status=400)
 
-    # Normalize year level to canonical 1-4 using helper
-    year_level = _normalize_year_level_filter(year_level)
+    full_name = " ".join([part for part in [first_name, middle_name, last_name, suffix] if part])
 
+    # Create the user account immediately; no email verification gate.
     user = User.objects.create_user(
         username=email,
         email=email,
         password=password,
-        first_name=fullname,
+        first_name=first_name,
+        last_name=last_name,
     )
+
+    if role == "student":
+        # Create profile and require email verification before activation.
+        UserProfile.objects.create(
+            user=user,
+            full_name=full_name,
+            first_name=first_name,
+            middle_name=middle_name,
+            last_name=last_name,
+            suffix=suffix,
+            year_level=year_level,
+            role=role,
+            security_pin="",
+        )
+
+        # Mark user inactive until they verify their email
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        # Create and send OTP; if sending fails include error details but still instruct user to verify
+        otp_result = _create_and_send_otp(user, request)
+        response = {
+            "message": "Account created. A verification code was sent to your email.",
+            "user": {
+                "id": user.id,
+                "name": full_name,
+                "email": email,
+                "username": user.username,
+                "yearLevel": year_level,
+                "role": role,
+            },
+            "redirect": f"verify-email.html?email={email}",
+        }
+        if not otp_result.get("ok"):
+            response["error"] = "email_delivery_failed"
+            response["details"] = otp_result.get("error")
+
+        return Response(response, status=201)
+
+    # Non-student accounts are activated immediately
     UserProfile.objects.create(
         user=user,
-        full_name=fullname,
-        year_level=year_level if role == "student" else "",
+        full_name=full_name,
+        first_name=first_name,
+        middle_name=middle_name,
+        last_name=last_name,
+        suffix=suffix,
+        year_level=year_level,
         role=role,
         security_pin="",
     )
     _get_learning_state_for_user(user)
 
-    return Response(
-        {
-            "message": "Account created successfully",
-            "user": {
-                "name": fullname,
-                "email": email,
-                "yearLevel": year_level if role == "student" else "",
-                "role": role,
-            },
-            "redirect": _redirect_for_role(role),
+    return Response({
+        "message": "Account created successfully",
+        "user": {
+            "id": user.id,
+            "name": full_name,
+            "email": email,
+            "yearLevel": year_level if role == "student" else "",
+            "role": role,
         },
-        status=201,
-    )
+        "redirect": _redirect_for_role(role),
+    }, status=201)
 
 
+@csrf_exempt
 @api_view(["POST"])
 def login(request: Any) -> Response:
     serializer = LoginSerializer(data=request.data)
@@ -526,34 +748,157 @@ def login(request: Any) -> Response:
         return Response({"error": serializer.errors}, status=400)
 
     data = serializer.validated_data
-    email = data["email"].strip().lower()
-    # Authenticate with email/password only. Role and PIN are no longer required from client.
-    user = authenticate(username=email, password=data["password"])
+    identifier = str(data["email"] or "").strip()
+    if not identifier:
+        return Response({"error": "Email or username is required"}, status=400)
+
+    # Accept both username and email as login identifier.
+    # Build candidate list then pick the account with matching password.
+    candidates: list[User] = []
+    seen_ids: set[int] = set()
+
+    def add_candidate(qs):
+        for cand in qs[:25]:
+            if cand.id not in seen_ids:
+                seen_ids.add(cand.id)
+                candidates.append(cand)
+
+    add_candidate(User.objects.filter(username__iexact=identifier))
+    add_candidate(User.objects.filter(email__iexact=identifier))
+
+    if "@" not in identifier:
+        add_candidate(User.objects.filter(username__istartswith=f"{identifier}@"))
+        add_candidate(User.objects.filter(email__istartswith=f"{identifier}@"))
+    else:
+        local_part = identifier.split("@", 1)[0]
+        add_candidate(User.objects.filter(username__iexact=local_part))
+        add_candidate(User.objects.filter(email__istartswith=f"{local_part}@"))
+        add_candidate(User.objects.filter(username__istartswith=f"{local_part}@"))
+
+    user = next((cand for cand in candidates if cand.check_password(data["password"])), None)
     if not user:
-        return Response({"error": "Invalid email or password"}, status=401)
+        return Response({"error": "Invalid username/email or password"}, status=401)
+
+    auth_username = user.username
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    user = authenticate(username=auth_username, password=data["password"])
+    if not user:
+        return Response({"error": "Invalid username/email or password"}, status=401)
+
+    django_login(request, user)
 
     profile, _ = UserProfile.objects.get_or_create(
         user=user,
         defaults={
-            "full_name": user.first_name or email.split("@")[0],
+            "full_name": user.first_name or user.username.split("@")[0],
             "role": "student",
             "year_level": "",
         },
     )
     _get_learning_state_for_user(user)
 
+    # Don't require client-sent role or PIN. Server determines role from profile.
+
     return Response(
         {
             "message": "Login successful",
             "user": {
-                "name": profile.full_name or user.first_name or email.split("@")[0],
+                "id": user.id,
+                "name": profile.full_name or user.first_name or user.username.split("@")[0],
                 "email": user.email,
+                "username": user.username,
                 "yearLevel": profile.year_level,
                 "role": profile.role,
             },
             "redirect": _redirect_for_role(profile.role),
         }
     )
+
+
+@csrf_exempt
+@api_view(["POST"])
+def verify_email(request: Any) -> Response:
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    otp = str(request.data.get("otp") or request.query_params.get("otp") or "").strip()
+    if not email or not otp:
+        return Response({"error": "Missing email or otp"}, status=400)
+
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    # Find latest valid OTP
+    now = timezone.now()
+    latest = EmailOTP.objects.filter(user=user, expires_at__gte=now).order_by("-created_at").first()
+    if not latest:
+        return Response({"error": "No valid verification code found. Request a new one."}, status=400)
+
+    if latest.otp != otp:
+        # increment attempts
+        latest.attempts = (latest.attempts or 0) + 1
+        latest.save(update_fields=["attempts"])  # type: ignore[arg-type]
+        return Response({"error": "Invalid verification code"}, status=400)
+
+    # valid OTP
+    user.is_active = True
+    user.save(update_fields=["is_active"])  # type: ignore[arg-type]
+
+    # cleanup otps for user
+    EmailOTP.objects.filter(user=user).delete()
+
+    profile, _ = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={
+            "full_name": user.first_name or user.username.split("@")[0],
+            "role": "student",
+            "year_level": "",
+        },
+    )
+    _get_learning_state_for_user(user)
+
+    return Response({"message": "Email verified. You can now log in."})
+
+
+@csrf_exempt
+@api_view(["POST"])
+def resend_verification(request: Any) -> Response:
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    if user.is_active:
+        return Response({"message": "Email already verified"})
+
+    # Avoid duplicate sends when the resend button is clicked repeatedly or the client retries.
+    now = timezone.now()
+    recent_otp = (
+        EmailOTP.objects.filter(user=user, expires_at__gte=now, created_at__gte=now - timedelta(seconds=60))
+        .order_by("-created_at")
+        .first()
+    )
+    if recent_otp:
+        return Response({"message": "A verification code was already sent recently. Please check your email."})
+
+    result = _create_and_send_otp(user, request)
+    if not result.get("ok"):
+        # In development include error details so frontend can surface them.
+        details = result.get("error")
+        return Response({
+            "message": "Failed to send verification code.",
+            "error": "email_delivery_failed",
+            "details": details,
+        }, status=500)
+
+    return Response({"message": "Verification code sent."})
 
 
 @api_view(["GET", "POST"])
@@ -583,121 +928,9 @@ def learning_state(request: Any) -> Response:
     return Response(serializer.data)
 
 
-def _request_email(request: Any) -> str:
-    return str(request.query_params.get("email") or request.data.get("email") or "").strip().lower()
-
-
-def _default_student_modules() -> list[dict[str, Any]]:
-    return [
-        {
-            "module_key": "lesson1",
-            "title": "Lesson 1: Basic Finger Spelling",
-            "year_level": "1",
-            "description": "Start with alphabet hand shapes and spelling drills.",
-            "activities_count": 4,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 1,
-        },
-        {
-            "module_key": "lesson2",
-            "title": "Lesson 2: Common Everyday Signs",
-            "year_level": "1",
-            "description": "Build essential sign vocabulary for daily communication.",
-            "activities_count": 5,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 2,
-        },
-        {
-            "module_key": "lesson3",
-            "title": "Lesson 3: Greetings and Polite Expressions",
-            "year_level": "2",
-            "description": "Practice polite conversational signs.",
-            "activities_count": 4,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 3,
-        },
-        {
-            "module_key": "lesson4",
-            "title": "Lesson 4: Family and Relationships",
-            "year_level": "2",
-            "description": "Describe people and relationships around you.",
-            "activities_count": 5,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 4,
-        },
-        {
-            "module_key": "lesson5",
-            "title": "Lesson 5: Numbers and Counting",
-            "year_level": "3",
-            "description": "Use numerical signs accurately in context.",
-            "activities_count": 6,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 5,
-        },
-        {
-            "module_key": "lesson6",
-            "title": "Lesson 6: Sign Language Grammar",
-            "year_level": "3",
-            "description": "Build clear sentence structure and grammar.",
-            "activities_count": 6,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 6,
-        },
-        {
-            "module_key": "lesson7",
-            "title": "Lesson 7: Emotions and Expressions",
-            "year_level": "4",
-            "description": "Express emotions naturally through signs.",
-            "activities_count": 7,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 7,
-        },
-        {
-            "module_key": "lesson8",
-            "title": "Lesson 8: Complex Conversations",
-            "year_level": "4",
-            "description": "Handle practical real-life sign conversations.",
-            "activities_count": 8,
-            "status": LearningModule.STATUS_PUBLISHED,
-            "sort_order": 8,
-        },
-    ]
-
-
-def _game_access_for_year(year_level: str) -> list[dict[str, Any]]:
-    year_to_game = {
-        "1": ("sign-match-game.html", "Sign Match Game"),
-        "2": ("typing-game.html", "Sign-to-Word Typing"),
-        "3": ("sentence-game.html", "Sentence Builder"),
-        "4": ("scenario-game.html", "Scenario-Based Game"),
-    }
-    game_route, game_title = year_to_game.get(str(year_level), ("sign-match-game.html", "Sign Match Game"))
-
-    def _difficulty_payload(level_name: str) -> dict[str, Any]:
-        levels = [1, 2, 3]
-        return {
-            "difficulty": level_name,
-            "levels": levels,
-            "randomLevel": random.choice(levels),
-        }
-
-    return [
-        {
-            "yearLevel": str(year_level),
-            "title": game_title,
-            "route": game_route,
-            "difficulties": [
-                _difficulty_payload("easy"),
-                _difficulty_payload("medium"),
-                _difficulty_payload("hard"),
-            ],
-        }
-    ]
-
-
 @api_view(["GET"])
 def student_content(request: Any) -> Response:
-    email = _request_email(request)
+    email = str(request.query_params.get("email") or "").strip().lower()
     if not email:
         return Response({"error": "Missing email"}, status=400)
 
@@ -707,50 +940,96 @@ def student_content(request: Any) -> Response:
         return Response({"error": "User not found"}, status=404)
 
     profile = getattr(user, "profile", None)
-    if not profile or str(profile.role or "student").lower() != "student":
-        return Response({"error": "Student access required"}, status=403)
+    own_year_level = str(getattr(profile, "year_level", "1") or "1").strip()
+    year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
 
-    year_level = _normalize_year_level_filter(getattr(profile, "year_level", "1") or "1")
-    if year_level not in {"1", "2", "3", "4"}:
-        year_level = "1"
+    try:
+        page = max(1, int(request.query_params.get("page") or 1))
+    except Exception:
+        page = 1
+    try:
+        limit = max(1, min(50, int(request.query_params.get("limit") or 10)))
+    except Exception:
+        limit = 10
 
-    modules = list(
-        LearningModule.objects.filter(year_level=year_level, status=LearningModule.STATUS_PUBLISHED)
-        .order_by("sort_order", "title")
-        .all()
+    # Return published modules for all year levels, optionally narrowed to one
+    # via the ?yearLevel= query param, with attached files.
+    modules_qs = (
+        LearningModule.objects
+        .select_related("created_by", "updated_by")
+        .prefetch_related("files", "quiz_questions")
+        .filter(status=LearningModule.STATUS_PUBLISHED)
+        .order_by("year_level", "sort_order", "title")
     )
+    if year_level != "all":
+        modules_qs = modules_qs.filter(year_level=year_level)
+    total = modules_qs.count()
+    start = (page - 1) * limit
+    end = start + limit
+    modules = list(modules_qs[start:end])
 
-    if modules:
-        modules_payload = LearningModuleSerializer(modules, many=True).data
-    else:
-        modules_payload = [
-            module
-            for module in _default_student_modules()
-            if str(module.get("year_level") or "") == year_level
-        ]
+    serialized = []
+    for module in modules:
+        module_data = LearningModuleSerializer(module).data
+        module_files = list(module.files.all().order_by("-created_at"))
+        module_data["files"] = ModuleFileSerializer(module_files, many=True, context={"request": request}).data
+        # include quiz count and student-safe quiz payload
+        questions = list(module.quiz_questions.all().order_by("order", "created_at"))
+        module_data["quizCount"] = len(questions)
+        module_data["quizzes"] = StudentQuizQuestionSerializer(questions, many=True).data
+        serialized.append(module_data)
 
-    return Response(
-        {
-            "yearLevel": year_level,
-            "modules": modules_payload,
-            "gameAccess": _game_access_for_year(year_level),
-        }
+    return Response({
+        "modules": serialized,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "yearLevel": year_level,
+        "ownYearLevel": own_year_level,
+    })
+
+
+def _request_email(request: Any) -> str:
+    query_email = (
+        request.query_params.get("actorEmail")
+        or request.query_params.get("adminEmail")
+        or request.query_params.get("instructorEmail")
+        or request.query_params.get("email")
+        or ""
     )
+    body_email = (
+        request.data.get("actorEmail")
+        or request.data.get("adminEmail")
+        or request.data.get("instructorEmail")
+        or request.data.get("email")
+        or ""
+    )
+    return str(query_email or body_email).strip().lower()
 
 
 def _get_instructor_actor(request: Any):
     email = _request_email(request)
+    logger.info(f"[DEBUG] _get_instructor_actor: request.method={request.method}, request.data={request.data}, query_params={request.query_params}, extracted_email={email}")
     if not email:
+        logger.error(f"[DEBUG] No email found in request data: {request.data} or query_params: {request.query_params}")
         return None, Response({"error": "Missing instructor email"}, status=400)
 
     try:
-        user = User.objects.select_related("profile").get(username=email)
+        # Try to find by email first, then by username
+        user = User.objects.select_related("profile").get(email=email)
     except User.DoesNotExist:
-        return None, Response({"error": "User not found"}, status=404)
+        try:
+            user = User.objects.select_related("profile").get(username=email)
+        except User.DoesNotExist:
+            return None, Response({"error": "User not found"}, status=404)
 
     profile = getattr(user, "profile", None)
     if not profile or profile.role not in {"instructor", "admin"}:
         return None, Response({"error": "Instructor access required"}, status=403)
+
+    # Deny access if instructor/admin account has been marked inactive (1 == inactive)
+    if getattr(profile, "active", 0) == 1:
+        return None, Response({"error": "Instructor account is inactive"}, status=403)
 
     return user, None
 
@@ -783,7 +1062,7 @@ def _module_student_counts(modules: list[LearningModule]) -> dict[str, int]:
     return counts
 
 
-def _serialize_student_row(learning_state: UserLearningState, total_modules: int) -> dict:
+def _serialize_student_row(learning_state: UserLearningState, total_modules: int, request: Any = None) -> dict:
     user = learning_state.user
     profile = getattr(user, "profile", None)
     state = learning_state.state if isinstance(learning_state.state, dict) else {}
@@ -804,11 +1083,39 @@ def _serialize_student_row(learning_state: UserLearningState, total_modules: int
         "totalModules": total_modules,
         "overallProgress": average_progress,
         "updatedAt": learning_state.updated_at.isoformat(),
+        **(_profile_avatar_payload(profile, request) if request is not None else {"photoUrl": "", "avatarId": ""}),
     }
 
 
 def _student_learning_state(user: User) -> UserLearningState | None:
     return UserLearningState.objects.filter(user=user).first()
+
+
+def _serialize_user_profile_row(profile: UserProfile, request: Any = None) -> dict:
+    user = profile.user
+    return {
+        "id": user.id,
+        "name": profile.full_name or user.first_name or user.username,
+        "email": user.email,
+        "username": user.username,
+        "role": str(profile.role or "student").lower(),
+        "yearLevel": str(profile.year_level or ""),
+        "active": _safe_int(getattr(profile, "active", 0), 0),
+        "createdAt": profile.created_at.isoformat() if profile.created_at else "",
+        **(_profile_avatar_payload(profile, request) if request is not None else {"photoUrl": "", "avatarId": ""}),
+    }
+
+
+def _get_admin_actor(request: Any):
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return None, error_response
+
+    profile = getattr(actor, "profile", None)
+    if not profile or str(profile.role or "").lower() != "admin":
+        return None, Response({"error": "Admin access required"}, status=403)
+
+    return actor, None
 
 
 def _instructor_fallback_payload(actor: User) -> dict:
@@ -843,6 +1150,15 @@ def instructor_dashboard(request: Any) -> Response:
         return error_response
 
     try:
+        page = max(1, int(request.query_params.get("page") or 1))
+    except Exception:
+        page = 1
+    try:
+        page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
+    except Exception:
+        page_size = 10
+
+    try:
         modules = list(LearningModule.objects.select_related("created_by", "updated_by").all())
         announcements = list(Announcement.objects.select_related("created_by", "updated_by").all())
         student_profiles = list(
@@ -865,7 +1181,7 @@ def instructor_dashboard(request: Any) -> Response:
         if not learning_state:
             learning_state = _get_learning_state_for_user(profile.user)
             student_states[profile.user_id] = learning_state
-        student_row = _serialize_student_row(learning_state, total_modules)
+        student_row = _serialize_student_row(learning_state, total_modules, request)
         total_points += student_row["points"]
         total_completion += student_row["overallProgress"]
         if student_row["points"] > 0 or student_row["modulesCompleted"] > 0:
@@ -874,11 +1190,8 @@ def instructor_dashboard(request: Any) -> Response:
 
     students.sort(key=lambda item: (item["points"], item["overallProgress"], item["accuracy"]), reverse=True)
 
-    # Pagination for student list
-    page = _safe_int(request.query_params.get("page"), 1)
-    page_size = _safe_int(request.query_params.get("pageSize"), 25)
     total_students = len(students)
-    start = max(0, (page - 1) * page_size)
+    start = (page - 1) * page_size
     end = start + page_size
     students_page = students[start:end]
 
@@ -903,7 +1216,13 @@ def instructor_dashboard(request: Any) -> Response:
         "modules": [
             {
                 **LearningModuleSerializer(module).data,
+                "files": ModuleFileSerializer(
+                    list(module.files.all().order_by("-created_at")),
+                    many=True,
+                    context={"request": request},
+                ).data,
                 "studentCount": module_counts.get(module.module_key, 0),
+                "quizCount": module.quiz_questions.count(),
             }
             for module in modules
         ],
@@ -915,7 +1234,191 @@ def instructor_dashboard(request: Any) -> Response:
         },
         "announcements": AnnouncementSerializer(announcements, many=True).data,
     }
+
+    actor_profile = getattr(actor, "profile", None)
+    if actor_profile and str(getattr(actor_profile, "role", "")).lower() == "admin":
+        all_profiles = list(UserProfile.objects.select_related("user").order_by("role", "full_name", "user__username"))
+        payload["users"] = [_serialize_user_profile_row(profile, request) for profile in all_profiles]
+        payload["roleCounts"] = {
+            "student": sum(1 for profile in all_profiles if str(profile.role or "").lower() == "student"),
+            "instructor": sum(1 for profile in all_profiles if str(profile.role or "").lower() == "instructor"),
+            "admin": sum(1 for profile in all_profiles if str(profile.role or "").lower() == "admin"),
+            "total": len(all_profiles),
+            "inactive": sum(1 for profile in all_profiles if _safe_int(getattr(profile, "active", 0), 0) == 1),
+        }
+
     return Response(payload)
+
+
+@api_view(["GET", "POST"])
+def admin_users(request: Any) -> Response:
+    actor, error_response = _get_admin_actor(request)
+    if error_response:
+        return error_response
+
+    # If POST, create a new user (admin action)
+    if request.method == "POST":
+        payload = request.data.copy() if isinstance(request.data, dict) else {}
+        email = str(payload.get("email") or "").strip().lower()
+        first_name = _normalize_name_part(payload.get("firstName") or "")
+        middle_name = _normalize_name_part(payload.get("middleName") or "")
+        last_name = _normalize_name_part(payload.get("lastName") or "")
+        suffix = _normalize_name_part(payload.get("suffix") or "")
+        password = str(payload.get("password") or "")
+        year_level = str(payload.get("yearLevel") or "").strip()
+        role = str(payload.get("role") or "instructor").strip().lower()
+
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+        if User.objects.filter(username=email).exists():
+            return Response({"error": "Email is already registered"}, status=409)
+        if not password or len(password) < 8:
+            return Response({"error": "Password must be at least 8 characters"}, status=400)
+        if not first_name or not last_name:
+            return Response({"error": "First name and last name are required"}, status=400)
+
+        if role not in {"student", "instructor", "admin"}:
+            role = "instructor"
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+
+        full_name = " ".join([part for part in [first_name, middle_name, last_name, suffix] if part]).strip()
+
+        profile = UserProfile.objects.create(
+            user=user,
+            full_name=full_name,
+            first_name=first_name,
+            middle_name=middle_name,
+            last_name=last_name,
+            suffix=suffix,
+            year_level=year_level,
+            role=role,
+            security_pin="",
+        )
+
+        _get_learning_state_for_user(user)
+
+        return Response({"message": "User created", "user": _serialize_user_profile_row(profile, request)}, status=201)
+
+    role_filter = str(request.query_params.get("role") or "all").strip().lower()
+    try:
+        page = max(1, int(request.query_params.get("page") or 1))
+    except Exception:
+        page = 1
+    try:
+        page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
+    except Exception:
+        page_size = 10
+
+    profiles_qs = UserProfile.objects.select_related("user").all().order_by("role", "full_name", "user__username")
+    if role_filter in {"student", "instructor", "admin"}:
+        profiles_qs = profiles_qs.filter(role=role_filter)
+
+    total = profiles_qs.count()
+    start = (page - 1) * page_size
+    end = start + page_size
+    profiles = list(profiles_qs[start:end])
+    return Response(
+        {
+            "currentUser": {
+                "email": actor.email,
+                "role": "admin",
+            },
+            "users": [_serialize_user_profile_row(profile, request) for profile in profiles],
+            "role": role_filter,
+            "total": total,
+            "pagination": {
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": max(1, (total + page_size - 1) // page_size),
+            },
+        }
+    )
+
+
+@api_view(["PATCH"])
+def admin_user_status(request: Any, user_id: int) -> Response:
+    actor, error_response = _get_admin_actor(request)
+    if error_response:
+        return error_response
+
+    target_profile = get_object_or_404(UserProfile.objects.select_related("user"), user_id=user_id)
+
+    if target_profile.user_id == actor.id:
+        return Response({"error": "You cannot deactivate your own admin account"}, status=400)
+
+    next_active = _safe_int(request.data.get("active"), -1)
+    if next_active not in {0, 1}:
+        return Response({"error": "active must be 0 (active) or 1 (inactive)"}, status=400)
+
+    target_profile.active = next_active
+    target_profile.save(update_fields=["active"])
+
+    return Response({
+        "message": "User status updated",
+        "user": _serialize_user_profile_row(target_profile, request),
+    })
+
+
+@api_view(["PATCH"])
+def admin_user_details(request: Any, user_id: int) -> Response:
+    actor, error_response = _get_admin_actor(request)
+    if error_response:
+        return error_response
+
+    target_profile = get_object_or_404(UserProfile.objects.select_related("user"), user_id=user_id)
+    target_user = target_profile.user
+
+    # Extract fields from request
+    full_name = _normalize_name_part(request.data.get("name") or "")
+    email = str(request.data.get("email") or "").strip().lower()
+    role = str(request.data.get("role") or "").strip().lower()
+    year_level = str(request.data.get("yearLevel") or "").strip()
+
+    # Track changes
+    user_updated = False
+    profile_updated = False
+
+    # Validate and update email
+    if email and email != target_user.email:
+        if User.objects.filter(email=email).exclude(id=target_user.id).exists():
+            return Response({"error": "Email already in use"}, status=400)
+        target_user.email = email
+        user_updated = True
+
+    # Validate and update role
+    if role and role not in {"student", "instructor", "admin"}:
+        return Response({"error": f"Invalid role: {role}"}, status=400)
+    if role and role != str(target_profile.role or "").lower():
+        target_profile.role = role
+        profile_updated = True
+
+    # Update other fields
+    if full_name and full_name != (target_profile.full_name or ""):
+        target_profile.full_name = full_name
+        profile_updated = True
+
+    if year_level and year_level != str(target_profile.year_level or ""):
+        target_profile.year_level = year_level
+        profile_updated = True
+
+    # Save changes
+    if user_updated:
+        target_user.save(update_fields=["email"])
+    if profile_updated:
+        target_profile.save()
+
+    return Response({
+        "message": "User details updated",
+        "user": _serialize_user_profile_row(target_profile, request),
+    })
 
 
 @api_view(["GET", "POST"])
@@ -926,15 +1429,43 @@ def instructor_modules(request: Any) -> Response:
 
     if request.method == "GET":
         try:
-            modules = LearningModule.objects.select_related("created_by", "updated_by").all()
+            modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quiz_questions").order_by("sort_order", "title").all()
+            year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
+            if year_level != "all":
+                modules_qs = modules_qs.filter(year_level=year_level)
+            try:
+                page = max(1, int(request.query_params.get("page") or 1))
+            except Exception:
+                page = 1
+            try:
+                limit = max(1, min(100, int(request.query_params.get("limit") or 50)))
+            except Exception:
+                limit = 50
+
+            total = modules_qs.count()
+            start = (page - 1) * limit
+            end = start + limit
+            modules = list(modules_qs[start:end])
             module_counts = _module_student_counts(list(modules))
-            return Response([
-                {
-                    **LearningModuleSerializer(module).data,
-                    "studentCount": module_counts.get(module.module_key, 0),
-                }
-                for module in modules
-            ])
+            return Response({
+                "modules": [
+                    {
+                        **LearningModuleSerializer(module).data,
+                        "files": ModuleFileSerializer(
+                            list(module.files.all().order_by("-created_at")),
+                            many=True,
+                            context={"request": request},
+                        ).data,
+                        "studentCount": module_counts.get(module.module_key, 0),
+                        "quizCount": module.quiz_questions.count(),
+                    }
+                    for module in modules
+                ],
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "yearLevel": year_level,
+            })
         except (DatabaseError, OperationalError):
             return Response([])
 
@@ -963,6 +1494,7 @@ def instructor_modules(request: Any) -> Response:
 
     module = serializer.save(created_by=actor, updated_by=actor)
     response_data = LearningModuleSerializer(module).data
+    response_data["files"] = []
     response_data["studentCount"] = 0
     return Response(response_data, status=201)
 
@@ -977,6 +1509,7 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
 
     if request.method == "GET":
         data = LearningModuleSerializer(module).data
+        data["files"] = ModuleFileSerializer(list(module.files.all().order_by("-created_at")), many=True, context={"request": request}).data
         data["studentCount"] = _module_student_counts([module]).get(module.module_key, 0)
         return Response(data)
 
@@ -1005,6 +1538,202 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     data = LearningModuleSerializer(module).data
     data["studentCount"] = _module_student_counts([module]).get(module.module_key, 0)
     return Response(data)
+
+
+@api_view(["GET", "POST"])
+def module_quiz_questions(request: Any, module_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    module = get_object_or_404(LearningModule, pk=module_id)
+
+    if request.method == "GET":
+        questions = QuizQuestion.objects.filter(module=module).order_by("order", "created_at")
+        return Response(QuizQuestionSerializer(questions, many=True).data)
+
+    payload = request.data.copy()
+    serializer = QuizQuestionSerializer(data={
+        "module": module.id,
+        "question_text": str(payload.get("question_text") or "").strip(),
+        "question_type": str(payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE).strip(),
+        "choices": payload.get("choices") or [],
+        "correct_answer": str(payload.get("correct_answer") or "").strip(),
+        "order": int(payload.get("order") or 0),
+    })
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    question = serializer.save()
+    return Response(QuizQuestionSerializer(question).data, status=201)
+
+
+@api_view(["POST"])
+def module_quiz_submit(request: Any, module_id: int) -> Response:
+    """Endpoint for students to submit quiz answers for grading.
+
+    Expects JSON: { "email": "student@example.com", "answers": [{"question_id": 1, "answer": "A"}, ...] }
+    Returns: { score: int, total: int, details: [{question_id, correct, expected, given}] }
+    """
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    answers = request.data.get("answers") or []
+
+    try:
+        module = LearningModule.objects.get(pk=module_id)
+    except LearningModule.DoesNotExist:
+        return Response({"error": "Module not found"}, status=404)
+
+    # Build lookup of correct answers
+    questions = list(QuizQuestion.objects.filter(module=module).all())
+    question_map = {q.id: q for q in questions}
+
+    if not isinstance(answers, list):
+        return Response({"error": "answers must be a list"}, status=400)
+
+    details = []
+    correct_count = 0
+    for ans in answers:
+        try:
+            qid = int(ans.get("question_id"))
+        except Exception:
+            continue
+        given = ans.get("answer")
+        q = question_map.get(qid)
+        if not q:
+            details.append({"question_id": qid, "correct": False, "expected": None, "given": given})
+            continue
+        expected = str(q.correct_answer or "").strip()
+        # Compare normalized strings for simple grading
+        is_correct = False
+        if expected != "":
+            try:
+                is_correct = str(given or "").strip().lower() == expected.strip().lower()
+            except Exception:
+                is_correct = False
+
+        if is_correct:
+            correct_count += 1
+
+        details.append({"question_id": qid, "correct": bool(is_correct), "expected": expected, "given": given})
+
+    total = len(questions)
+    score = correct_count
+
+    # Any submission completes the module, regardless of score, and updates
+    # the student's progress/recent-activity state authoritatively here so
+    # completion is guaranteed correct even if the client never re-syncs.
+    updated_state = None
+    if email:
+        try:
+            user = User.objects.get(username=email)
+        except User.DoesNotExist:
+            user = None
+
+        if user is not None:
+            try:
+                learning_state = _get_learning_state_for_user(user)
+                state = dict(learning_state.state or {})
+                module_progress = dict(state.get("moduleProgress") or {})
+                module_progress[module.module_key] = 100
+                state["moduleProgress"] = module_progress
+
+                state["points"] = int(state.get("points") or 0) + 50
+                state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
+
+                recent_activity = list(state.get("recentActivity") or [])
+                recent_activity.insert(0, {
+                    "icon": "📝",
+                    "text": f"Completed quiz: {module.title}",
+                    "meta": f"{score}/{total} correct",
+                })
+                state["recentActivity"] = recent_activity[:10]
+
+                learning_state.state = state
+                learning_state.save(update_fields=["state", "updated_at"])
+                updated_state = state
+            except Exception:
+                logger.exception("Failed to persist quiz completion state for %s / module %s", email, module_id)
+
+    return Response({"score": score, "total": total, "details": details, "state": updated_state})
+
+
+@api_view(["PATCH", "DELETE"])
+def module_quiz_question_detail(request: Any, module_id: int, question_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    module = get_object_or_404(LearningModule, pk=module_id)
+    question = get_object_or_404(QuizQuestion, pk=question_id, module=module)
+
+    if request.method == "DELETE":
+        question.delete()
+        return Response({"message": "Question deleted"})
+
+    payload = request.data.copy()
+    update_data = {
+        "question_text": str(payload.get("question_text") or question.question_text).strip(),
+        "question_type": str(payload.get("question_type") or question.question_type).strip(),
+        "choices": payload.get("choices") if payload.get("choices") is not None else question.choices,
+        "correct_answer": str(payload.get("correct_answer") or question.correct_answer).strip(),
+        "order": int(payload.get("order") or question.order),
+    }
+    serializer = QuizQuestionSerializer(question, data=update_data, partial=True)
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    question = serializer.save()
+    return Response(QuizQuestionSerializer(question).data)
+
+
+@api_view(["GET"])
+def check_session(request: Any) -> Response:
+    """Check if user is authenticated via session cookie."""
+    if not request.user.is_authenticated:
+        return Response({"authenticated": False, "user": None}, status=401)
+
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(
+            user=request.user,
+            full_name=request.user.first_name or request.user.username.split("@")[0],
+            role="student",
+        )
+
+    return Response({
+        "authenticated": True,
+        "user": {
+            "id": request.user.id,
+            "name": profile.full_name or request.user.first_name or request.user.username.split("@")[0],
+            "email": request.user.email,
+            "username": request.user.username,
+            **_profile_avatar_payload(profile, request),
+            "firstName": profile.first_name or request.user.first_name or "",
+            "middleName": profile.middle_name or "",
+            "lastName": profile.last_name or request.user.last_name or "",
+            "suffix": profile.suffix or "",
+            "yearLevel": profile.year_level,
+            "role": profile.role,
+        }
+    })
+
+
+@ensure_csrf_cookie
+@api_view(["GET"])
+def csrf_token(request: Any) -> Response:
+    """Set the CSRF cookie for browser clients that submit session-backed POST requests."""
+    return Response({"csrfToken": "set"})
+
+
+@csrf_exempt
+@api_view(["POST"])
+def logout(request: Any) -> Response:
+    """Log out the user by clearing the session."""
+    from django.contrib.auth import logout as django_logout
+    django_logout(request)
+    return Response({"message": "Logged out successfully"})
+
 
 
 @api_view(["GET", "POST"])
@@ -1061,6 +1790,206 @@ def instructor_announcement_detail(request: Any, announcement_id: int) -> Respon
 
     announcement = serializer.save(updated_by=actor)
     return Response(AnnouncementSerializer(announcement).data)
+
+
+@api_view(["GET", "POST"])
+def instructor_game_levels(request: Any) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    if request.method == "GET":
+        levels = GameLevel.objects.select_related("created_by", "updated_by").prefetch_related("items").all()
+        game_key = request.query_params.get("game_key")
+        if game_key:
+            levels = levels.filter(game_key=game_key)
+        return Response(GameLevelSerializer(levels, many=True).data)
+
+    serializer = GameLevelSerializer(data={
+        "game_key": str(request.data.get("game_key") or "").strip(),
+        "difficulty": str(request.data.get("difficulty") or GameLevel.DIFFICULTY_EASY).strip(),
+        "level_number": int(request.data.get("level_number") or 1),
+        "title": str(request.data.get("title") or "").strip(),
+        "is_published": _safe_bool(request.data.get("is_published", True), True),
+    })
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    level = serializer.save(created_by=actor, updated_by=actor)
+    return Response(GameLevelSerializer(level).data, status=201)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+def instructor_game_level_detail(request: Any, level_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    level = get_object_or_404(GameLevel, pk=level_id)
+
+    if request.method == "GET":
+        return Response(GameLevelSerializer(level).data)
+
+    if request.method == "DELETE":
+        level.delete()
+        return Response({"message": "Level deleted"})
+
+    serializer = GameLevelSerializer(
+        level,
+        data={
+            "game_key": str(request.data.get("game_key") or level.game_key).strip(),
+            "difficulty": str(request.data.get("difficulty") or level.difficulty).strip(),
+            "level_number": int(request.data.get("level_number") or level.level_number),
+            "title": str(request.data.get("title") if request.data.get("title") is not None else level.title).strip(),
+            "is_published": _safe_bool(request.data.get("is_published", level.is_published), level.is_published),
+        },
+        partial=True,
+    )
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    level = serializer.save(updated_by=actor)
+    return Response(GameLevelSerializer(level).data)
+
+
+@api_view(["GET", "POST"])
+def game_level_items(request: Any, level_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    level = get_object_or_404(GameLevel, pk=level_id)
+
+    if request.method == "GET":
+        items = GameLevelItem.objects.filter(level=level).order_by("order", "id")
+        return Response(GameLevelItemSerializer(items, many=True).data)
+
+    payload = request.data.copy()
+    # Normalize values first so we can validate uniqueness for a "primary" item (order==0)
+    prompt_val = str(payload.get("prompt") or "").strip()
+    answer_val = str(payload.get("answer") or "").strip()
+    media_url_val = str(payload.get("media_url") or "").strip()
+    extra_data_val = payload.get("extra_data") or {}
+    try:
+        order_val = int(payload.get("order") or 0)
+    except Exception:
+        order_val = 0
+
+    # Prevent creating duplicate primary items for a level. Primary is treated as order==0.
+    if order_val == 0:
+        existing_primary = GameLevelItem.objects.filter(level=level, order=0).exists()
+        if existing_primary:
+            return Response({"error": "A primary content item (order=0) already exists for this level. Delete or change it first."}, status=409)
+
+    serializer = GameLevelItemSerializer(data={
+        "level": level.id,
+        "prompt": prompt_val,
+        "answer": answer_val,
+        "media_url": media_url_val,
+        "extra_data": extra_data_val,
+        "order": order_val,
+    })
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    item = serializer.save()
+    return Response(GameLevelItemSerializer(item).data, status=201)
+
+
+@api_view(["PATCH", "DELETE"])
+def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    level = get_object_or_404(GameLevel, pk=level_id)
+    item = get_object_or_404(GameLevelItem, pk=item_id, level=level)
+
+    if request.method == "DELETE":
+        item.delete()
+        return Response({"message": "Item deleted"})
+
+    payload = request.data.copy()
+    serializer = GameLevelItemSerializer(
+        item,
+        data={
+            "level": level.id,
+            "prompt": str(payload.get("prompt") if payload.get("prompt") is not None else item.prompt).strip(),
+            "answer": str(payload.get("answer") if payload.get("answer") is not None else item.answer).strip(),
+            "media_url": str(payload.get("media_url") if payload.get("media_url") is not None else item.media_url).strip(),
+            "extra_data": payload.get("extra_data") if payload.get("extra_data") is not None else item.extra_data,
+            "order": int(payload.get("order") or item.order),
+        },
+        partial=True,
+    )
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    item = serializer.save()
+    return Response(GameLevelItemSerializer(item).data)
+
+
+@api_view(["GET"])
+def public_game_levels(request: Any, game_key: str) -> Response:
+    """Public listing of published levels (with content) for a game.
+
+    Consumed directly by the student-facing game pages so teacher-authored
+    levels replace each game's default pool once published.
+    """
+    valid_game_keys = {choice[0] for choice in GameLevel.GAME_CHOICES}
+    if game_key not in valid_game_keys:
+        return Response({"error": f"Invalid game_key: {game_key}"}, status=400)
+
+    levels = GameLevel.objects.filter(game_key=game_key, is_published=True).prefetch_related("items")
+    difficulty = str(request.query_params.get("difficulty") or "").strip().lower()
+    if difficulty:
+        levels = levels.filter(difficulty=difficulty)
+    return Response(GameLevelSerializer(levels, many=True).data)
+
+
+@api_view(["POST"])
+def instructor_upload_sign_video(request: Any) -> Response:
+    """Instructor upload of a sign video for use as Game Level content.
+
+    Creates a SignVideo (text_to_sign_only=False) so it's immediately usable
+    through the shared /sign-videos/?scope=games pool the games already read.
+    Re-uploading an existing word/phrase reuses the existing video instead of
+    erroring, since teachers commonly reuse the same word across levels.
+    """
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    word = str(request.data.get("word") or "").strip()
+    if not word:
+        return Response({"error": "Word/phrase is required"}, status=400)
+
+    key = _key_for_word(word)
+    existing = SignVideo.objects.filter(key=key).first()
+    if existing:
+        return Response(AdminSignVideoSerializer(existing, context={"request": request}).data)
+
+    if "video" not in request.FILES:
+        return Response({"error": "No video file provided"}, status=400)
+
+    category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
+    valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
+    if category not in valid_categories:
+        category = SignVideo.CATEGORY_PHRASES
+
+    try:
+        video = SignVideo.objects.create(
+            key=key,
+            word=word,
+            category=category,
+            video=request.FILES["video"],
+            order=_safe_int(request.data.get("order"), 0),
+            is_published=True,
+            text_to_sign_only=False,
+        )
+        return Response(AdminSignVideoSerializer(video, context={"request": request}).data, status=201)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
 
 
 @api_view(["GET", "POST"])
@@ -1123,6 +2052,124 @@ def module_file_detail(request: Any, module_id: int, file_id: int) -> Response:
 
     module_file.delete()
     return Response({"message": "File deleted"})
+
+
+@api_view(["GET"])
+def sign_videos(request: Any) -> Response:
+    """Public listing of sign language demonstration videos.
+
+    Shared data source for the Games and Text-to-Sign modules -- both read
+    from the SignVideo table instead of hardcoded local video files. Pass
+    ?scope=games to exclude videos uploaded via the Admin "Sign Language
+    Videos" manager, which are meant for Text-to-Sign only.
+    """
+    videos = SignVideo.objects.filter(is_published=True).order_by("category", "order", "word")
+    category = str(request.query_params.get("category") or "").strip().lower()
+    if category:
+        videos = videos.filter(category=category)
+    scope = str(request.query_params.get("scope") or "").strip().lower()
+    if scope == "games":
+        videos = videos.exclude(text_to_sign_only=True)
+    return Response(SignVideoSerializer(videos, many=True, context={"request": request}).data)
+
+
+def _key_for_word(word: str) -> str:
+    return str(word or "").strip().lower()
+
+
+@api_view(["GET", "POST"])
+def admin_sign_videos(request: Any) -> Response:
+    """Admin management of Text-to-Sign videos: list all, or upload a new one."""
+    actor, error_response = _get_admin_actor(request)
+    if error_response:
+        return error_response
+
+    if request.method == "GET":
+        videos = SignVideo.objects.all().order_by("category", "order", "word")
+        category = str(request.query_params.get("category") or "").strip().lower()
+        if category:
+            videos = videos.filter(category=category)
+        return Response(AdminSignVideoSerializer(videos, many=True, context={"request": request}).data)
+
+    # POST - upload a new video. Always scoped to Text-to-Sign only.
+    word = str(request.data.get("word") or "").strip()
+    if not word:
+        return Response({"error": "Word/phrase is required"}, status=400)
+
+    if "video" not in request.FILES:
+        return Response({"error": "No video file provided"}, status=400)
+
+    category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
+    valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
+    if category not in valid_categories:
+        return Response({"error": f"Invalid category: {category}"}, status=400)
+
+    key = _key_for_word(word)
+    if SignVideo.objects.filter(key=key).exists():
+        return Response({"error": "A video for this word/phrase already exists"}, status=409)
+
+    try:
+        video = SignVideo.objects.create(
+            key=key,
+            word=word,
+            category=category,
+            video=request.FILES["video"],
+            order=_safe_int(request.data.get("order"), 0),
+            is_published=_safe_bool(request.data.get("is_published"), True),
+            text_to_sign_only=True,
+        )
+        return Response(AdminSignVideoSerializer(video, context={"request": request}).data, status=201)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+def admin_sign_video_detail(request: Any, video_id: int) -> Response:
+    """Admin get/update/delete of a single Text-to-Sign video."""
+    actor, error_response = _get_admin_actor(request)
+    if error_response:
+        return error_response
+
+    video = get_object_or_404(SignVideo, pk=video_id)
+
+    if request.method == "GET":
+        return Response(AdminSignVideoSerializer(video, context={"request": request}).data)
+
+    if request.method == "DELETE":
+        if video.video:
+            video.video.delete(save=False)
+        video.delete()
+        return Response({"message": "Video deleted"})
+
+    # PATCH - update fields and optionally replace the video file.
+    word = str(request.data.get("word") or video.word).strip()
+    if not word:
+        return Response({"error": "Word/phrase is required"}, status=400)
+
+    category = str(request.data.get("category") or video.category).strip().lower()
+    valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
+    if category not in valid_categories:
+        return Response({"error": f"Invalid category: {category}"}, status=400)
+
+    if word != video.word:
+        new_key = _key_for_word(word)
+        if SignVideo.objects.exclude(pk=video.pk).filter(key=new_key).exists():
+            return Response({"error": "A video for this word/phrase already exists"}, status=409)
+        video.key = new_key
+        video.word = word
+
+    video.category = category
+    video.order = _safe_int(request.data.get("order"), video.order)
+    if "is_published" in request.data:
+        video.is_published = _safe_bool(request.data.get("is_published"), video.is_published)
+
+    if "video" in request.FILES:
+        if video.video:
+            video.video.delete(save=False)
+        video.video = request.FILES["video"]
+
+    video.save()
+    return Response(AdminSignVideoSerializer(video, context={"request": request}).data)
 
 
 def _get_file_type(file_ext: str) -> str:
