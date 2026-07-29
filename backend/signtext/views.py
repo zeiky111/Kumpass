@@ -1910,6 +1910,16 @@ def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Respons
         return Response({"message": "Item deleted"})
 
     payload = request.data.copy()
+    # Pre-validate order uniqueness for primary (order==0) when updating
+    try:
+        new_order = int(payload.get("order") or item.order)
+    except Exception:
+        new_order = item.order
+    if new_order == 0:
+        # If another item (different pk) already uses order 0, deny the change
+        if GameLevelItem.objects.filter(level=level, order=0).exclude(pk=item.pk).exists():
+            return Response({"error": "Another primary content item (order=0) already exists for this level. Delete or change it first."}, status=409)
+
     serializer = GameLevelItemSerializer(
         item,
         data={
@@ -1918,7 +1928,7 @@ def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Respons
             "answer": str(payload.get("answer") if payload.get("answer") is not None else item.answer).strip(),
             "media_url": str(payload.get("media_url") if payload.get("media_url") is not None else item.media_url).strip(),
             "extra_data": payload.get("extra_data") if payload.get("extra_data") is not None else item.extra_data,
-            "order": int(payload.get("order") or item.order),
+            "order": new_order,
         },
         partial=True,
     )
