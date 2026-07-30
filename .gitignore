@@ -1,0 +1,14 @@
+# Python virtual environments
+backend/.venv/
+backend/.venv-training/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Large raw training datasets (downloaded manually, not source-controlled)
+backend/datasets/raw/*
+!backend/datasets/raw/.gitkeep
+
+# Env files with secrets
+backend/.env

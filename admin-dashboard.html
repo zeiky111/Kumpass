@@ -7,33 +7,47 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard-pro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body>
-    <!-- Navigation -->
+<body class="pro-dashboard admin-theme">
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
     <nav class="navbar">
         <div class="container navbar-container">
-            <a href="index.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hands"></i>
-                </div>
+            <a href="admin-dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
                 <span>Kumpas</span>
             </a>
-            
             <ul class="nav-menu" id="navMenu">
                 <li><a href="admin-dashboard.html" class="nav-link active">Admin Panel</a></li>
             </ul>
-            
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <!-- Dashboard Content -->
     <div class="dashboard-layout">
-        <!-- Sidebar Navigation -->
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <h3>Admin Menu</h3>
@@ -41,230 +55,253 @@
             <ul class="sidebar-menu">
                 <li><a href="#overview" class="sidebar-link active" onclick="switchTab('overview')"><i class="fas fa-chart-line"></i> Overview</a></li>
                 <li><a href="#users" class="sidebar-link" onclick="switchTab('users')"><i class="fas fa-users"></i> Manage Users</a></li>
-                <li><a href="#roles" class="sidebar-link" onclick="switchTab('roles')"><i class="fas fa-shield"></i> Role Management</a></li>
+                <li><a href="#roles" class="sidebar-link" onclick="switchTab('roles')"><i class="fas fa-shield"></i> Role Distribution</a></li>
                 <li><a href="#reports" class="sidebar-link" onclick="switchTab('reports')"><i class="fas fa-chart-bar"></i> System Reports</a></li>
+                <li><a href="#sign-videos" class="sidebar-link" onclick="switchTab('sign-videos')"><i class="fas fa-hands"></i> Sign Language Videos</a></li>
                 <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
 
-        <!-- Main Content -->
         <main class="dashboard-main">
             <div class="container-fluid">
-                <!-- Welcome Section -->
                 <div class="dashboard-welcome">
                     <div>
-                        <h1>Welcome, Admin! 👋</h1>
-                        <p>System Administration & Monitoring Dashboard</p>
+                        <h1 id="adminWelcomeTitle"></h1>
+                        <p id="adminWelcomeCopy"></p>
                     </div>
                 </div>
 
-                <!-- Stats -->
-                <div class="stats-grid grid grid-4">
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #3b82f6;">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">128</div>
-                            <div class="stat-label">Total Users</div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #10b981;">
-                            <i class="fas fa-user-graduate"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">95</div>
-                            <div class="stat-label">Active Students</div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #f59e0b;">
-                            <i class="fas fa-chalkboard-user"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">18</div>
-                            <div class="stat-label">Instructors</div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: #8b5cf6;">
-                            <i class="fas fa-activity"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">92%</div>
-                            <div class="stat-label">System Uptime</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Manage Users -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Manage Users</h3>
-                        <div>
-                            <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ Add User</button>
-                            <select class="form-input" style="width: 150px; display: inline-block; margin-left: 10px;">
-                                <option>Filter by Role</option>
-                                <option>All</option>
-                                <option>Students</option>
-                                <option>Instructors</option>
-                                <option>Admins</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>User ID</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>#U001</td>
-                                    <td>Juan Dela Cruz</td>
-                                    <td>juan@ccnc.edu.ph</td>
-                                    <td><span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Student</span></td>
-                                    <td><span style="color: #10b981;">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
-                                        <button class="btn btn-sm btn-danger">Deactivate</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>#I001</td>
-                                    <td>Ms. Maria Santos</td>
-                                    <td>maria@ccnc.edu.ph</td>
-                                    <td><span style="background: #fef3c7; color: #b45309; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Instructor</span></td>
-                                    <td><span style="color: #10b981;">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
-                                        <button class="btn btn-sm btn-danger">Deactivate</button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>#A001</td>
-                                    <td>Admin User</td>
-                                    <td>admin@ccnc.edu.ph</td>
-                                    <td><span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 3px; font-size: 0.85rem;">Admin</span></td>
-                                    <td><span style="color: #10b981;">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-secondary" onclick="openModal('editUserModal')">Edit</button>
-                                        <button class="btn btn-sm btn-danger">Deactivate</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Role Management -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Role Management</h3>
-                    </div>
-                    <div class="card-body">
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
-                                <h4 style="margin-top: 0;">Student</h4>
-                                <p style="font-size: 0.9rem; color: #666;">Access to learning modules, games, and translation tools.</p>
-                                <p style="margin: 10px 0; font-size: 0.85rem;">
-                                    <strong>Permissions:</strong><br>
-                                    • View Modules<br>
-                                    • Play Games<br>
-                                    • Use Translators<br>
-                                    • View Progress
-                                </p>
-                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Student role permissions')">Edit Permissions</button>
+                <div id="overview" class="tab-content active">
+                    <div class="stats-grid grid grid-4">
+                        <div class="stat-card">
+                            <div class="stat-card-top">
+                                <div class="stat-icon" style="background: #3b82f6;"><i class="fas fa-users"></i></div>
+                                <div class="stat-meta">Live accounts</div>
                             </div>
-
-                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
-                                <h4 style="margin-top: 0;">Instructor</h4>
-                                <p style="font-size: 0.9rem; color: #666;">Can create modules, manage announcements, and monitor student progress.</p>
-                                <p style="margin: 10px 0; font-size: 0.85rem;">
-                                    <strong>Permissions:</strong><br>
-                                    • Create Modules<br>
-                                    • Monitor Students<br>
-                                    • Post Announcements<br>
-                                    • View Reports
-                                </p>
-                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Instructor role permissions')">Edit Permissions</button>
-                            </div>
-
-                            <div style="border: 1px solid #ddd; padding: 20px; border-radius: 6px;">
-                                <h4 style="margin-top: 0;">Admin</h4>
-                                <p style="font-size: 0.9rem; color: #666;">Full system access, user management, and system configuration.</p>
-                                <p style="margin: 10px 0; font-size: 0.85rem;">
-                                    <strong>Permissions:</strong><br>
-                                    • Manage All Users<br>
-                                    • Manage Roles<br>
-                                    • System Reports<br>
-                                    • Full Access
-                                </p>
-                                <button class="btn btn-sm btn-secondary" onclick="alert('Editing Admin role permissions')">Edit Permissions</button>
+                            <div class="stat-content">
+                                <div class="stat-value" id="adminTotalUsers">0</div>
+                                <div class="stat-label">Total Users</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- System Reports -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">System Reports</h3>
-                    </div>
-                    <div class="card-body">
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-                            <!-- User Activity Report -->
-                            <div>
-                                <h4>User Activity Report</h4>
-                                <div class="chart-placeholder">
-                                    <div class="chart-bars">
-                                        <div class="chart-bar" style="height: 70%;" data-value="70"></div>
-                                        <div class="chart-bar" style="height: 85%;" data-value="85"></div>
-                                        <div class="chart-bar" style="height: 60%;" data-value="60"></div>
-                                        <div class="chart-bar" style="height: 90%;" data-value="90"></div>
-                                        <div class="chart-bar" style="height: 75%;" data-value="75"></div>
-                                    </div>
-                                    <div class="chart-legend">
-                                        <span>Mon</span>
-                                        <span>Tue</span>
-                                        <span>Wed</span>
-                                        <span>Thu</span>
-                                        <span>Fri</span>
+                        <div class="stat-card">
+                            <div class="stat-card-top">
+                                <div class="stat-icon" style="background: #10b981;"><i class="fas fa-user-graduate"></i></div>
+                                <div class="stat-meta">Currently active</div>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="adminActiveStudents">0</div>
+                                <div class="stat-label">Active Students</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-top">
+                                <div class="stat-icon" style="background: #f59e0b;"><i class="fas fa-chalkboard-user"></i></div>
+                                <div class="stat-meta">Teaching staff</div>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="adminInstructors">0</div>
+                                <div class="stat-label">Instructors</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-top">
+                                <div class="stat-icon" style="background: #8b5cf6;"><i class="fas fa-bullseye"></i></div>
+                                <div class="stat-meta">Course progress</div>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="adminAverageCompletion">0%</div>
+                                <div class="stat-label">Avg Completion</div>
+                                <div class="stat-progress">
+                                    <div class="progress-track">
+                                        <div class="progress-fill" id="adminCompletionProgress" style="width: 0%;"></div>
                                     </div>
                                 </div>
-                                <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;">Download Report</button>
                             </div>
+                        </div>
+                    </div>
+                    <div class="charts-grid grid grid-2">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3>Role Distribution</h3>
+                                <p class="chart-card-copy">Quick breakdown of all active accounts by role.</p>
+                            </div>
+                            <div id="overviewRoleChart" class="chart-body"></div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h3>Completion Insight</h3>
+                                <p class="chart-card-copy">Average course completion across students.</p>
+                            </div>
+                            <div id="overviewCompletionChart" class="chart-body"></div>
+                        </div>
+                    </div>
+                </div>
 
-                            <!-- Learning Performance Report -->
+                <div id="users" class="tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Manage Users</h3>
                             <div>
-                                <h4>Learning Performance Report</h4>
-                                <div class="chart-placeholder">
-                                    <div class="chart-bars">
-                                        <div class="chart-bar" style="height: 80%;" data-value="80"></div>
-                                        <div class="chart-bar" style="height: 75%;" data-value="75"></div>
-                                        <div class="chart-bar" style="height: 90%;" data-value="90"></div>
-                                        <div class="chart-bar" style="height: 65%;" data-value="65"></div>
-                                        <div class="chart-bar" style="height: 85%;" data-value="85"></div>
-                                    </div>
-                                    <div class="chart-legend">
-                                        <span>Basic</span>
-                                        <span>Intermediate</span>
-                                        <span>Advanced</span>
-                                        <span>Expert</span>
-                                        <span>Master</span>
+                                <select id="adminRoleFilter" class="form-input" style="width: 170px; display: inline-block;">
+                                    <option value="all">All Roles</option>
+                                    <option value="student">Students</option>
+                                    <option value="instructor">Instructors</option>
+                                    <option value="admin">Admins</option>
+                                </select>
+                                <button class="btn btn-secondary btn-sm" onclick="refreshAdminDashboard()" style="margin-left: 10px;">Refresh</button>
+                                <button class="btn btn-primary btn-sm" id="showCreateUserBtn" onclick="toggleCreateUserForm()" style="margin-left: 8px;">Create Instructor</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="createUserForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px;">
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <input id="newFirstName" class="form-input" placeholder="First name" style="width:160px;" />
+                                    <input id="newMiddleName" class="form-input" placeholder="Middle name (optional)" style="width:160px;" />
+                                    <input id="newLastName" class="form-input" placeholder="Last name" style="width:160px;" />
+                                    <input id="newEmail" class="form-input" placeholder="Email" style="width:220px;" />
+                                    <input id="newPassword" type="password" class="form-input" placeholder="Password (min 8)" style="width:200px;" />
+                                    <select id="newRole" class="form-input" style="width:150px;">
+                                        <option value="instructor">Instructor</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-sm" onclick="createUserFromAdmin()">Create</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="toggleCreateUserForm()">Cancel</button>
+                                </div>
+                                <div id="createUserMessage" style="margin-top:8px; color:#b91c1c;"></div>
+                            </div>
+                            <div id="editUserForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px; background-color:#f9fafb;">
+                                <h4>Edit User</h4>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                    <input id="editUserId" type="hidden" />
+                                    <input id="editUserName" class="form-input" placeholder="Full name" style="flex:1; min-width:200px;" />
+                                    <input id="editUserEmail" class="form-input" placeholder="Email" style="flex:1; min-width:200px;" />
+                                    <select id="editUserRole" class="form-input" style="width:150px;" onchange="updateEditFormForRole()">
+                                        <option value="student">Student</option>
+                                        <option value="instructor">Instructor</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                    <div id="editUserYearLevelWrapper" style="display:none;">
+                                        <input id="editUserYearLevel" class="form-input" placeholder="Year level" style="width:120px;" />
                                     </div>
                                 </div>
-                                <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;">Download Report</button>
+                                <div>
+                                    <button class="btn btn-primary btn-sm" onclick="saveUserEdit()">Save</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="closeEditUserForm()">Cancel</button>
+                                </div>
+                                <div id="editUserMessage" style="margin-top:8px; color:#b91c1c;"></div>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Avatar</th>
+                                            <th>Name</th>
+                                            <th>Email / Username</th>
+                                            <th>Role</th>
+                                            <th>Year</th>
+                                            <th>Active</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminUsersTable"></tbody>
+                                </table>
+                            </div>
+                            <div id="adminUsersPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="roles" class="tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Role Distribution</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-card" style="margin-bottom: 18px;">
+                                <div class="chart-card-header">
+                                    <h4>Role Breakdown</h4>
+                                </div>
+                                <div id="adminRoleChart" class="chart-body"></div>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Role</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminRoleDistributionTable"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="reports" class="tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">System Reports</h3>
+                        </div>
+                        <div class="card-body report-grid" id="adminReportSummary"></div>
+                    </div>
+                </div>
+
+                <div id="sign-videos" class="tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Sign Language Videos</h3>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" onclick="refreshSignVideos()">Refresh</button>
+                                <button class="btn btn-primary btn-sm" id="showAddSignVideoBtn" onclick="toggleSignVideoForm()" style="margin-left: 8px;">Add Video</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p style="color:#6b7280; margin-top:-6px; margin-bottom:16px;">Videos uploaded here are stored in the database and power the Text-to-Sign module only.</p>
+                            <div id="signVideoForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px; background-color:#f9fafb;">
+                                <h4 id="signVideoFormTitle">Add Sign Language Video</h4>
+                                <input id="signVideoId" type="hidden" />
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                                    <input id="signVideoWord" class="form-input" placeholder="Word / phrase (e.g. Hello)" style="width:220px;" />
+                                    <select id="signVideoCategory" class="form-input" style="width:180px;">
+                                        <option value="alphabet">Alphabet</option>
+                                        <option value="emotions">Emotions</option>
+                                        <option value="everyday_words">Everyday Words</option>
+                                        <option value="expressions">Expressions</option>
+                                        <option value="greetings">Greetings</option>
+                                        <option value="phrases" selected>Phrases</option>
+                                        <option value="responses">Responses</option>
+                                    </select>
+                                    <input id="signVideoOrder" type="number" class="form-input" placeholder="Order" style="width:100px;" value="0" />
+                                    <label style="display:flex; align-items:center; gap:6px;">
+                                        <input id="signVideoPublished" type="checkbox" checked /> Published
+                                    </label>
+                                </div>
+                                <div style="margin-bottom:8px;">
+                                    <input id="signVideoFile" type="file" accept="video/*" class="form-input" />
+                                    <small id="signVideoFileHint" style="color:#6b7280; display:block; margin-top:4px;">MP4/MOV video file for this word or phrase.</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary btn-sm" onclick="saveSignVideo()">Save</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="closeSignVideoForm()">Cancel</button>
+                                </div>
+                                <div id="signVideoMessage" style="margin-top:8px; color:#b91c1c;"></div>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Preview</th>
+                                            <th>Word / Phrase</th>
+                                            <th>Category</th>
+                                            <th>Order</th>
+                                            <th>Published</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="signVideosTable"></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -273,62 +310,715 @@
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="addUserModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Add New User</h2>
-                <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
-            </div>
-            <form onsubmit="handleAddUser(event)">
-                <div class="form-group">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Role</label>
-                    <select class="form-input" required>
-                        <option>Student</option>
-                        <option>Instructor</option>
-                        <option>Admin</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Temporary Password</label>
-                    <input type="text" class="form-input" value="Temp123!" readonly>
-                </div>
-                <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add User</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script src="js/main.js"></script>
+    <script src="js/portal.js"></script>
     <script>
+        const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+        let adminPayload = null;
+        let currentUserPromise = null;
+
+        async function getSessionCurrentUser() {
+            if (window.KumpasSession && typeof window.KumpasSession.ensureCurrentUser === 'function') {
+                const user = await window.KumpasSession.ensureCurrentUser();
+                if (user && (user.email || user.username)) return user;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/me/`, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+                if (!response.ok) return null;
+                const data = await response.json();
+                return data.user || null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        async function getCurrentUser() {
+            if (!currentUserPromise) {
+                currentUserPromise = getSessionCurrentUser();
+            }
+
+            const sessionUser = await currentUserPromise;
+            if (sessionUser && (sessionUser.email || sessionUser.username)) {
+                return sessionUser;
+            }
+
+            return { name: 'Admin', email: '', username: '', role: 'admin' };
+        }
+
+        async function getAdminActorIdentifier() {
+            const currentUser = await getCurrentUser();
+            return currentUser.email || currentUser.username || '';
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+            return '';
+        }
+
+        async function ensureCsrfToken() {
+            const existingToken = getCookie('csrftoken');
+            if (existingToken) {
+                return existingToken;
+            }
+
+            try {
+                await fetch(`${API_BASE}/auth/csrf/`, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+            } catch (_) {
+                return '';
+            }
+
+            return getCookie('csrftoken');
+        }
+
+        async function requestJson(path, options = {}) {
+            const method = (options.method || 'GET').toUpperCase();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {}),
+            };
+
+            if (method !== 'GET' && method !== 'HEAD') {
+                const csrfToken = await ensureCsrfToken();
+                if (csrfToken) {
+                    headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+
+            const response = await fetch(`${API_BASE}${path}`, {
+                ...options,
+                method,
+                headers,
+                credentials: options.credentials || 'include',
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (_) {
+                data = {};
+            }
+
+            if (!response.ok) {
+                const message = typeof data.error === 'object'
+                    ? Object.values(data.error).flat().join(' ')
+                    : data.error || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+
+            return data;
+        }
+
+        function safeText(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatRole(role) {
+            const normalized = String(role || '').toLowerCase();
+            if (normalized === 'admin') return 'Admin';
+            if (normalized === 'instructor') return 'Instructor';
+            return 'Student';
+        }
+
         function switchTab(tab) {
-            // Simple navigation between tabs
-            console.log('Switching to:', tab);
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(t => t.style.display = 'none');
+
+            const selectedTab = document.getElementById(tab);
+            if (selectedTab) selectedTab.style.display = 'block';
+
+            const links = document.querySelectorAll('.sidebar-link');
+            links.forEach(link => link.classList.remove('active'));
+            const activeLink = document.querySelector(`.sidebar-link[onclick="switchTab('${tab}')"]`);
+            if (activeLink) activeLink.classList.add('active');
         }
 
-        function openModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
+        function renderOverview(payload) {
+            const summary = payload.summary || {};
+            const roleCounts = payload.roleCounts || {};
+            const completionPercent = Math.min(100, Math.max(0, Number(summary.averageCompletion || 0)));
+            document.getElementById('adminTotalUsers').textContent = Number(roleCounts.total || 0);
+            document.getElementById('adminActiveStudents').textContent = Number(summary.activeStudents || 0);
+            document.getElementById('adminInstructors').textContent = Number(roleCounts.instructor || 0);
+            document.getElementById('adminAverageCompletion').textContent = `${completionPercent}%`;
+            const completionProgress = document.getElementById('adminCompletionProgress');
+            if (completionProgress) {
+                completionProgress.style.width = `${completionPercent}%`;
+            }
+            document.getElementById('overviewRoleChart').innerHTML = renderRoleDistributionChart(roleCounts);
+            document.getElementById('overviewCompletionChart').innerHTML = renderCompletionMetric(completionPercent);
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+        function renderRoleDistributionChart(roleCounts) {
+            const total = Number(roleCounts.total || 0) || 1;
+            const entries = [
+                { label: 'Students', value: Number(roleCounts.student || 0), color: '#3b82f6' },
+                { label: 'Instructors', value: Number(roleCounts.instructor || 0), color: '#10b981' },
+                { label: 'Admins', value: Number(roleCounts.admin || 0), color: '#f59e0b' },
+                { label: 'Inactive', value: Number(roleCounts.inactive || 0), color: '#ef4444' },
+            ];
+            return entries.map(entry => {
+                const percent = Math.round((entry.value / total) * 100);
+                return `
+                    <div class="chart-bar-row">
+                        <div class="chart-bar-label">
+                            <span>${entry.label}</span>
+                            <strong>${entry.value}</strong>
+                        </div>
+                        <div class="chart-bar-track">
+                            <div class="chart-bar-fill" style="width:${percent}%; background:${entry.color};"></div>
+                        </div>
+                        <div class="chart-bar-percent">${percent}%</div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function handleAddUser(e) {
-            e.preventDefault();
-            alert('User added successfully!');
-            closeModal('addUserModal');
+        function renderCompletionMetric(value) {
+            const percent = Math.min(100, Math.max(0, Number(value || 0)));
+            return `
+                <div class="completion-metric">
+                    <div class="completion-number">${percent}%</div>
+                    <div class="completion-label">Average completion across students</div>
+                    <div class="completion-bar">
+                        <div class="completion-fill" style="width: ${percent}%;"></div>
+                    </div>
+                </div>
+            `;
         }
+
+        function renderUsers(payload) {
+            const users = Array.isArray(payload.users) ? payload.users : [];
+            const target = document.getElementById('adminUsersTable');
+            const pagination = document.getElementById('adminUsersPagination');
+            const pageInfo = payload.pagination || payload.usersPagination || {};
+            target.innerHTML = users.length
+                ? users.map(user => {
+                    const isActive = Number(user.active || 0) === 0;
+                    const roleTag = formatRole(user.role);
+                    const actionLabel = isActive ? 'Deactivate' : 'Activate';
+                    const nextActive = isActive ? 1 : 0;
+                    const avatarHtml = (window.KumpasPortal && typeof window.KumpasPortal.renderAvatarMarkup === 'function')
+                        ? window.KumpasPortal.renderAvatarMarkup({ photoUrl: user.photoUrl, avatarId: user.avatarId })
+                        : '<i class="fas fa-user" style="color:#94a3b8;"></i>';
+                    return `
+                        <tr>
+                            <td>#${Number(user.id || 0)}</td>
+                            <td><div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:#e2e8f0;display:flex;align-items:center;justify-content:center;">${avatarHtml}</div></td>
+                            <td>${safeText(user.name)}</td>
+                            <td>${safeText(user.email)}<br><small style="color:#6b7280;">${safeText(user.username)}</small></td>
+                            <td>${safeText(roleTag)}</td>
+                            <td>${safeText(user.yearLevel || '-')}</td>
+                            <td><span style="color:${isActive ? '#10b981' : '#ef4444'};">${isActive ? 'Active (0)' : 'Inactive (1)'}</span></td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-info" onclick="openEditUserForm(${Number(user.id || 0)}, '${safeAttr(user.name)}', '${safeAttr(user.email)}', '${safeAttr(user.role)}', '${safeAttr(user.yearLevel || '')}')" style="margin-right:4px;">Edit</button>
+                                <button type="button" class="btn btn-sm ${isActive ? 'btn-danger' : 'btn-primary'}" onclick="updateUserStatus(${Number(user.id || 0)}, ${nextActive})">${actionLabel}</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')
+                : '<tr><td colspan="8" style="padding: 16px; color: #6b7280;">No users found in database.</td></tr>';
+
+            if (pagination) {
+                const page = Number(pageInfo.page || 1);
+                const pageSize = Number(pageInfo.pageSize || 10);
+                const total = Number(pageInfo.total || users.length);
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                const start = total ? ((page - 1) * pageSize) + 1 : 0;
+                const end = total ? Math.min(page * pageSize, total) : 0;
+                pagination.innerHTML = `
+                    <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeAdminUsersPage(${page - 1})">Prev</button>
+                        <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeAdminUsersPage(${page + 1})">Next</button>
+                    </div>
+                `;
+            }
+        }
+
+        function renderRoles(payload) {
+            const roleCounts = payload.roleCounts || {};
+            const target = document.getElementById('adminRoleDistributionTable');
+            const chartTarget = document.getElementById('adminRoleChart');
+            chartTarget.innerHTML = renderRoleDistributionChart(roleCounts);
+            target.innerHTML = `
+                <tr><td>Student</td><td>${Number(roleCounts.student || 0)}</td></tr>
+                <tr><td>Instructor</td><td>${Number(roleCounts.instructor || 0)}</td></tr>
+                <tr><td>Admin</td><td>${Number(roleCounts.admin || 0)}</td></tr>
+                <tr><td>Inactive Accounts</td><td>${Number(roleCounts.inactive || 0)}</td></tr>
+                <tr><td>Total</td><td>${Number(roleCounts.total || 0)}</td></tr>
+            `;
+        }
+
+        function renderReports(payload) {
+            const summary = payload.summary || {};
+            const report = document.getElementById('adminReportSummary');
+            report.innerHTML = `
+                <div class="report-card">
+                    <h4>Total Students</h4>
+                    <p>${Number(summary.totalStudents || 0)}</p>
+                </div>
+                <div class="report-card">
+                    <h4>Active Students</h4>
+                    <p>${Number(summary.activeStudents || 0)}</p>
+                </div>
+                <div class="report-card">
+                    <h4>Published Modules</h4>
+                    <p>${Number(summary.publishedModules || 0)}</p>
+                </div>
+                <div class="report-card">
+                    <h4>Average Accuracy</h4>
+                    <p>${Number(summary.averageAccuracy || 0)}%</p>
+                </div>
+                <div class="report-card report-card-wide">
+                    <h4>Completion Overview</h4>
+                    <div class="completion-bar report-completion-bar">
+                        <div class="completion-fill" style="width: ${Math.min(100, Math.max(0, Number(summary.averageCompletion || 0)))}%;"></div>
+                    </div>
+                    <small>${Number(summary.averageCompletion || 0)}% average student completion</small>
+                </div>
+            `;
+        }
+
+        function sanitizeAdminInput(value) {
+            return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+        }
+
+        function sanitizeAdminEmail(value) {
+            return sanitizeAdminInput(value).toLowerCase();
+        }
+
+        function getAdminUsersPage() {
+            return Number(window.__adminUsersPage || 1);
+        }
+
+        function setAdminUsersPage(page) {
+            window.__adminUsersPage = Math.max(1, Number(page || 1));
+        }
+
+        async function changeAdminUsersPage(page) {
+            setAdminUsersPage(page);
+            await refreshAdminDashboard();
+        }
+
+        function validateAdminCreateUserInputs(firstName, lastName, email, password) {
+            if (!firstName || !lastName || !email || !password) {
+                return 'All fields are required (except middle name).';
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                return 'Please enter a valid email address.';
+            }
+            if (password.length < 8) {
+                return 'Password must be at least 8 characters.';
+            }
+            return '';
+        }
+
+        async function refreshAdminDashboard() {
+            const actorId = await getAdminActorIdentifier();
+            if (!actorId) {
+                alert('Please log in first as admin.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const roleFilter = String((document.getElementById('adminRoleFilter') || {}).value || 'all');
+            const page = getAdminUsersPage();
+
+            try {
+                const dashboard = await requestJson(`/instructor/dashboard/?adminEmail=${encodeURIComponent(actorId)}`);
+                const usersPayload = await requestJson(`/admin/users/?adminEmail=${encodeURIComponent(actorId)}&role=${encodeURIComponent(roleFilter)}&page=${encodeURIComponent(page)}&pageSize=5`);
+
+                dashboard.users = usersPayload.users || [];
+                dashboard.pagination = usersPayload.pagination || { page, pageSize: 5, total: Array.isArray(usersPayload.users) ? usersPayload.users.length : 0 };
+                dashboard.roleCounts = usersPayload.roleCounts || dashboard.roleCounts || {
+                    student: 0,
+                    instructor: 0,
+                    admin: 0,
+                    total: 0,
+                    inactive: 0,
+                };
+                dashboard.summary = dashboard.summary || {};
+                dashboard.summary.totalUsers = Number(dashboard.roleCounts.total || dashboard.summary.totalStudents || 0);
+                dashboard.summary.activeStudents = Number(dashboard.summary.activeStudents || 0);
+                dashboard.summary.averageCompletion = Number(dashboard.summary.averageCompletion || 0);
+
+                renderOverview(dashboard);
+                renderUsers(dashboard);
+                renderRoles(dashboard);
+                renderReports(dashboard);
+            } catch (error) {
+                alert(`Failed to load admin dashboard: ${error.message}`);
+            }
+        }
+
+        function toggleCreateUserForm() {
+            const el = document.getElementById('createUserForm');
+            const btn = document.getElementById('showCreateUserBtn');
+            if (!el) return;
+            if (el.style.display === 'none' || !el.style.display) {
+                el.style.display = 'block';
+                if (btn) btn.textContent = 'Hide';
+            } else {
+                el.style.display = 'none';
+                if (btn) btn.textContent = 'Create Instructor';
+                document.getElementById('createUserMessage').textContent = '';
+            }
+        }
+
+        function safeAttr(value) {
+            return String(value == null ? '' : value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        async function updateUserStatus(userId, active) {
+            const actorId = await getAdminActorIdentifier();
+            if (!actorId) {
+                alert('Please log in first as admin.');
+                window.location.href = 'login.html';
+                return;
+            }
+            if (!userId) {
+                alert('Invalid user selected.');
+                return;
+            }
+
+            try {
+                await requestJson(`/admin/users/${encodeURIComponent(userId)}/status/?adminEmail=${encodeURIComponent(actorId)}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ active: Number(active) }),
+                });
+                await refreshAdminDashboard();
+            } catch (err) {
+                alert(err.message || 'Unable to update user status.');
+            }
+        }
+
+        function updateEditFormForRole() {
+            const role = String(document.getElementById('editUserRole').value || '').toLowerCase();
+            const yearLevelWrapper = document.getElementById('editUserYearLevelWrapper');
+            if (role === 'student') {
+                yearLevelWrapper.style.display = 'block';
+            } else {
+                yearLevelWrapper.style.display = 'none';
+                document.getElementById('editUserYearLevel').value = '';
+            }
+        }
+
+        function openEditUserForm(userId, name, email, role, yearLevel) {
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserName').value = name;
+            document.getElementById('editUserEmail').value = email;
+            document.getElementById('editUserRole').value = role;
+            document.getElementById('editUserYearLevel').value = yearLevel || '';
+            updateEditFormForRole();
+            document.getElementById('editUserForm').style.display = 'block';
+            document.getElementById('editUserMessage').textContent = '';
+        }
+
+        function closeEditUserForm() {
+            document.getElementById('editUserForm').style.display = 'none';
+            document.getElementById('editUserMessage').textContent = '';
+        }
+
+        async function saveUserEdit() {
+            const actorId = await getAdminActorIdentifier();
+            const userId = Number(document.getElementById('editUserId').value || 0);
+            const name = sanitizeAdminInput(document.getElementById('editUserName').value);
+            const email = sanitizeAdminEmail(document.getElementById('editUserEmail').value);
+            const role = String(document.getElementById('editUserRole').value || '').trim().toLowerCase();
+            const yearLevel = sanitizeAdminInput(document.getElementById('editUserYearLevel').value);
+            const msgEl = document.getElementById('editUserMessage');
+
+            msgEl.textContent = '';
+            if (!userId) {
+                msgEl.textContent = 'Error: Invalid user ID';
+                return;
+            }
+            if (!name) {
+                msgEl.textContent = 'Error: Name required';
+                return;
+            }
+            if (!email) {
+                msgEl.textContent = 'Error: Email required';
+                return;
+            }
+            if (!role) {
+                msgEl.textContent = 'Error: Role required';
+                return;
+            }
+
+            try {
+                await requestJson(`/admin/users/${userId}/?adminEmail=${encodeURIComponent(actorId)}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        role: role,
+                        yearLevel: yearLevel,
+                    }),
+                });
+                msgEl.style.color = '#10b981';
+                msgEl.textContent = 'User updated successfully!';
+                setTimeout(() => {
+                    closeEditUserForm();
+                    refreshAdminDashboard();
+                }, 800);
+            } catch (err) {
+                msgEl.textContent = err.message || 'Failed to update user';
+            }
+        }
+
+        async function createUserFromAdmin() {
+            const actorId = await getAdminActorIdentifier();
+            const firstName = sanitizeAdminInput((document.getElementById('newFirstName') || {}).value || '');
+            const middleName = sanitizeAdminInput((document.getElementById('newMiddleName') || {}).value || '');
+            const lastName = sanitizeAdminInput((document.getElementById('newLastName') || {}).value || '');
+            const email = sanitizeAdminEmail((document.getElementById('newEmail') || {}).value || '');
+            const password = String((document.getElementById('newPassword') || {}).value || '').trim();
+            const role = String((document.getElementById('newRole') || {}).value || 'instructor').trim().toLowerCase();
+            const msgEl = document.getElementById('createUserMessage');
+            if (msgEl) msgEl.style.color = '#b91c1c';
+
+            if (!actorId) {
+                if (msgEl) msgEl.textContent = 'Please log in first as admin.';
+                return;
+            }
+
+            const validationMessage = validateAdminCreateUserInputs(firstName, lastName, email, password);
+            if (validationMessage) {
+                if (msgEl) msgEl.textContent = validationMessage;
+                return;
+            }
+
+            try {
+                await requestJson(`/admin/users/?adminEmail=${encodeURIComponent(actorId)}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        firstName, middleName, lastName, email, password, role
+                    }),
+                });
+                if (msgEl) {
+                    msgEl.style.color = '#059669';
+                    msgEl.textContent = 'User created successfully.';
+                }
+                // refresh list
+                await refreshAdminDashboard();
+                setTimeout(() => toggleCreateUserForm(), 800);
+            } catch (err) {
+                if (msgEl) msgEl.textContent = err.message || 'Failed to create user.';
+            }
+        }
+
+        const SIGN_VIDEO_CATEGORY_LABELS = {
+            alphabet: 'Alphabet',
+            emotions: 'Emotions',
+            everyday_words: 'Everyday Words',
+            expressions: 'Expressions',
+            greetings: 'Greetings',
+            phrases: 'Phrases',
+            responses: 'Responses',
+        };
+
+        let signVideosCache = [];
+
+        function renderSignVideos(videos) {
+            signVideosCache = Array.isArray(videos) ? videos : [];
+            const target = document.getElementById('signVideosTable');
+            if (!target) return;
+            target.innerHTML = signVideosCache.length
+                ? signVideosCache.map(video => `
+                    <tr>
+                        <td>
+                            ${video.video_url
+                                ? `<video src="${safeAttr(video.video_url)}" style="width:120px;height:80px;object-fit:cover;border-radius:4px;" muted controls></video>`
+                                : '<span style="color:#6b7280;">No video</span>'}
+                        </td>
+                        <td>${safeText(video.word)}</td>
+                        <td>${safeText(SIGN_VIDEO_CATEGORY_LABELS[video.category] || video.category)}</td>
+                        <td>${Number(video.order || 0)}</td>
+                        <td><span style="color:${video.is_published ? '#10b981' : '#ef4444'};">${video.is_published ? 'Published' : 'Hidden'}</span></td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-info" onclick="openEditSignVideoForm(${Number(video.id)})" style="margin-right:4px;">Edit</button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSignVideo(${Number(video.id)})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No sign language videos uploaded yet.</td></tr>';
+        }
+
+        async function refreshSignVideos() {
+            const actorId = await getAdminActorIdentifier();
+            if (!actorId) {
+                alert('Please log in first as admin.');
+                window.location.href = 'login.html';
+                return;
+            }
+            try {
+                const videos = await requestJson(`/admin/sign-videos/?adminEmail=${encodeURIComponent(actorId)}`);
+                renderSignVideos(videos);
+            } catch (error) {
+                alert(`Failed to load sign language videos: ${error.message}`);
+            }
+        }
+
+        function resetSignVideoForm() {
+            document.getElementById('signVideoFormTitle').textContent = 'Add Sign Language Video';
+            document.getElementById('signVideoId').value = '';
+            document.getElementById('signVideoWord').value = '';
+            document.getElementById('signVideoCategory').value = 'phrases';
+            document.getElementById('signVideoOrder').value = '0';
+            document.getElementById('signVideoPublished').checked = true;
+            document.getElementById('signVideoFile').value = '';
+            document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase.';
+            document.getElementById('signVideoMessage').textContent = '';
+        }
+
+        function toggleSignVideoForm() {
+            const el = document.getElementById('signVideoForm');
+            const btn = document.getElementById('showAddSignVideoBtn');
+            if (!el) return;
+            if (el.style.display === 'none' || !el.style.display) {
+                resetSignVideoForm();
+                el.style.display = 'block';
+                if (btn) btn.textContent = 'Hide';
+            } else {
+                closeSignVideoForm();
+            }
+        }
+
+        function closeSignVideoForm() {
+            const el = document.getElementById('signVideoForm');
+            const btn = document.getElementById('showAddSignVideoBtn');
+            if (el) el.style.display = 'none';
+            if (btn) btn.textContent = 'Add Video';
+            document.getElementById('signVideoMessage').textContent = '';
+        }
+
+        function openEditSignVideoForm(videoId) {
+            const video = signVideosCache.find(item => Number(item.id) === Number(videoId));
+            if (!video) return;
+            document.getElementById('signVideoFormTitle').textContent = 'Edit Sign Language Video';
+            document.getElementById('signVideoId').value = video.id;
+            document.getElementById('signVideoWord').value = video.word || '';
+            document.getElementById('signVideoCategory').value = video.category || 'phrases';
+            document.getElementById('signVideoOrder').value = Number(video.order || 0);
+            document.getElementById('signVideoPublished').checked = !!video.is_published;
+            document.getElementById('signVideoFile').value = '';
+            document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file.';
+            document.getElementById('signVideoMessage').textContent = '';
+            document.getElementById('signVideoForm').style.display = 'block';
+            document.getElementById('showAddSignVideoBtn').textContent = 'Hide';
+        }
+
+        async function saveSignVideo() {
+            const actorId = await getAdminActorIdentifier();
+            const msgEl = document.getElementById('signVideoMessage');
+            msgEl.style.color = '#b91c1c';
+
+            if (!actorId) {
+                msgEl.textContent = 'Please log in first as admin.';
+                return;
+            }
+
+            const videoId = Number(document.getElementById('signVideoId').value || 0);
+            const word = sanitizeAdminInput(document.getElementById('signVideoWord').value);
+            const category = String(document.getElementById('signVideoCategory').value || 'phrases');
+            const order = Number(document.getElementById('signVideoOrder').value || 0);
+            const isPublished = document.getElementById('signVideoPublished').checked;
+            const fileInput = document.getElementById('signVideoFile');
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+
+            if (!word) {
+                msgEl.textContent = 'Word / phrase is required.';
+                return;
+            }
+            if (!videoId && !file) {
+                msgEl.textContent = 'A video file is required.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('actorEmail', actorId);
+            formData.append('word', word);
+            formData.append('category', category);
+            formData.append('order', String(order));
+            formData.append('is_published', isPublished ? 'true' : 'false');
+            if (file) {
+                formData.append('video', file);
+            }
+
+            const path = videoId ? `${API_BASE}/admin/sign-videos/${videoId}/` : `${API_BASE}/admin/sign-videos/`;
+            const method = videoId ? 'PATCH' : 'POST';
+
+            try {
+                const response = await fetch(path, { method, body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || `Request failed (${response.status})`);
+                }
+                msgEl.style.color = '#059669';
+                msgEl.textContent = videoId ? 'Video updated successfully!' : 'Video added successfully!';
+                await refreshSignVideos();
+                setTimeout(() => closeSignVideoForm(), 800);
+            } catch (err) {
+                msgEl.textContent = err.message || 'Failed to save sign language video.';
+            }
+        }
+
+        async function deleteSignVideo(videoId) {
+            if (!confirm('Delete this sign language video? This cannot be undone.')) {
+                return;
+            }
+            const actorId = await getAdminActorIdentifier();
+            try {
+                await requestJson(`/admin/sign-videos/${videoId}/?adminEmail=${encodeURIComponent(actorId)}`, {
+                    method: 'DELETE',
+                });
+                await refreshSignVideos();
+            } catch (err) {
+                alert(err.message || 'Unable to delete sign language video.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const roleFilter = document.getElementById('adminRoleFilter');
+            if (roleFilter) {
+                roleFilter.addEventListener('change', function () {
+                    setAdminUsersPage(1);
+                    void refreshAdminDashboard();
+                });
+            }
+
+            await refreshAdminDashboard();
+            await refreshSignVideos();
+            switchTab('overview');
+        });
+    </script>
+    <script>
+    (function() {
+        const _t = document.getElementById('navUserToggle');
+        const _d = document.getElementById('navUserDropdown');
+        if (_t && _d) {
+            _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
+            document.addEventListener('click', function() { _d.classList.remove('open'); });
+        }
+    })();
     </script>
 </body>
 </html>

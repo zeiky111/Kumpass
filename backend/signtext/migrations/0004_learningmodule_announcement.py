@@ -39,21 +39,7 @@ def seed_instructor_content(apps, schema_editor):
             },
         )
 
-    if not Announcement.objects.exists():
-        announcement_seed_data = [
-            ("Updated: Module 5 - Advanced Signs", "Module 5 has been updated with new video content. All students should review the new lessons."),
-            ("Reminder: Quiz This Friday!", "Don't forget - there's a quiz on Friday covering lessons 1-4. Make sure to review your notes."),
-            ("New Achievement: Master Signer Badge", "Congratulations to all students who have earned the \"Master Signer\" badge this week!"),
-        ]
-
-        for title, message in announcement_seed_data:
-            Announcement.objects.create(
-                title=title,
-                message=message,
-                is_published=True,
-                created_by_id=instructor.id if instructor else None,
-                updated_by_id=instructor.id if instructor else None,
-            )
+    # Do not seed announcements here; keep the feed database-driven.
 
 
 def unseed_instructor_content(apps, schema_editor):

@@ -1,0 +1,61 @@
+{
+  "users": [
+    {
+      "id": 21,
+      "username": "zyyydetorres@gmail.com",
+      "email": "zyyydetorres@gmail.com",
+      "first_name": "Chyra",
+      "last_name": "Santos"
+    }
+  ],
+  "related": {
+    "21": {
+      "auth_user_groups.user_id": [],
+      "auth_user_user_permissions.user_id": [],
+      "signtext_userprofile.user_id": [
+        {
+          "id": 18,
+          "full_name": "Chyra Santos",
+          "year_level": "3",
+          "role": "student",
+          "security_pin": "",
+          "created_at": "2026-05-26 11:24:29.357186+08:00",
+          "user_id": 21,
+          "active": 0,
+          "first_name": "Chyra",
+          "middle_name": "",
+          "last_name": "Santos",
+          "suffix": "",
+          "photo": ""
+        }
+      ],
+      "django_admin_log.user_id": [],
+      "signtext_userlearningstate.user_id": [],
+      "signtext_learningmodule.created_by_id": [],
+      "signtext_learningmodule.updated_by_id": [],
+      "signtext_announcement.created_by_id": [],
+      "signtext_announcement.updated_by_id": [],
+      "signtext_modulefile.uploaded_by_id": [],
+      "signtext_emailotp.user_id": [
+        {
+          "id": 37,
+          "otp": "644361",
+          "created_at": "2026-05-26 11:24:29.361190+08:00",
+          "expires_at": "2026-05-26 11:39:29.360191+08:00",
+          "attempts": 0,
+          "user_id": 21
+        },
+        {
+          "id": 38,
+          "otp": "511440",
+          "created_at": "2026-05-26 11:25:26.800040+08:00",
+          "expires_at": "2026-05-26 11:40:26.800040+08:00",
+          "attempts": 0,
+          "user_id": 21
+        }
+      ],
+      "signtext_game.created_by_id": [],
+      "signtext_gamecontent.created_by_id": []
+    }
+  }
+}

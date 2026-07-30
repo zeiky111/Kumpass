@@ -6,25 +6,67 @@
     <title>Sign-to-Text Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/bg-orbs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="js/theme.js"></script>
 </head>
-<body>
-    <!-- Navigation -->
-    <div class="navbar">
-        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="learning.html">Learn</a>
-        <a href="activities.html">Activities</a>
-        <a href="translator.html">Translators</a>
-        <a href="leaderboard.html">Leaderboard</a>
-        <a href="profile.html" style="float: right;">Profile</a>
-        <a href="index.html" style="float: right;">Logout</a>
+<body class="kd-animated-bg">
+    <div class="bg-orbs" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
     </div>
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="learning.html" class="nav-link">Learn</a></li>
+                <li><a href="activities.html" class="nav-link">Activities</a></li>
+                <li><a href="translator.html" class="nav-link active">Translators</a></li>
+                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+            </ul>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-    <div style="padding: 20px;">
-        <h1>Sign-to-Text Translator</h1>
-        <p>Use your camera to recognize sign language and convert it to text</p>
-        <br>
-    </div>
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="header-content">
+            <h1>Sign-to-Text Translator</h1>
+            <p>Use your camera to recognize sign language and convert it to text</p>
+        </div>
+    </section>
 
     <!-- Main Content -->
     <main class="sign-to-text-container">
@@ -41,6 +83,15 @@
                         </div>
                     </div>
 
+                    <div class="camera-settings">
+                        <h3>Camera Selection</h3>
+                        <label for="cameraSelect" class="camera-select-label">Choose camera</label>
+                        <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)">
+                            <option value="">Default front camera</option>
+                        </select>
+                        <p id="cameraStatus" class="camera-status">Using default camera.</p>
+                    </div>
+
                     <div class="camera-controls">
                         <button class="btn-primary" onclick="startCameraFeed()">
                             <span>▶</span> Start Camera
@@ -51,77 +102,7 @@
                 </div>
             </section>
 
-            <!-- Translation Results Section -->
-            <section class="results-section">
-                <div class="results-panel">
-                    <h2>📝 Translation Output</h2>
 
-                    <div class="translation-output">
-                        <textarea 
-                            id="translationOutput" 
-                            class="text-output" 
-                            placeholder="Recognized text will appear here..."
-                            readonly
-                        ></textarea>
-                    </div>
-
-                    <div class="output-controls">
-                        <button class="btn-secondary" onclick="copyTranslation()">📋 Copy</button>
-                        <button class="btn-secondary" onclick="clearTranslation()">Clear</button>
-                    </div>
-
-                    <div id="fingerSpellingSection" class="recognized-signs">
-                        <h3>Finger Spelling (Letters to Word)</h3>
-                        <div class="status-item">
-                            <span class="status-label">Detected Letter</span>
-                            <span id="detectedLetter" class="status-value">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Current Spelled Word</span>
-                            <span id="currentSpelledWord" class="status-value">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Suggested Word</span>
-                            <span id="wordSuggestion" class="status-value">-</span>
-                        </div>
-                    </div>
-
-                    <!-- Recognized Signs List -->
-                    <div id="recognizedSigns" class="recognized-signs" style="display: none;">
-                        <h3>Recognized Signs</h3>
-                        <div class="signs-list" id="signsList"></div>
-                    </div>
-
-                    <!-- Alternatives -->
-                    <div id="alternativesSection" class="alternatives-section" style="display: none;">
-                        <h3>Alternative Interpretations</h3>
-                        <div class="alternatives-list" id="alternativesList"></div>
-                    </div>
-
-                    <!-- Translation Statistics -->
-                    <div id="statsSection" class="stats-section" style="display: none;">
-                        <h3>Translation Statistics</h3>
-                        <div class="stats-grid">
-                            <div class="stat-box">
-                                <span class="stat-label">Words Recognized</span>
-                                <span id="wordsCount" class="stat-value">0</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="stat-label">Accuracy</span>
-                                <span id="accuracyScore" class="stat-value">0%</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="stat-label">Processing Time</span>
-                                <span id="processingTime" class="stat-value">0ms</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="stat-label">Session Duration</span>
-                                <span id="sessionTime" class="stat-value">0:00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </div>
 
         <!-- Tips Section -->
@@ -170,62 +151,57 @@
     </footer>
 
     <style>
-        /* Navbar Styles */
-        .navbar {
-            background-color: #4169e1;
-            padding: 15px;
-            color: white;
-        }
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            margin-right: 20px;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo img {
-            width: 72px;
-            height: 72px;
-            object-fit: contain;
-        }
-
         .sign-to-text-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem);
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .sign-to-text-container h1,
+        .sign-to-text-container h2,
+        .sign-to-text-container h3 {
+            font-family: 'Poppins', 'Inter', sans-serif;
         }
 
         .translator-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 2rem;
             margin-bottom: 3rem;
         }
 
-        .camera-panel, .results-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        .camera-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            padding: 1.5rem;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
-        .camera-panel h2, .results-panel h2 {
+        .camera-panel h2 {
             margin-top: 0;
-            color: var(--dark);
-            margin-bottom: 1.5rem;
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
         }
 
         .camera-container {
             background: #000;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            margin-bottom: 1.5rem;
-            aspect-ratio: 4/3;
+            margin-bottom: 1.25rem;
+            aspect-ratio: 3/4;
+            max-height: 72vh;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
             position: relative;
         }
 
@@ -254,14 +230,59 @@
 
         .camera-controls {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
 
+        .camera-select-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.45rem;
+        }
+
+        .camera-select {
+            width: 100%;
+            border: 1px solid rgba(148,163,184,0.35);
+            border-radius: 12px;
+            padding: 0.8rem 0.95rem;
+            font-size: 0.95rem;
+            background: #fff;
+            color: #0f172a;
+            margin-bottom: 0.55rem;
+        }
+
+        .camera-status {
+            margin: 0 0 1rem;
+            font-size: 0.88rem;
+            color: #64748b;
+        }
+
+        .sign-to-text-container .btn-primary,
+        .sign-to-text-container .btn-secondary {
+            border-radius: 999px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .sign-to-text-container .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
+        }
+
+        .sign-to-text-container .btn-primary:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
+        }
+
+        .sign-to-text-container .btn-secondary:hover {
+            transform: translateY(-1px);
+        }
+
         .recognition-status, .camera-settings {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 14px;
             padding: 1rem;
             margin-bottom: 1rem;
         }
@@ -367,8 +388,8 @@
         }
 
         .recognized-signs, .alternatives-section, .stats-section {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 14px;
             padding: 1rem;
             margin-bottom: 1rem;
         }
@@ -445,7 +466,7 @@
         .stat-box {
             background: white;
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: 14px;
             text-align: center;
             border: 1px solid #e0e0e0;
         }
@@ -481,17 +502,18 @@
         }
 
         .practice-card {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 18px;
             padding: 2rem;
             text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
+            box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+            border: 1px solid rgba(148,163,184,0.14);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .practice-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 36px rgba(15,23,42,0.14);
         }
 
         .practice-icon {
@@ -504,15 +526,20 @@
         }
 
         .tips-section {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
             padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+            animation-delay: .15s;
         }
 
         .tips-section h2 {
             text-align: center;
             margin-bottom: 2rem;
+            color: #0f172a;
+            font-weight: 800;
         }
 
         .tips-grid {
@@ -522,15 +549,30 @@
         }
 
         .tip-card {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 16px;
             padding: 1.5rem;
             text-align: center;
+            border: 1px solid rgba(148,163,184,0.14);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .tip-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(15,23,42,0.1);
         }
 
         .tip-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 8px 18px rgba(37,99,235,0.22);
         }
 
         .tip-card h3 {
@@ -544,9 +586,25 @@
             font-size: 0.9rem;
         }
 
+        @media (max-width: 1024px) {
+            .camera-controls,
+            .output-controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .translator-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .camera-panel {
+                max-width: 100%;
+                padding: 1.1rem;
+            }
+
+            .camera-container {
+                max-height: 65vh;
             }
 
             .camera-controls,
@@ -560,6 +618,87 @@
             .tips-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        @media (max-height: 700px) {
+            .camera-container {
+                max-height: 58vh;
+            }
+        }
+
+        /* ---- Dark theme overrides ---- */
+        :root[data-theme="dark"] .camera-panel h2,
+        :root[data-theme="dark"] .results-panel h2,
+        :root[data-theme="dark"] .tips-section h2 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .camera-panel,
+        :root[data-theme="dark"] .results-panel,
+        :root[data-theme="dark"] .practice-card,
+        :root[data-theme="dark"] .tips-section {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .recognition-status,
+        :root[data-theme="dark"] .camera-settings,
+        :root[data-theme="dark"] .recognized-signs,
+        :root[data-theme="dark"] .alternatives-section,
+        :root[data-theme="dark"] .stats-section,
+        :root[data-theme="dark"] .tip-card {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .recognition-status h3,
+        :root[data-theme="dark"] .camera-settings h3,
+        :root[data-theme="dark"] .recognized-signs h3,
+        :root[data-theme="dark"] .alternatives-section h3,
+        :root[data-theme="dark"] .stats-section h3,
+        :root[data-theme="dark"] .tip-card h3 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .status-item {
+            border-bottom-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .status-label {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .confidence-bar {
+            background: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] #sensitivityValue {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .text-output {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-item,
+        :root[data-theme="dark"] .alternative-item,
+        :root[data-theme="dark"] .stat-box {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .alternative-text {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .stat-label {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .tip-card p {
+            color: var(--text-muted-2);
         }
     </style>
 
@@ -581,7 +720,16 @@
         let lastPredictionAt = 0;
         let mirrorFixEnabled = true;
 
+        let availableCameras = [];
+        let selectedCameraId = '';
+
+        const HAND_ORDER = { Left: 0, Right: 1 };
+        const handPredictionStates = new Map();
+
         let handsDetector = null;
+        let overlayCanvas = null;
+        let overlayCtx = null;
+        let overlayLabel = '';
         let stableLetter = '';
         let stableLetterSince = 0;
         let lastCommittedLetterAt = 0;
@@ -594,12 +742,18 @@
         let handTrackingAvailable = true;
         let lastLetterAddedAt = 0;
         let letterVoteBuffer = [];
-        let aiWordCandidate = '';
-        let aiWordSince = 0;
-        let aiWordCount = 0;
         let aiUnavailableLogged = false;
         let apiBackoffUntil = 0;
         let apiFailureLogged = false;
+
+        // Rolling buffer of recent two-hand landmark frames, used for word/phrase
+        // sequence recognition (replaces the old JPEG-frame cloud-AI poll loop).
+        let wordFrameBuffer = [];
+        let wordRequestInFlight = false;
+        let lastWordApiCallAt = 0;
+        let wordCandidate = '';
+        let wordCandidateSince = 0;
+        let wordCandidateCount = 0;
 
         const API_BASE = 'http://127.0.0.1:8000/api';
         const LETTER_STABLE_MS = 300;
@@ -608,13 +762,17 @@
         const FINGER_API_INTERVAL_MS = 180;
         const FINGER_IMAGE_INTERVAL_MS = 420;
         const HYBRID_LETTER_AI_ENABLED = false;
-        const AI_WORD_STABLE_MS = 2 * 300;
-        const AI_WORD_MIN_CONFIDENCE = 35;
-        const AI_WORD_MIN_REPEAT = 1;
         const LETTER_VOTE_WINDOW_MS = 800;
         const LETTER_VOTE_MIN_COUNT = 2;
         const LETTER_VOTE_MIN_RATIO = 0.50;
         const API_RETRY_BACKOFF_MS = 2500;
+
+        const WORD_BUFFER_MAX_AGE_MS = 2600;
+        const WORD_API_INTERVAL_MS = 700;
+        const WORD_MIN_FRAMES = 6;
+        const WORD_STABLE_MS = 600;
+        const WORD_MIN_CONFIDENCE = 40;
+        const WORD_MIN_REPEAT = 1;
 
         function apiBackoffActive() {
             return Date.now() < apiBackoffUntil;
@@ -640,6 +798,119 @@
             videoElement.style.transform = mirrorFixEnabled ? 'scaleX(-1)' : 'scaleX(1)';
         }
 
+        function createOverlay(container) {
+            // remove existing
+            if (overlayCanvas && overlayCanvas.parentNode) overlayCanvas.remove();
+            overlayCanvas = document.createElement('canvas');
+            overlayCanvas.id = 'overlayCanvas';
+            overlayCanvas.style.position = 'absolute';
+            overlayCanvas.style.left = '0';
+            overlayCanvas.style.top = '0';
+            overlayCanvas.style.width = '100%';
+            overlayCanvas.style.height = '100%';
+            overlayCanvas.style.pointerEvents = 'none';
+            container.appendChild(overlayCanvas);
+            overlayCtx = overlayCanvas.getContext('2d');
+        }
+
+        function resizeOverlayToVideo(video) {
+            if (!overlayCanvas) return;
+            const rect = video.getBoundingClientRect();
+            overlayCanvas.width = video.videoWidth || rect.width;
+            overlayCanvas.height = video.videoHeight || rect.height;
+        }
+
+        function clearOverlay() {
+            if (!overlayCtx) return;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+
+        function drawHandBox(landmarks, label = 'Hand', color = '#ff33cc') {
+            if (!overlayCtx || !landmarks || !landmarks.length) return;
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            let minX = 1, minY = 1, maxX = 0, maxY = 0;
+            for (const p of landmarks) {
+                const x = mirrorFixEnabled ? (1 - p.x) : p.x;
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, p.y);
+            }
+            const pad = 0.05; // padding fraction
+            const x = Math.max(0, (minX - pad) * w);
+            const y = Math.max(0, (minY - pad) * h);
+            const boxW = Math.min(w, (maxX - minX + pad * 2) * w);
+            const boxH = Math.min(h, (maxY - minY + pad * 2) * h);
+
+            overlayCtx.lineWidth = Math.max(2, Math.round(Math.min(w, h) * 0.004));
+            overlayCtx.strokeStyle = color;
+            overlayCtx.fillStyle = color.startsWith('#') ? `${color}1f` : color;
+            overlayCtx.fillRect(x, y, boxW, boxH);
+            overlayCtx.strokeRect(x, y, boxW, boxH);
+            overlayCtx.font = '20px sans-serif';
+            overlayCtx.fillStyle = '#fff';
+            overlayCtx.fillText(label, x + 8, y + 22);
+        }
+
+        function drawHandSkeleton(landmarks, color = '#00e5ff') {
+            if (!overlayCtx || !landmarks || !landmarks.length) return;
+            // connections from MediaPipe hands
+            const connections = [
+                [0,1],[1,2],[2,3],[3,4], // thumb
+                [0,5],[5,6],[6,7],[7,8], // index
+                [0,9],[9,10],[10,11],[11,12], // middle
+                [0,13],[13,14],[14,15],[15,16], // ring
+                [0,17],[17,18],[18,19],[19,20], // pinky
+                [5,9],[9,13],[13,17] // palm connections
+            ];
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            overlayCtx.strokeStyle = color;
+            overlayCtx.lineWidth = Math.max(1, Math.round(Math.min(w, h) * 0.003));
+            for (const [a,b] of connections) {
+                const p1 = landmarks[a];
+                const p2 = landmarks[b];
+                if (!p1 || !p2) continue;
+                const x1 = (mirrorFixEnabled ? (1 - p1.x) : p1.x) * w;
+                const y1 = p1.y * h;
+                const x2 = (mirrorFixEnabled ? (1 - p2.x) : p2.x) * w;
+                const y2 = p2.y * h;
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(x1, y1);
+                overlayCtx.lineTo(x2, y2);
+                overlayCtx.stroke();
+            }
+            // draw key points
+            overlayCtx.fillStyle = color;
+            for (const p of landmarks) {
+                const x = (mirrorFixEnabled ? (1 - p.x) : p.x) * w;
+                const y = p.y * h;
+                overlayCtx.beginPath();
+                overlayCtx.arc(x, y, Math.max(2, Math.round(Math.min(w, h) * 0.006)), 0, Math.PI * 2);
+                overlayCtx.fill();
+            }
+        }
+
+        function drawPredictionLabel(text, confidence) {
+            if (!overlayCtx) return;
+            const w = overlayCanvas.width;
+            const h = overlayCanvas.height;
+            const label = text ? `${text} ${confidence ? `(${Math.round(confidence)}%)` : ''}` : '';
+            if (!label) return;
+            overlayCtx.font = '28px sans-serif';
+            overlayCtx.fillStyle = 'rgba(0,0,0,0.6)';
+            const padding = 8;
+            const metrics = overlayCtx.measureText(label);
+            const boxW = metrics.width + padding * 2;
+            const boxH = 36;
+            const x = 12;
+            const y = overlayCanvas.height - boxH - 12;
+            overlayCtx.fillRect(x, y, boxW, boxH);
+            overlayCtx.fillStyle = '#fff';
+            overlayCtx.fillText(label, x + padding, y + 24);
+        }
+
         function toggleMirrorFix() {
             mirrorFixEnabled = !mirrorFixEnabled;
             const button = document.getElementById('mirrorFixBtn');
@@ -653,18 +924,118 @@
             }
         }
 
+        function normalizeHandednessLabel(handedness) {
+            const value = String(handedness || '').trim();
+            if (value === 'Left' || value === 'Right') return value;
+            return 'Right';
+        }
+
+        function getHandPredictionState(handedness) {
+            const key = normalizeHandednessLabel(handedness);
+            if (!handPredictionStates.has(key)) {
+                handPredictionStates.set(key, {
+                    fingerRequestInFlight: false,
+                    lastFingerApiCallAt: 0,
+                    lastFingerImageSentAt: 0,
+                    stableLetter: '',
+                    stableLetterSince: 0,
+                    lastCommittedLetterAt: 0,
+                    lastCommittedLetter: '',
+                    letterVoteBuffer: [],
+                    currentWord: '',
+                    lastLetterAddedAt: 0,
+                    previewLetter: '',
+                    wordFrameBuffer: [],
+                    wordRequestInFlight: false,
+                    lastWordApiCallAt: 0,
+                    wordCandidate: '',
+                    wordCandidateSince: 0,
+                    wordCandidateCount: 0,
+                    lastWordPrediction: '',
+                    lastWordPredictionAt: 0,
+                    previewWord: '',
+                });
+            }
+            return handPredictionStates.get(key);
+        }
+
+        function resetHandPredictionStates() {
+            handPredictionStates.clear();
+        }
+
+        function compareHandRecords(a, b) {
+            const leftOrder = HAND_ORDER[normalizeHandednessLabel(a && a.handedness)] ?? 99;
+            const rightOrder = HAND_ORDER[normalizeHandednessLabel(b && b.handedness)] ?? 99;
+            return leftOrder - rightOrder;
+        }
+
+        async function loadCameraList() {
+            const select = document.getElementById('cameraSelect');
+            if (!select || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                return;
+            }
+
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableCameras = devices.filter(device => device.kind === 'videoinput');
+                const currentValue = select.value || '';
+
+                select.innerHTML = '<option value="">Default front camera</option>';
+                availableCameras.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `Camera ${index + 1}`;
+                    select.appendChild(option);
+                });
+
+                if (currentValue && availableCameras.some(device => device.deviceId === currentValue)) {
+                    select.value = currentValue;
+                }
+
+                updateCameraStatus();
+            } catch (error) {
+                console.warn('Could not enumerate cameras:', error);
+            }
+        }
+
+        function updateCameraStatus() {
+            const status = document.getElementById('cameraStatus');
+            if (!status) return;
+
+            if (!selectedCameraId) {
+                status.textContent = 'Using default front camera.';
+                return;
+            }
+
+            const camera = availableCameras.find(device => device.deviceId === selectedCameraId);
+            status.textContent = camera ? `Using ${camera.label || 'selected camera'}.` : 'Using selected camera.';
+        }
+
+        async function switchCamera(deviceId) {
+            selectedCameraId = String(deviceId || '').trim();
+
+            if (!cameraActive) {
+                updateCameraStatus();
+                return;
+            }
+
+            stopCameraFeed();
+            await startCameraFeed();
+        }
+
         async function predictLetterWithSvc(landmarks, handedness) {
-            if (fingerRequestInFlight) return;
+            const handState = getHandPredictionState(handedness);
+            if (handState.fingerRequestInFlight) return;
             if (apiBackoffActive()) return;
 
             const now = Date.now();
-            if (now - lastFingerApiCallAt < FINGER_API_INTERVAL_MS) return;
+            if (now - handState.lastFingerApiCallAt < FINGER_API_INTERVAL_MS) return;
 
-            fingerRequestInFlight = true;
-            lastFingerApiCallAt = now;
+            handState.fingerRequestInFlight = true;
+            handState.lastFingerApiCallAt = now;
 
             let imageDataUrl = '';
-            if (HYBRID_LETTER_AI_ENABLED && now - lastFingerImageSentAt >= FINGER_IMAGE_INTERVAL_MS) {
+            if (HYBRID_LETTER_AI_ENABLED && now - handState.lastFingerImageSentAt >= FINGER_IMAGE_INTERVAL_MS) {
                 const video = document.getElementById('cameraVideo');
                 const canvas = document.getElementById('captureCanvas');
                 if (video && canvas && video.readyState >= 2) {
@@ -682,7 +1053,7 @@
                         context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     }
                     imageDataUrl = canvas.toDataURL('image/jpeg', 0.65);
-                    lastFingerImageSentAt = now;
+                    handState.lastFingerImageSentAt = now;
                 }
             }
 
@@ -706,27 +1077,28 @@
 
                 const data = await response.json();
                 markApiRecovered();
-                handleSvcLetter(data.letter || '', Number(data.confidence || 0));
+                handleSvcLetter(handedness, data.letter || '', Number(data.confidence || 0));
             } catch (error) {
                 markApiFailure(error.message || 'Failed to fetch');
                 debugLog(`❌ SVC fallback error: ${error.message}`, 'error');
             } finally {
-                fingerRequestInFlight = false;
+                handState.fingerRequestInFlight = false;
             }
         }
 
-        function handleSvcLetter(letter, confidence) {
+        function handleSvcLetter(handedness, letter, confidence) {
+            const handState = getHandPredictionState(handedness);
             const normalizedLetter = confidence >= 7 ? String(letter || '').trim().toUpperCase() : '';
             if (!normalizedLetter || !/^[A-Z]$/.test(normalizedLetter)) return;
 
             const now = Date.now();
-            letterVoteBuffer.push({ letter: normalizedLetter, confidence, at: now });
-            letterVoteBuffer = letterVoteBuffer.filter(item => now - item.at <= LETTER_VOTE_WINDOW_MS);
+            handState.letterVoteBuffer.push({ letter: normalizedLetter, confidence, at: now });
+            handState.letterVoteBuffer = handState.letterVoteBuffer.filter(item => now - item.at <= LETTER_VOTE_WINDOW_MS);
 
             const counts = {};
             const confidenceSums = {};
-            for (let i = 0; i < letterVoteBuffer.length; i += 1) {
-                const item = letterVoteBuffer[i];
+            for (let i = 0; i < handState.letterVoteBuffer.length; i += 1) {
+                const item = handState.letterVoteBuffer[i];
                 counts[item.letter] = (counts[item.letter] || 0) + 1;
                 confidenceSums[item.letter] = (confidenceSums[item.letter] || 0) + Number(item.confidence || 0);
             }
@@ -740,184 +1112,279 @@
                 }
             });
 
-            const totalVotes = letterVoteBuffer.length;
+            const totalVotes = handState.letterVoteBuffer.length;
             const dominantRatio = totalVotes > 0 ? (dominantCount / totalVotes) : 0;
             const dominantAvgConfidence = dominantCount > 0 ? (confidenceSums[dominantLetter] / dominantCount) : 0;
             const minAvgConfidence = dominantLetter === 'E' ? 5.5 : 7;
             const minVoteCount = dominantLetter === 'E' ? 1 : LETTER_VOTE_MIN_COUNT;
 
-            updateFingerSpellingUI(dominantLetter);
+            handState.previewLetter = dominantLetter;
+            try { drawPredictionLabel(dominantLetter, dominantAvgConfidence); } catch (e) { /* ignore */ }
 
             if (dominantCount < minVoteCount || dominantRatio < LETTER_VOTE_MIN_RATIO || dominantAvgConfidence < minAvgConfidence) {
                 return;
             }
             const requiredStableMs = dominantAvgConfidence >= 80 ? 180 : (dominantAvgConfidence >= 65 ? 250 : LETTER_STABLE_MS);
             const requiredCooldownMs = dominantAvgConfidence >= 80 ? 260 : LETTER_COOLDOWN_MS;
-            if (dominantLetter !== stableLetter) {
-                stableLetter = dominantLetter;
-                stableLetterSince = now;
+            if (dominantLetter !== handState.stableLetter) {
+                handState.stableLetter = dominantLetter;
+                handState.stableLetterSince = now;
                 return;
             }
 
-            if (now - stableLetterSince < requiredStableMs) return;
-            if (now - lastCommittedLetterAt < requiredCooldownMs) return;
+            if (dominantLetter === handState.lastCommittedLetter) {
+                return;
+            }
 
-            commitDetectedLetter(dominantLetter);
-            lastCommittedLetterAt = now;
-            letterVoteBuffer = [];
+            if (now - handState.stableLetterSince < requiredStableMs) return;
+            if (now - handState.lastCommittedLetterAt < requiredCooldownMs) return;
+
+            commitDetectedLetter(handedness, dominantLetter);
+            handState.lastCommittedLetterAt = now;
+            handState.lastCommittedLetter = dominantLetter;
+            handState.letterVoteBuffer = [];
+            handState.stableLetter = '';
+            handState.stableLetterSince = 0;
         }
 
         function getWordSuggestion(value) {
-            return '-';
+            return '';
         }
 
-        function updateFingerSpellingUI(letter) {
-            document.getElementById('detectedLetter').textContent = letter || '-';
-            document.getElementById('currentSpelledWord').textContent = currentSpelledWord || '-';
-            document.getElementById('wordSuggestion').textContent = getWordSuggestion(currentSpelledWord);
+        function getHandDisplayLabel(handedness) {
+            const handState = getHandPredictionState(handedness);
+            return String(handState.previewLetter || handState.lastCommittedLetter || normalizeHandednessLabel(handedness)).toUpperCase();
         }
 
         function appendOutputToken(token, icon, confidence, processingMs) {
-            const textarea = document.getElementById('translationOutput');
-            textarea.value += (textarea.value ? ' ' : '') + token;
-
-            const recognizedSigns = document.getElementById('recognizedSigns');
-            const signsList = document.getElementById('signsList');
-            signsList.innerHTML += `<div class="sign-item"><div class="sign-icon">${icon}</div>${token}</div>`;
-            recognizedSigns.style.display = 'block';
-
-            const alternativesSection = document.getElementById('alternativesSection');
-            const alternativesList = document.getElementById('alternativesList');
-            const secondConfidence = Math.max(0, Math.round(confidence - 8));
-            const thirdConfidence = Math.max(0, Math.round(confidence - 16));
-            alternativesList.innerHTML = `
-                <div class="alternative-item">
-                    <span class="alternative-text">${token}</span>
-                    <span class="alternative-confidence">${Math.round(confidence)}%</span>
-                </div>
-                <div class="alternative-item">
-                    <span class="alternative-text">Maybe ${token}</span>
-                    <span class="alternative-confidence">${secondConfidence}%</span>
-                </div>
-                <div class="alternative-item">
-                    <span class="alternative-text">Try again</span>
-                    <span class="alternative-confidence">${thirdConfidence}%</span>
-                </div>
-            `;
-            alternativesSection.style.display = 'block';
-
-            const statsSection = document.getElementById('statsSection');
-            const words = textarea.value.trim() ? textarea.value.trim().split(/\s+/).length : 0;
-            document.getElementById('wordsCount').textContent = String(words);
-            document.getElementById('accuracyScore').textContent = `${Math.round(confidence)}%`;
-            document.getElementById('processingTime').textContent = `${processingMs}ms`;
-
-            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
-            document.getElementById('sessionTime').textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            statsSection.style.display = 'block';
+            lastPrediction = String(token).toUpperCase();
+            lastPredictionAt = Date.now();
         }
 
-        function handleAIWordPrediction(data, processingMs) {
-            const sign = String(data.prediction || '').trim().toUpperCase();
+        function handleWordSequenceResult(data, processingMs) {
+            const word = String(data.word || '').trim().toUpperCase();
             const confidence = Number(data.confidence || 0);
-            const handDetected = Boolean(data.hand_detected);
-            const isLetter = /^[A-Z]$/.test(sign);
 
-            debugLog(`🔍 AI Response: sign='${sign}' conf=${confidence}% hand=${handDetected}`, 'log');
-
-            if (!handDetected || !sign || sign === 'NO HAND DETECTED' || sign === 'NONE' || confidence < AI_WORD_MIN_CONFIDENCE) {
-                debugLog(`⏭️ Skipping (confidence too low or no hand)`, 'log');
-                if (!isLetter) {
-                    stableLetter = '';
-                    stableLetterSince = 0;
-                }
-                aiWordCandidate = '';
-                aiWordSince = 0;
-                aiWordCount = 0;
+            if (!word || confidence < WORD_MIN_CONFIDENCE) {
+                wordCandidate = '';
+                wordCandidateSince = 0;
+                wordCandidateCount = 0;
                 return;
             }
 
             const now = Date.now();
 
-            // Prefer MediaPipe+SVC letters whenever hand tracking is available.
-            if (isLetter && handTrackingAvailable) {
+            if (word !== wordCandidate) {
+                wordCandidate = word;
+                wordCandidateSince = now;
+                wordCandidateCount = 1;
+                debugLog(`🔄 New word candidate: ${word}`, 'log');
                 return;
             }
 
-            // Finger spelling path: commit single letters into current spelled word.
-            if (isLetter) {
-                updateFingerSpellingUI(sign);
+            wordCandidateCount += 1;
+            if (wordCandidateCount < WORD_MIN_REPEAT) return;
+            if (now - wordCandidateSince < WORD_STABLE_MS) return;
 
-                if (sign !== stableLetter) {
-                    stableLetter = sign;
-                    stableLetterSince = now;
-                    return;
-                }
-
-                if (now - stableLetterSince < LETTER_STABLE_MS) return;
-                if (now - lastCommittedLetterAt < LETTER_COOLDOWN_MS) return;
-
-                commitDetectedLetter(sign);
-                lastCommittedLetterAt = now;
-                return;
-            }
-
-            if (sign !== aiWordCandidate) {
-                aiWordCandidate = sign;
-                aiWordSince = now;
-                aiWordCount = 1;
-                debugLog(`🔄 New candidate: ${sign}`, 'log');
-                return;
-            }
-
-            aiWordCount += 1;
-            debugLog(`✓ Candidate match #${aiWordCount}/${AI_WORD_MIN_REPEAT}`, 'log');
-            
-            if (aiWordCount < AI_WORD_MIN_REPEAT) return;
-            if (now - aiWordSince < AI_WORD_STABLE_MS) return;
-
-            const lastWord = document.getElementById('translationOutput').value.trim().split(/\s+/).slice(-1)[0] || '';
-            if (sign === lastWord && now - lastPredictionAt < 2500) {
+            if (word === lastPrediction && now - lastPredictionAt < 2500) {
                 debugLog(`⏭️ Skipping (duplicate of last word)`, 'log');
                 return;
             }
 
-            debugLog(`✨ COMMITTING: ${sign}`, 'success');
-            aiWordCandidate = '';
-            aiWordSince = 0;
-            aiWordCount = 0;
+            debugLog(`✨ COMMITTING WORD: ${word}`, 'success');
+            wordCandidate = '';
+            wordCandidateSince = 0;
+            wordCandidateCount = 0;
+            wordFrameBuffer = [];
 
-            lastPrediction = sign;
+            lastPrediction = word;
             lastPredictionAt = now;
-            appendOutputToken(sign, '✋', confidence, processingMs);
+            appendOutputToken(word, '✋', confidence, processingMs);
         }
 
-        function commitDetectedLetter(letter) {
-            currentSpelledWord += letter;
-            lastLetterAddedAt = Date.now();
-            updateFingerSpellingUI(letter);
+        function commitDetectedLetter(handedness, letter) {
+            const handState = getHandPredictionState(handedness);
+            handState.currentWord += letter;
+            handState.lastLetterAddedAt = Date.now();
+            handState.previewLetter = String(letter || '').trim().toUpperCase();
+            handState.lastCommittedLetter = handState.previewLetter;
         }
 
-        function removeLastLetter() {
-            if (!currentSpelledWord) return;
-            currentSpelledWord = currentSpelledWord.slice(0, -1);
-            updateFingerSpellingUI('');
+        function removeLastLetter(handedness) {
+            const handState = getHandPredictionState(handedness);
+            if (!handState.currentWord) return;
+            handState.currentWord = handState.currentWord.slice(0, -1);
+            handState.previewLetter = handState.currentWord.slice(-1) || '';
         }
 
-        function commitCurrentWord() {
-            if (!currentSpelledWord) return;
-            appendOutputToken(currentSpelledWord, '🔤', 96, 0);
-            currentSpelledWord = '';
-            stableLetter = '';
-            stableLetterSince = 0;
-            updateFingerSpellingUI('');
+        function commitCurrentWord(handedness) {
+            const handState = getHandPredictionState(handedness);
+            if (!handState.currentWord) return;
+            appendOutputToken(handState.currentWord, '🔤', 96, 0);
+            handState.currentWord = '';
+            handState.stableLetter = '';
+            handState.stableLetterSince = 0;
+            handState.previewLetter = '';
+        }
+
+        function pushHandWordFrame(handedness, landmarks) {
+            const handState = getHandPredictionState(handedness);
+            const now = Date.now();
+            const frame = { t: now, left: null, right: null };
+            frame[normalizeHandednessLabel(handedness).toLowerCase()] = landmarks.map(point => [point.x, point.y, point.z]);
+            handState.wordFrameBuffer.push(frame);
+            handState.wordFrameBuffer = handState.wordFrameBuffer.filter(item => now - Number(item.t || now) <= WORD_BUFFER_MAX_AGE_MS);
+            handState.previewWord = handState.previewWord || '';
+        }
+
+        async function maybePostWordSequenceForHand(handedness) {
+            const handState = getHandPredictionState(handedness);
+            if (!cameraActive) return;
+            if (apiBackoffActive()) return;
+            if (handState.wordRequestInFlight) return;
+
+            const now = Date.now();
+            if (now - handState.lastWordApiCallAt < WORD_API_INTERVAL_MS) return;
+            if (handState.wordFrameBuffer.length < WORD_MIN_FRAMES) return;
+
+            const frames = handState.wordFrameBuffer.map(frame => ({ left: frame.left, right: frame.right }));
+
+            handState.wordRequestInFlight = true;
+            handState.lastWordApiCallAt = now;
+            const requestStart = performance.now();
+
+            try {
+                const response = await fetch(`${API_BASE}/sign/word-sequence/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frames })
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                markApiRecovered();
+                const processingMs = Math.round(performance.now() - requestStart);
+                handleHandWordSequenceResult(handedness, data, processingMs);
+            } catch (error) {
+                markApiFailure(error.message || 'Failed to fetch');
+                debugLog(`❌ Word-sequence request error (${normalizeHandednessLabel(handedness)}): ${error.message}`, 'error');
+            } finally {
+                handState.wordRequestInFlight = false;
+            }
+        }
+
+        function handleHandWordSequenceResult(handedness, data, processingMs) {
+            const handState = getHandPredictionState(handedness);
+            const word = String(data && data.word ? data.word : '').trim().toUpperCase();
+            const confidence = Number(data && data.confidence ? data.confidence : 0);
+
+            if (!word || confidence < WORD_MIN_CONFIDENCE) {
+                handState.wordCandidate = '';
+                handState.wordCandidateSince = 0;
+                handState.wordCandidateCount = 0;
+                return;
+            }
+
+            const now = Date.now();
+            handState.previewWord = word;
+
+            if (word !== handState.wordCandidate) {
+                handState.wordCandidate = word;
+                handState.wordCandidateSince = now;
+                handState.wordCandidateCount = 1;
+                return;
+            }
+
+            handState.wordCandidateCount += 1;
+            if (handState.wordCandidateCount < WORD_MIN_REPEAT) return;
+            if (now - handState.wordCandidateSince < WORD_STABLE_MS) return;
+
+            if (word === handState.lastWordPrediction && now - handState.lastWordPredictionAt < 2500) {
+                return;
+            }
+
+            handState.wordCandidate = '';
+            handState.wordCandidateSince = 0;
+            handState.wordCandidateCount = 0;
+            handState.lastWordPrediction = word;
+            handState.lastWordPredictionAt = now;
+            appendOutputToken(word, '✋', confidence, processingMs);
+        }
+
+        // MediaPipe doesn't guarantee multiHandLandmarks[0] is the same physical
+        // hand from frame to frame once a second hand enters view. Pick a stable
+        // "primary" hand (highest handedness confidence, tie-broken by bounding-box
+        // size) so single-hand fingerspelling doesn't flicker between hands.
+        function selectPrimaryHandIndex(multiHandLandmarks, multiHandedness) {
+            if (!multiHandLandmarks || multiHandLandmarks.length <= 1) return 0;
+
+            let bestIndex = 0;
+            let bestScore = -Infinity;
+            for (let i = 0; i < multiHandLandmarks.length; i += 1) {
+                const confidence = (multiHandedness && multiHandedness[i] && typeof multiHandedness[i].score === 'number')
+                    ? multiHandedness[i].score
+                    : 0.5;
+                const landmarks = multiHandLandmarks[i];
+                let minX = 1, minY = 1, maxX = 0, maxY = 0;
+                for (const p of landmarks) {
+                    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+                }
+                const area = Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
+                // Confidence dominates; box area only breaks near-ties.
+                const score = (confidence * 1000) + area;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIndex = i;
+                }
+            }
+            return bestIndex;
+        }
+
+        function _handBounds(landmarks) {
+            let minX = 1, minY = 1, maxX = 0, maxY = 0;
+            for (const p of landmarks) {
+                minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+            }
+            return { minX, minY, maxX, maxY };
+        }
+
+        // Two hands count as "one sign" (combined box) only when they're near
+        // each other -- e.g. clasped/interacting for a two-handed word. If they're
+        // far apart (one hand fingerspelling, the other resting elsewhere in
+        // frame), each hand should stay in its own box.
+        function handsAreClose(landmarksA, landmarksB) {
+            const a = _handBounds(landmarksA);
+            const b = _handBounds(landmarksB);
+
+            const gapX = Math.max(0, Math.max(a.minX, b.minX) - Math.min(a.maxX, b.maxX));
+            const gapY = Math.max(0, Math.max(a.minY, b.minY) - Math.min(a.maxY, b.maxY));
+            const gap = Math.hypot(gapX, gapY);
+
+            const avgHandSize = ((a.maxX - a.minX) + (a.maxY - a.minY) + (b.maxX - b.minX) + (b.maxY - b.minY)) / 4;
+            // Allow a gap of up to ~2x average hand size before treating the
+            // hands as separate signs.
+            return gap <= avgHandSize * 2;
+        }
+
+        function buildHandRecords(results) {
+            const landmarksList = results.multiHandLandmarks || [];
+            const handednessList = results.multiHandedness || [];
+            const records = [];
+            for (let i = 0; i < landmarksList.length; i += 1) {
+                records.push({
+                    landmarks: landmarksList[i],
+                    handedness: (handednessList[i] && handednessList[i].label) ? handednessList[i].label : 'Right',
+                });
+            }
+            return records;
         }
 
         async function initFingerSpelling() {
             debugLog('🔧 Initializing finger spelling...', 'log');
-            
+
             if (!window.Hands) {
                 debugLog('❌ MediaPipe Hands not found!', 'error');
                 handTrackingAvailable = false;
@@ -933,33 +1400,76 @@
                 });
 
                 handsDetector.setOptions({
-                    maxNumHands: 1,
+                    maxNumHands: 2,
                     modelComplexity: 1,
                     minDetectionConfidence: 0.55,
                     minTrackingConfidence: 0.55
                 });
 
                 handsDetector.onResults(results => {
-                    if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                    const handRecords = buildHandRecords(results);
+
+                    if (!handRecords.length) {
                         handCurrentlyDetected = false;
-                        stableLetter = '';
-                        stableLetterSince = 0;
-                        letterVoteBuffer = [];
-                        updateFingerSpellingUI('');
+                        resetHandPredictionStates();
+                        overlayLabel = '';
+                        clearOverlay();
                         return;
                     }
 
                     lastHandSeenAt = Date.now();
                     handCurrentlyDetected = true;
-                    const landmarks = results.multiHandLandmarks[0];
-                    const handedness = results.multiHandedness && results.multiHandedness[0]
-                        ? results.multiHandedness[0].label
-                        : 'Right';
-                    debugLog(`👐 Hand detected (${handedness})`, 'log');
-                    // Keep SVC as letter fallback in case AI provider is temporarily unavailable.
-                    predictLetterWithSvc(landmarks, handedness);
+
+                    const primaryIndex = selectPrimaryHandIndex(results.multiHandLandmarks, results.multiHandedness);
+                    const primaryHand = handRecords[primaryIndex];
+                    debugLog(`👐 Hand(s) detected: ${handRecords.length} (primary=${primaryHand.handedness})`, 'log');
+
+                    try {
+                        const video = document.getElementById('cameraVideo');
+                        if (video) resizeOverlayToVideo(video);
+                        clearOverlay();
+
+                        const bothHandsClose = handRecords.length >= 2 && handsAreClose(handRecords[0].landmarks, handRecords[1].landmarks);
+
+                        if (bothHandsClose) {
+                            // Two hands visible AND close together = likely a
+                            // two-handed word/phrase sign performed as one gesture.
+                            // Draw one combined box around both hands instead of two
+                            // separate boxes, with each hand's skeleton inside it.
+                            const combinedLandmarks = handRecords.flatMap(hand => hand.landmarks);
+                            drawHandBox(combinedLandmarks, overlayLabel || 'Sign', '#ff33cc');
+                            handRecords.forEach((hand, idx) => {
+                                const isPrimary = idx === primaryIndex;
+                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
+                            });
+                        } else {
+                            // Either one hand, or two hands far apart (e.g. one hand
+                            // fingerspelling while the other rests elsewhere in frame)
+                            // -- each hand gets its own box.
+                            handRecords.forEach((hand, idx) => {
+                                const isPrimary = idx === primaryIndex;
+                                const color = isPrimary ? '#ff33cc' : '#33ff99';
+                                const label = getHandDisplayLabel(hand.handedness);
+                                drawHandBox(hand.landmarks, label, color);
+                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Overlay draw error', e);
+                    }
+
+                    const handsArePaired = handRecords.length >= 2 && handsAreClose(handRecords[0].landmarks, handRecords[1].landmarks);
+
+                    if (!handsArePaired) {
+                        handRecords.slice().sort(compareHandRecords).forEach(hand => {
+                            predictLetterWithSvc(hand.landmarks, hand.handedness);
+                        });
+                    }
+
+                    // Word/phrase path uses every currently-visible hand.
+                    pushWordFrame(handRecords);
                 });
-                
+
                 debugLog('✓ Finger spelling initialized', 'log');
             } catch (error) {
                 debugLog(`❌ Init error: ${error.message}`, 'error');
@@ -974,11 +1484,18 @@
             const container = document.getElementById('cameraContainer');
 
             try {
+                const videoConstraints = selectedCameraId
+                    ? { deviceId: { exact: selectedCameraId } }
+                    : { facingMode: 'user' };
+
                 mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user' },
+                    video: videoConstraints,
                     audio: false
                 });
                 debugLog('✓ Camera access granted', 'log');
+
+                await loadCameraList();
+                updateCameraStatus();
             } catch (error) {
                 debugLog(`❌ Camera denied: ${error.message}`, 'error');
                 container.innerHTML = `
@@ -1017,8 +1534,11 @@
             canvas.style.display = 'none';
             container.appendChild(canvas);
 
-            debugLog('⏱️ Starting capture loop (900ms) and hand tracking (200ms)', 'log');
-            captureTimer = setInterval(captureAndPredict, 900);
+            // overlay for boxes and labels
+            createOverlay(container);
+
+            debugLog('⏱️ Starting hand tracking (200ms) and word-sequence poll (700ms)', 'log');
+            captureTimer = setInterval(maybePostWordSequence, WORD_API_INTERVAL_MS);
             handsTimer = setInterval(runFingerSpellingFrame, 200);
         }
 
@@ -1048,6 +1568,10 @@
                     <p class="camera-subtitle">Allow camera access to begin recognition</p>
                 </div>
             `;
+            // clear overlay state
+            overlayLabel = '';
+            clearOverlay();
+            updateCameraStatus();
         }
 
         async function runFingerSpellingFrame() {
@@ -1062,118 +1586,118 @@
                 console.error('Finger spelling detector error:', error);
             }
 
-            if (currentSpelledWord && Date.now() - lastHandSeenAt > WORD_PAUSE_MS) {
-                commitCurrentWord();
-            }
-
-            if (currentSpelledWord && lastLetterAddedAt && Date.now() - lastLetterAddedAt > 1800) {
-                commitCurrentWord();
+            for (const [handedness, state] of handPredictionStates.entries()) {
+                const idleMs = Date.now() - Number(state.lastLetterAddedAt || 0);
+                if (state.currentWord && (idleMs > WORD_PAUSE_MS || idleMs > 1800)) {
+                    commitCurrentWord(handedness);
+                }
             }
         }
 
-        async function captureAndPredict() {
-            if (!cameraActive) return;
-            if (apiBackoffActive()) return;
+        // Called on every hand-tracking tick (~200ms) with the current frame's
+        // hand records (0-2 hands). Builds the rolling window that
+        // maybePostWordSequence() sends to the backend.
+        function pushWordFrame(handRecords) {
+            const now = Date.now();
+            const byLabel = {};
+            for (const hand of handRecords) {
+                const slot = normalizeHandednessLabel(hand.handedness);
+                byLabel[slot] = hand.landmarks.map(p => [p.x, p.y, p.z]);
+            }
 
-            const video = document.getElementById('cameraVideo');
-            const canvas = document.getElementById('captureCanvas');
-            if (!video || !canvas || video.readyState < 2) {
-                debugLog('⚠️ Video not ready', 'warn');
+            const handsSeparated = handRecords.length >= 2 && !handsAreClose(handRecords[0].landmarks, handRecords[1].landmarks);
+            if (!handsSeparated) {
+                for (const [handedness, state] of handPredictionStates.entries()) {
+                    state.wordFrameBuffer = [];
+                    state.wordCandidate = '';
+                    state.wordCandidateSince = 0;
+                    state.wordCandidateCount = 0;
+                }
+                wordFrameBuffer.push({
+                    t: now,
+                    left: byLabel.Left || null,
+                    right: byLabel.Right || null,
+                });
+                wordFrameBuffer = wordFrameBuffer.filter(frame => now - frame.t <= WORD_BUFFER_MAX_AGE_MS);
                 return;
             }
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            wordFrameBuffer = [];
+            handRecords.forEach(hand => {
+                pushHandWordFrame(hand.handedness, hand.landmarks);
+            });
+        }
 
-            const context = canvas.getContext('2d');
-            context.setTransform(1, 0, 0, 1, 0, 0);
-            context.clearRect(0, 0, canvas.width, canvas.height);
+        async function maybePostWordSequence() {
+            if (!cameraActive) return;
+            if (apiBackoffActive()) return;
 
-            if (mirrorFixEnabled) {
-                context.translate(canvas.width, 0);
-                context.scale(-1, 1);
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                context.setTransform(1, 0, 0, 1, 0, 0);
-            } else {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            }
+            if (wordFrameBuffer.length >= WORD_MIN_FRAMES) {
+                const now = Date.now();
+                if (!wordRequestInFlight && now - lastWordApiCallAt >= WORD_API_INTERVAL_MS) {
+                    wordRequestInFlight = true;
+                    lastWordApiCallAt = now;
+                    const requestStart = performance.now();
 
-            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-            const requestStart = performance.now();
+                    try {
+                        const response = await fetch(`${API_BASE}/sign/word-sequence/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ frames: wordFrameBuffer.map(frame => ({ left: frame.left, right: frame.right })) })
+                        });
 
-            debugLog('📤 Sending word prediction request...', 'log');
-
-            try {
-                const response = await fetch(`${API_BASE}/sign/predict/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: imageDataUrl,
-                        source: 'webcam'
-                    })
-                });
-
-                if (!response.ok) {
-                    debugLog(`❌ Predict API error: ${response.status}`, 'error');
-                    return;
+                        if (response.ok) {
+                            const data = await response.json();
+                            markApiRecovered();
+                            const processingMs = Math.round(performance.now() - requestStart);
+                            if (data && data.word) {
+                                debugLog(`📥 Word prediction: ${data.word} (${data.confidence}%, ${processingMs}ms)`, 'log');
+                                overlayLabel = String(data.word).toUpperCase();
+                                try { drawPredictionLabel(overlayLabel, Number(data.confidence || 0)); } catch (e) {}
+                            }
+                            if (data && data.model_available === false && !aiUnavailableLogged) {
+                                debugLog('ℹ️ Word model not trained yet; letter fingerspelling remains active.', 'warn');
+                                aiUnavailableLogged = true;
+                            }
+                            handleWordSequenceResult(data, processingMs);
+                        }
+                    } catch (error) {
+                        markApiFailure(error.message || 'Failed to fetch');
+                        debugLog(`❌ Word-sequence request error: ${error.message}`, 'error');
+                    } finally {
+                        wordRequestInFlight = false;
+                    }
                 }
+            }
 
-                const data = await response.json();
-                markApiRecovered();
-                const processingMs = Math.round(performance.now() - requestStart);
-                debugLog(`📥 Prediction: ${data.prediction} (${data.confidence}%, ${processingMs}ms)`, 'log');
-                renderWordPrediction(data, processingMs);
-            } catch (error) {
-                markApiFailure(error.message || 'Failed to fetch');
-                debugLog(`❌ Prediction error: ${error.message}`, 'error');
+            for (const [handedness, state] of handPredictionStates.entries()) {
+                if (state.wordFrameBuffer.length < WORD_MIN_FRAMES) continue;
+                maybePostWordSequenceForHand(handedness);
             }
         }
 
-        function renderWordPrediction(data, processingMs) {
-            if (data && data.ai_available === false && !aiUnavailableLogged) {
-                const detail = String(data.ai_error || 'Unknown AI provider error');
-                debugLog(`⚠️ AI word service unavailable. ${detail}`, 'warn');
-                debugLog('ℹ️ Letter fallback remains active.', 'warn');
-                aiUnavailableLogged = true;
-            }
-            handleAIWordPrediction(data, processingMs);
-        }
-
-        async function copyTranslation() {
-            const text = document.getElementById('translationOutput').value;
-            if (!text) return;
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(text);
-            } else {
-                const textarea = document.getElementById('translationOutput');
-                textarea.select();
-                document.execCommand('copy');
-            }
-            alert('Translation copied to clipboard!');
-        }
-
-        function clearTranslation() {
-            document.getElementById('translationOutput').value = '';
-            document.getElementById('recognizedSigns').style.display = 'none';
-            document.getElementById('alternativesSection').style.display = 'none';
-            document.getElementById('statsSection').style.display = 'none';
-            document.getElementById('signsList').innerHTML = '';
-            document.getElementById('alternativesList').innerHTML = '';
+        function resetRecognitionState() {
             lastPrediction = '';
             lastPredictionAt = 0;
-            currentSpelledWord = '';
-            stableLetter = '';
-            stableLetterSince = 0;
-            letterVoteBuffer = [];
-            lastCommittedLetterAt = 0;
-            lastLetterAddedAt = 0;
-            aiWordCandidate = '';
-            aiWordSince = 0;
-            aiWordCount = 0;
+            resetHandPredictionStates();
+            wordFrameBuffer = [];
+            wordCandidate = '';
+            wordCandidateSince = 0;
+            wordCandidateCount = 0;
             aiUnavailableLogged = false;
-            updateFingerSpellingUI('');
+            overlayLabel = '';
+            clearOverlay();
         }
+
+        // Navbar dropdown
+        (function() {
+            const _navToggle = document.getElementById('navUserToggle');
+            const _navDrop = document.getElementById('navUserDropdown');
+            if (_navToggle && _navDrop) {
+                _navToggle.addEventListener('click', function(e) { e.stopPropagation(); _navDrop.classList.toggle('open'); });
+                document.addEventListener('click', function() { _navDrop.classList.remove('open'); });
+            }
+        })();
     </script>
 </body>
 </html>

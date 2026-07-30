@@ -1,0 +1,13 @@
+# Training/offline-only dependencies for the Sign-to-Text dataset pipeline.
+#
+# Install with: pip install -r requirements-training.txt
+#
+# NOT required by the Django runtime (manage.py runserver) -- all hand
+# tracking in the deployed app runs client-side in the browser via the
+# @mediapipe/hands JS package. This file is only needed when running the
+# offline scripts under backend/scripts/ that extract landmarks from
+# datasets (images/videos) to build training CSVs/JSONL files.
+# Pinned to the 0.10.x line: mediapipe 1.0.0 dropped the legacy
+# mp.solutions.hands Python API (used by these scripts and by the
+# ji-chani reference notebook) in favor of the newer Tasks API.
+mediapipe==0.10.21

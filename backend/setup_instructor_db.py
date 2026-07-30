@@ -15,15 +15,29 @@ django.setup()
 from django.contrib.auth.models import User
 from signtext.models import UserProfile, LearningModule, Announcement, UserLearningState
 
+
+def split_name_parts(full_name):
+    parts = [part for part in str(full_name or '').split() if part]
+    suffixes = {'jr', 'sr', 'ii', 'iii', 'iv', 'v'}
+    suffix = ''
+    if parts and parts[-1].rstrip('.').lower() in suffixes:
+        suffix = parts.pop(-1)
+
+    first_name = parts[0] if parts else ''
+    last_name = parts[-1] if len(parts) > 1 else ''
+    middle_name = ' '.join(parts[1:-1]) if len(parts) > 2 else ''
+    return first_name, middle_name, last_name, suffix
+
 def create_instructor_account(email, password, full_name, security_pin='1234'):
     """Create an instructor account."""
     try:
+        first_name, middle_name, last_name, suffix = split_name_parts(full_name)
         user = User.objects.create_user(
             username=email,
             email=email,
             password=password,
-            first_name=full_name.split()[0] if full_name else "Instructor",
-            last_name=" ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
+            first_name=first_name or "Instructor",
+            last_name=last_name,
         )
         
         # Create user profile
@@ -31,6 +45,10 @@ def create_instructor_account(email, password, full_name, security_pin='1234'):
             user=user,
             defaults={
                 'full_name': full_name or "Instructor",
+                'first_name': first_name,
+                'middle_name': middle_name,
+                'last_name': last_name,
+                'suffix': suffix,
                 'role': 'instructor',
                 'year_level': 'instructor',
                 'security_pin': security_pin
@@ -54,52 +72,16 @@ def create_instructor_account(email, password, full_name, security_pin='1234'):
         print(f"✗ Error creating instructor: {str(e)}")
         return None
 
-
-def create_admin_account(email, password, full_name):
-    """Create an admin account (only via setup script)."""
-    try:
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=full_name.split()[0] if full_name else "Admin",
-            last_name=" ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
-        )
-
-        profile, created = UserProfile.objects.get_or_create(
-            user=user,
-            defaults={
-                'full_name': full_name or "Admin",
-                'role': 'admin',
-                'year_level': 'admin',
-                'security_pin': ''
-            }
-        )
-
-        UserLearningState.objects.get_or_create(
-            user=user,
-            defaults={'state': {}}
-        )
-
-        if created:
-            print(f"✓ Created admin: {email} ({full_name})")
-        else:
-            print(f"✓ Admin already exists: {email}")
-
-        return user
-    except Exception as e:
-        print(f"✗ Error creating admin: {str(e)}")
-        return None
-
 def create_student_account(email, password, full_name, year_level):
     """Create a student account."""
     try:
+        first_name, middle_name, last_name, suffix = split_name_parts(full_name)
         user = User.objects.create_user(
             username=email,
             email=email,
             password=password,
-            first_name=full_name.split()[0] if full_name else "Student",
-            last_name=" ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
+            first_name=first_name or "Student",
+            last_name=last_name,
         )
         
         # Create user profile
@@ -107,6 +89,10 @@ def create_student_account(email, password, full_name, year_level):
             user=user,
             defaults={
                 'full_name': full_name or "Student",
+                'first_name': first_name,
+                'middle_name': middle_name,
+                'last_name': last_name,
+                'suffix': suffix,
                 'role': 'student',
                 'year_level': str(year_level)
             }
@@ -198,10 +184,56 @@ def main():
         # Update existing instructor's PIN if not set
         if not instructor_profile.security_pin:
             instructor_profile.security_pin = '1234'
+            instructor_profile.active = 0
             instructor_profile.save()
-            print(f"✓ Updated instructor security PIN: maria@ccnc.edu.ph")
+            print(f"✓ Updated instructor security PIN and activated account: maria@ccnc.edu.ph")
         else:
             print("✓ Default instructor already exists")
+
+    # Ensure admin account exists (username: admin1, password: admin123)
+    admin_username = 'admin1'
+    admin_email = 'admin1@kumpas.local'
+    existing_admin = User.objects.filter(username=admin_username).first()
+    if not existing_admin:
+        # Backward compatibility: previously seeded admin may use email as username.
+        legacy_admin = User.objects.filter(email=admin_email).first()
+        if legacy_admin and not User.objects.filter(username=admin_username).exists():
+            legacy_admin.username = admin_username
+            legacy_admin.email = admin_email
+            legacy_admin.set_password('admin123')
+            legacy_admin.is_staff = True
+            legacy_admin.is_superuser = True
+            legacy_admin.save(update_fields=['username', 'email', 'password', 'is_staff', 'is_superuser'])
+            existing_admin = legacy_admin
+            print("✓ Updated legacy admin account to username: admin1 (password: admin123)")
+
+    if not existing_admin:
+        try:
+            admin_user = User.objects.create_superuser(
+                username=admin_username,
+                email=admin_email,
+                password='admin123',
+                first_name='Admin'
+            )
+            UserProfile.objects.get_or_create(
+                user=admin_user,
+                defaults={
+                    'full_name': 'System Admin',
+                    'role': 'admin',
+                    'year_level': 'admin',
+                    'security_pin': ''
+                }
+            )
+            print(f"✓ Created admin account: {admin_email} (password: admin123)")
+        except Exception as e:
+            print(f"✗ Error creating admin account: {str(e)}")
+    else:
+        existing_admin.email = admin_email
+        existing_admin.set_password('admin123')
+        existing_admin.is_staff = True
+        existing_admin.is_superuser = True
+        existing_admin.save(update_fields=['email', 'password', 'is_staff', 'is_superuser'])
+        print("✓ Admin account already exists: username=admin1, password=admin123")
     
     # Create some test students
     test_students = [
@@ -215,14 +247,6 @@ def main():
             create_student_account(email, pwd, name, year)
         else:
             print(f"✓ Student already exists: {email}")
-
-    # Ensure a default admin account exists (do not allow admin registration via UI)
-    admin_email = 'admin1@kumpas.local'
-    admin_profile = UserProfile.objects.filter(user__email=admin_email, role='admin').first()
-    if not admin_profile and not User.objects.filter(email=admin_email).exists():
-        create_admin_account(admin_email, 'admin123', 'Admin One')
-    else:
-        print(f"✓ Admin already exists: {admin_email}")
     
     # Verify setup
     verify_database_setup()

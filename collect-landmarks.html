@@ -6,68 +6,131 @@
     <title>Collect Finger-Spelling Landmarks</title>
     <style>
         body { font-family: Segoe UI, sans-serif; margin: 24px; background: #f4f7fb; color: #1f2a37; }
-        .wrap { max-width: 960px; margin: 0 auto; }
-        .panel { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-        .controls { display: grid; grid-template-columns: repeat(5, minmax(90px, 1fr)); gap: 8px; margin-top: 12px; }
-        button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; background: #2563eb; color: #fff; }
+        .wrap { max-width: 1080px; margin: 0 auto; }
+        .panel { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        .controls { display: grid; grid-template-columns: repeat(6, minmax(90px, 1fr)); gap: 8px; margin-top: 12px; }
+        button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; background: #2563eb; color: #fff; font-size: 0.9rem; }
         button.secondary { background: #475569; }
         button.warn { background: #dc2626; }
-        video { width: 100%; max-height: 480px; object-fit: cover; border-radius: 10px; background: #000; }
-        .meta { margin-top: 10px; font-size: 14px; }
-        .letter-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 10px; }
-        .letter-btn { background: #0f766e; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        video { width: 100%; max-height: 480px; object-fit: cover; border-radius: 10px; background: #000; transform: scaleX(-1); }
+        .video-wrap { position: relative; }
+        .video-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .meta { margin-top: 10px; font-size: 14px; display: flex; gap: 24px; flex-wrap: wrap; }
+        .letter-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 10px; }
+        .letter-btn { background: #0f766e; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; font-weight: 700; }
+        .letter-btn small { font-weight: 400; opacity: 0.85; font-size: 0.72rem; }
+        .letter-btn.active { background: #0369a1; box-shadow: 0 0 0 3px rgba(3,105,161,0.28); }
+        .letter-btn.has-data { border: 2px solid #22c55e; }
+        .hint { font-size: 0.85rem; color: #64748b; margin-top: 6px; }
+        .import-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+        h1 { margin-bottom: 4px; }
+        code { background: #eef2f7; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <h1>Finger-Spelling Data Collector</h1>
-    <p>Collect landmark rows for labels A, B, D, F, I, L, W, Y then export CSV for SVC training.</p>
+    <p>Record real FSL hand-shape samples (A&ndash;Z) using MediaPipe hand landmarks, then export CSV for training the fingerspelling classifier.</p>
 
     <div class="panel">
-        <video id="video" autoplay playsinline muted></video>
+        <div class="video-wrap">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
         <div class="meta">
-            <strong>Current Label:</strong> <span id="currentLabel">A</span>
-            <span style="margin-left:16px"><strong>Rows:</strong> <span id="rowCount">0</span></span>
-            <span style="margin-left:16px"><strong>Hand:</strong> <span id="handedness">-</span></span>
+            <span><strong>Current Label:</strong> <span id="currentLabel">A</span></span>
+            <span><strong>Total Rows:</strong> <span id="rowCount">0</span></span>
+            <span><strong>Hand:</strong> <span id="handedness">-</span></span>
         </div>
+        <p class="hint">Keyboard shortcuts: press <code>A</code>&ndash;<code>Z</code> to pick a letter, <code>Space</code> to capture one sample, <code>B</code> to capture a burst of 25.</p>
 
-        <div class="letter-grid">
-            <button class="letter-btn" onclick="setLabel('A')">A</button>
-            <button class="letter-btn" onclick="setLabel('B')">B</button>
-            <button class="letter-btn" onclick="setLabel('D')">D</button>
-            <button class="letter-btn" onclick="setLabel('F')">F</button>
-            <button class="letter-btn" onclick="setLabel('I')">I</button>
-            <button class="letter-btn" onclick="setLabel('L')">L</button>
-            <button class="letter-btn" onclick="setLabel('W')">W</button>
-            <button class="letter-btn" onclick="setLabel('Y')">Y</button>
-        </div>
+        <div class="letter-grid" id="letterGrid"></div>
 
         <div class="controls">
             <button onclick="startCamera()">Start Camera</button>
             <button class="secondary" onclick="captureOne()">Capture One</button>
-            <button class="secondary" onclick="captureBurst()">Capture Burst</button>
+            <button class="secondary" onclick="captureBurst()">Capture Burst (25)</button>
             <button onclick="downloadCsv()">Download CSV</button>
-            <button class="warn" onclick="clearRows()">Clear</button>
+            <button class="warn" onclick="clearRows()">Clear All</button>
         </div>
+
+        <div class="import-row">
+            <label for="csvImport"><strong>Merge an earlier session:</strong></label>
+            <input type="file" id="csvImport" accept=".csv">
+            <button class="secondary" onclick="importCsv()">Import &amp; Merge</button>
+        </div>
+        <p class="hint">
+            Tip: record 60&ndash;100 samples per letter, varying hand angle, distance, and lighting a little each time.
+            Recording can be split across multiple sessions &mdash; download a CSV now, and later import it here to merge with new captures before exporting the combined file.
+            Once you have a CSV covering all 26 letters, place it in <code>backend/datasets/fingerspelling/</code> and run
+            <code>python backend/scripts/train_fingerspelling_model.py</code> to train and deploy the model.
+        </p>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script>
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 let hands = null;
 let stream = null;
 let latestLandmarks = null;
 let latestHandedness = 'Right';
 let currentLabel = 'A';
 let rows = [];
+let overlayCtx = null;
+
+function selectPrimaryHandIndex(multiHandLandmarks, multiHandedness) {
+    if (!multiHandLandmarks || multiHandLandmarks.length <= 1) return 0;
+
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    for (let i = 0; i < multiHandLandmarks.length; i += 1) {
+        const confidence = (multiHandedness && multiHandedness[i] && typeof multiHandedness[i].score === 'number')
+            ? multiHandedness[i].score
+            : 0.5;
+        const landmarks = multiHandLandmarks[i];
+        let minX = 1, minY = 1, maxX = 0, maxY = 0;
+        for (const p of landmarks) {
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        }
+        const area = Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
+        const score = (confidence * 1000) + area;
+        if (score > bestScore) {
+            bestScore = score;
+            bestIndex = i;
+        }
+    }
+    return bestIndex;
+}
+
+function letterCount(label) {
+    return rows.reduce((acc, row) => acc + (row[0] === label ? 1 : 0), 0);
+}
+
+function renderLetterGrid() {
+    const grid = document.getElementById('letterGrid');
+    grid.innerHTML = LETTERS.map(letter => {
+        const count = letterCount(letter);
+        const classes = ['letter-btn'];
+        if (letter === currentLabel) classes.push('active');
+        if (count > 0) classes.push('has-data');
+        return `<button type="button" class="${classes.join(' ')}" onclick="setLabel('${letter}')">${letter}<small>${count}</small></button>`;
+    }).join('');
+}
 
 function setLabel(label) {
     currentLabel = label;
     document.getElementById('currentLabel').textContent = label;
+    renderLetterGrid();
 }
 
 function updateRowCount() {
     document.getElementById('rowCount').textContent = String(rows.length);
+    renderLetterGrid();
 }
 
 function makeHeader() {
@@ -109,6 +172,7 @@ function captureBurst() {
 }
 
 function clearRows() {
+    if (rows.length && !confirm(`Discard all ${rows.length} captured rows?`)) return;
     rows = [];
     updateRowCount();
 }
@@ -123,9 +187,79 @@ function downloadCsv() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'landmarks.csv';
+    a.download = `fingerspelling_${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+}
+
+function importCsv() {
+    const input = document.getElementById('csvImport');
+    const file = input.files && input.files[0];
+    if (!file) {
+        alert('Choose a CSV file first.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const text = String(reader.result || '');
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (!lines.length) return;
+
+        const expectedCols = 2 + (21 * 3);
+        let imported = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',');
+            if (cols.length !== expectedCols) continue;
+            if (!LETTERS.includes(cols[0])) continue;
+            rows.push(cols);
+            imported += 1;
+        }
+
+        updateRowCount();
+        alert(`Imported ${imported} rows. Total rows now: ${rows.length}`);
+    };
+    reader.readAsText(file);
+}
+
+function resizeOverlay(video) {
+    const canvas = document.getElementById('overlay');
+    canvas.width = video.videoWidth || video.clientWidth;
+    canvas.height = video.videoHeight || video.clientHeight;
+}
+
+function drawSkeleton(landmarks) {
+    const canvas = document.getElementById('overlay');
+    if (!overlayCtx) overlayCtx = canvas.getContext('2d');
+    overlayCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!landmarks) return;
+
+    const connections = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [0,9],[9,10],[10,11],[11,12],
+        [0,13],[13,14],[14,15],[15,16],
+        [0,17],[17,18],[18,19],[19,20],
+        [5,9],[9,13],[13,17]
+    ];
+    const w = canvas.width;
+    const h = canvas.height;
+    overlayCtx.strokeStyle = '#22d3ee';
+    overlayCtx.lineWidth = Math.max(1, Math.round(Math.min(w, h) * 0.004));
+    for (const [a, b] of connections) {
+        const p1 = landmarks[a];
+        const p2 = landmarks[b];
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(p1.x * w, p1.y * h);
+        overlayCtx.lineTo(p2.x * w, p2.y * h);
+        overlayCtx.stroke();
+    }
+    overlayCtx.fillStyle = '#facc15';
+    for (const p of landmarks) {
+        overlayCtx.beginPath();
+        overlayCtx.arc(p.x * w, p.y * h, Math.max(2, Math.round(Math.min(w, h) * 0.006)), 0, Math.PI * 2);
+        overlayCtx.fill();
+    }
 }
 
 async function startCamera() {
@@ -139,20 +273,30 @@ async function startCamera() {
             locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
         hands.setOptions({
-            maxNumHands: 1,
+            maxNumHands: 2,
             modelComplexity: 1,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
         hands.onResults(results => {
+            const video = document.getElementById('video');
+            resizeOverlay(video);
             if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
                 latestLandmarks = null;
                 document.getElementById('handedness').textContent = '-';
+                drawSkeleton(null);
                 return;
             }
-            latestLandmarks = results.multiHandLandmarks[0];
-            latestHandedness = (results.multiHandedness && results.multiHandedness[0]) ? results.multiHandedness[0].label : 'Right';
-            document.getElementById('handedness').textContent = latestHandedness;
+            const handLabels = (results.multiHandedness || []).map(item => item && item.label ? item.label : 'Right');
+            const primaryIndex = selectPrimaryHandIndex(results.multiHandLandmarks, results.multiHandedness);
+            latestLandmarks = results.multiHandLandmarks[primaryIndex];
+            latestHandedness = (results.multiHandedness && results.multiHandedness[primaryIndex]) ? results.multiHandedness[primaryIndex].label : 'Right';
+            document.getElementById('handedness').textContent = handLabels.length ? handLabels.join(', ') : latestHandedness;
+            drawSkeleton(null);
+            results.multiHandLandmarks.forEach((landmarks, index) => {
+                const color = index === primaryIndex ? '#22d3ee' : '#facc15';
+                drawSkeleton(landmarks, color);
+            });
         });
     }
 
@@ -168,6 +312,27 @@ async function startCamera() {
         }, 120);
     }
 }
+
+document.addEventListener('keydown', (event) => {
+    const tag = (event.target && event.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const key = event.key.toUpperCase();
+    if (LETTERS.includes(key)) {
+        setLabel(key);
+        return;
+    }
+    if (event.key === ' ') {
+        event.preventDefault();
+        captureOne();
+        return;
+    }
+    if (key === 'B') {
+        captureBurst();
+    }
+});
+
+renderLetterGrid();
 </script>
 </body>
 </html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collect Word/Phrase Sign Sequences</title>
+    <style>
+        body { font-family: Segoe UI, sans-serif; margin: 24px; background: #f4f7fb; color: #1f2a37; }
+        .wrap { max-width: 1080px; margin: 0 auto; }
+        .panel { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; background: #2563eb; color: #fff; font-size: 0.9rem; }
+        button.secondary { background: #475569; }
+        button.warn { background: #dc2626; }
+        button.record { background: #dc2626; }
+        button.record.active { background: #7f1d1d; animation: pulse 1s infinite; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+        video { width: 100%; max-height: 480px; object-fit: cover; border-radius: 10px; background: #000; transform: scaleX(-1); }
+        .video-wrap { position: relative; }
+        .video-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .meta { margin-top: 10px; font-size: 14px; display: flex; gap: 24px; flex-wrap: wrap; }
+        .phrase-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .phrase-btn { background: #0f766e; padding: 8px 12px; font-weight: 600; }
+        .phrase-btn small { font-weight: 400; opacity: 0.85; margin-left: 6px; }
+        .phrase-btn.active { background: #0369a1; box-shadow: 0 0 0 3px rgba(3,105,161,0.28); }
+        .phrase-btn.has-data { border: 2px solid #22c55e; }
+        .controls { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .add-phrase-row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+        .add-phrase-row input { padding: 8px 10px; border-radius: 8px; border: 1px solid #d1d5db; flex: 1; min-width: 200px; }
+        .import-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+        .hint { font-size: 0.85rem; color: #64748b; margin-top: 6px; }
+        h1 { margin-bottom: 4px; }
+        code { background: #eef2f7; padding: 2px 6px; border-radius: 4px; }
+        #recordStatus { font-weight: 700; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Word / Phrase Sign Collector</h1>
+    <p>Records a short landmark sequence (~2.5s) per attempt so the classifier learns the whole gesture, not just one frame.</p>
+
+    <div class="panel">
+        <div class="video-wrap">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
+        <div class="meta">
+            <span><strong>Phrase:</strong> <span id="currentPhrase">-</span></span>
+            <span><strong>Sequences saved:</strong> <span id="seqCount">0</span></span>
+            <span><strong>Status:</strong> <span id="recordStatus">idle</span></span>
+        </div>
+
+        <div class="phrase-grid" id="phraseGrid"></div>
+        <div class="add-phrase-row">
+            <input type="text" id="newPhraseInput" placeholder="Add a new phrase label (e.g. THANK YOU)">
+            <button class="secondary" onclick="addPhrase()">Add Phrase</button>
+        </div>
+
+        <div class="controls">
+            <button onclick="startCamera()">Start Camera</button>
+            <button class="record" id="recordBtn" onclick="toggleRecording()">Record Sequence (2.5s)</button>
+            <button onclick="downloadJsonl()">Export JSONL</button>
+            <button class="warn" onclick="clearSequences()">Clear All</button>
+        </div>
+
+        <div class="import-row">
+            <label for="jsonlImport"><strong>Merge an earlier session:</strong></label>
+            <input type="file" id="jsonlImport" accept=".jsonl,.json">
+            <button class="secondary" onclick="importJsonl()">Import &amp; Merge</button>
+        </div>
+        <p class="hint">
+            Tip: pick a phrase, hit Start Camera, then Record Sequence and perform the full sign naturally within the
+            2.5s window. Record 20&ndash;40 attempts per phrase, varying speed and starting position a little each time.
+            Once you have enough phrases covered, place the exported <code>.jsonl</code> file in
+            <code>backend/datasets/phrases/</code> and run <code>python backend/scripts/train_word_model.py</code>.
+        </p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script>
+let PHRASES = [
+    'HELLO', 'HOW ARE YOU', 'WHATS YOUR NAME', 'COME HERE', 'COME LETS EAT',
+    'EXCUSE', 'I LOVE YOU', 'IM SORRY', 'TRY AGAIN', 'ARE YOU DEAF OR HEARING'
+];
+
+let hands = null;
+let stream = null;
+let latestHandRecords = []; // array of { landmarks, handedness }
+let currentPhrase = PHRASES[0];
+let sequences = [];
+let overlayCtx = null;
+
+let recording = false;
+let recordFrames = [];
+let recordStartAt = 0;
+const RECORD_DURATION_MS = 2500;
+const SAMPLE_INTERVAL_MS = 80;
+let recordTimer = null;
+let recordCollector = null;
+
+function phraseCount(label) {
+    return sequences.reduce((acc, seq) => acc + (seq.label === label ? 1 : 0), 0);
+}
+
+function renderPhraseGrid() {
+    const grid = document.getElementById('phraseGrid');
+    grid.innerHTML = PHRASES.map(label => {
+        const count = phraseCount(label);
+        const classes = ['phrase-btn'];
+        if (label === currentPhrase) classes.push('active');
+        if (count > 0) classes.push('has-data');
+        return `<button type="button" class="${classes.join(' ')}" onclick="setPhrase('${label.replace(/'/g, "\\'")}')">${label}<small>${count}</small></button>`;
+    }).join('');
+}
+
+function setPhrase(label) {
+    currentPhrase = label;
+    document.getElementById('currentPhrase').textContent = label;
+    renderPhraseGrid();
+}
+
+function addPhrase() {
+    const input = document.getElementById('newPhraseInput');
+    const label = input.value.trim().toUpperCase();
+    if (!label) return;
+    if (!PHRASES.includes(label)) PHRASES.push(label);
+    input.value = '';
+    setPhrase(label);
+}
+
+function updateSeqCount() {
+    document.getElementById('seqCount').textContent = String(sequences.length);
+    renderPhraseGrid();
+}
+
+function toggleRecording() {
+    if (recording) return;
+    if (!latestHandRecords.length) {
+        alert('No hand detected yet. Start the camera and make sure your hand(s) are visible first.');
+        return;
+    }
+    startRecording();
+}
+
+function handsToFrame(handRecords) {
+    const byLabel = {};
+    for (const hand of handRecords) {
+        byLabel[hand.handedness] = hand.landmarks.map(p => [p.x, p.y, p.z]);
+    }
+    return { left: byLabel.Left || null, right: byLabel.Right || null };
+}
+
+function startRecording() {
+    recording = true;
+    recordFrames = [];
+    recordStartAt = Date.now();
+    document.getElementById('recordBtn').classList.add('active');
+    document.getElementById('recordStatus').textContent = 'recording...';
+
+    recordCollector = setInterval(() => {
+        if (latestHandRecords.length) {
+            recordFrames.push(handsToFrame(latestHandRecords));
+        }
+    }, SAMPLE_INTERVAL_MS);
+
+    recordTimer = setTimeout(stopRecording, RECORD_DURATION_MS);
+}
+
+function stopRecording() {
+    recording = false;
+    clearInterval(recordCollector);
+    clearTimeout(recordTimer);
+    document.getElementById('recordBtn').classList.remove('active');
+
+    if (recordFrames.length >= 4) {
+        sequences.push({
+            label: currentPhrase,
+            frames: recordFrames,
+            duration_ms: Date.now() - recordStartAt,
+        });
+        document.getElementById('recordStatus').textContent = `saved (${recordFrames.length} frames)`;
+    } else {
+        document.getElementById('recordStatus').textContent = 'too short, discarded';
+    }
+    updateSeqCount();
+}
+
+function clearSequences() {
+    if (sequences.length && !confirm(`Discard all ${sequences.length} saved sequences?`)) return;
+    sequences = [];
+    updateSeqCount();
+}
+
+function downloadJsonl() {
+    const lines = sequences.map(seq => JSON.stringify(seq));
+    const blob = new Blob([lines.join('\n')], { type: 'application/jsonl;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `phrases_${Date.now()}.jsonl`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importJsonl() {
+    const input = document.getElementById('jsonlImport');
+    const file = input.files && input.files[0];
+    if (!file) {
+        alert('Choose a .jsonl file first.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const text = String(reader.result || '');
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        let imported = 0;
+        for (const line of lines) {
+            try {
+                const seq = JSON.parse(line);
+                if (!seq || !seq.label || !Array.isArray(seq.frames)) continue;
+                sequences.push(seq);
+                if (!PHRASES.includes(seq.label)) PHRASES.push(seq.label);
+                imported += 1;
+            } catch (e) {
+                // skip malformed line
+            }
+        }
+        updateSeqCount();
+        alert(`Imported ${imported} sequences. Total now: ${sequences.length}`);
+    };
+    reader.readAsText(file);
+}
+
+function resizeOverlay(video) {
+    const canvas = document.getElementById('overlay');
+    canvas.width = video.videoWidth || video.clientWidth;
+    canvas.height = video.videoHeight || video.clientHeight;
+}
+
+function drawSkeleton(handRecords) {
+    const canvas = document.getElementById('overlay');
+    if (!overlayCtx) overlayCtx = canvas.getContext('2d');
+    overlayCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!handRecords || !handRecords.length) return;
+
+    const connections = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [0,9],[9,10],[10,11],[11,12],
+        [0,13],[13,14],[14,15],[15,16],
+        [0,17],[17,18],[18,19],[19,20],
+        [5,9],[9,13],[13,17]
+    ];
+    const w = canvas.width;
+    const h = canvas.height;
+
+    for (const hand of handRecords) {
+        const landmarks = hand.landmarks;
+        overlayCtx.strokeStyle = recording ? '#f87171' : '#22d3ee';
+        overlayCtx.lineWidth = Math.max(1, Math.round(Math.min(w, h) * 0.004));
+        for (const [a, b] of connections) {
+            const p1 = landmarks[a];
+            const p2 = landmarks[b];
+            overlayCtx.beginPath();
+            overlayCtx.moveTo(p1.x * w, p1.y * h);
+            overlayCtx.lineTo(p2.x * w, p2.y * h);
+            overlayCtx.stroke();
+        }
+        overlayCtx.fillStyle = '#facc15';
+        for (const p of landmarks) {
+            overlayCtx.beginPath();
+            overlayCtx.arc(p.x * w, p.y * h, Math.max(2, Math.round(Math.min(w, h) * 0.006)), 0, Math.PI * 2);
+            overlayCtx.fill();
+        }
+    }
+}
+
+async function startCamera() {
+    if (!window.Hands) {
+        alert('MediaPipe Hands failed to load. Check internet connection.');
+        return;
+    }
+
+    if (!hands) {
+        hands = new window.Hands({
+            locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        hands.onResults(results => {
+            const video = document.getElementById('video');
+            resizeOverlay(video);
+            if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                latestHandRecords = [];
+                drawSkeleton(null);
+                return;
+            }
+            latestHandRecords = results.multiHandLandmarks.map((landmarks, i) => ({
+                landmarks,
+                handedness: (results.multiHandedness && results.multiHandedness[i]) ? results.multiHandedness[i].label : 'Right',
+            }));
+            drawSkeleton(latestHandRecords);
+        });
+    }
+
+    if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+
+        setInterval(async () => {
+            if (video.readyState >= 2) {
+                await hands.send({ image: video });
+            }
+        }, 90);
+    }
+}
+
+setPhrase(currentPhrase);
+renderPhraseGrid();
+</script>
+</body>
+</html>

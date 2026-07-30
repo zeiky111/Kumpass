@@ -6,29 +6,56 @@
     <title>Leaderboard - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/bg-orbs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="js/theme.js"></script>
 </head>
-<body>
-    <!-- Navigation -->
+<body class="kd-animated-bg">
+    <div class="bg-orbs" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <!-- Navbar -->
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hands"></i>
-                </div>
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html">Dashboard</a></li>
-                <li><a href="learning.html">Learn</a></li>
-                <li><a href="translator.html">Translator</a></li>
-                <li><a href="leaderboard.html" class="active">Leaderboard</a></li>
-                <li><a href="profile.html">Profile</a></li>
-                <li><a href="index.html" class="logout-btn">Logout</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="learning.html" class="nav-link">Learn</a></li>
+                <li><a href="activities.html" class="nav-link">Activities</a></li>
+                <li><a href="translator.html" class="nav-link">Translators</a></li>
+                <li><a href="leaderboard.html" class="nav-link active">Leaderboard</a></li>
             </ul>
-            <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
             </div>
         </div>
     </nav>
@@ -44,13 +71,13 @@
     <!-- Main Content -->
     <main class="leaderboard-container">
         <!-- Your Ranking Card -->
-        <section class="your-ranking">
+        <section class="your-ranking kd-fade-in">
             <div class="ranking-card">
                 <h2>Your Current Ranking</h2>
                 <div class="ranking-display">
                     <div class="rank-position">
-                        <div class="rank-number" id="leaderboardRankNumber">--</div>
-                        <p class="rank-label" id="leaderboardRankLabel">Loading rank...</p>
+                        <div class="rank-number" id="leaderboardRankNumber"></div>
+                        <p class="rank-label" id="leaderboardRankLabel"></p>
                     </div>
                     <div class="rank-stats">
                         <div class="rank-stat">
@@ -72,17 +99,17 @@
                     </div>
                 </div>
                 <div class="next-milestone">
-                    <p id="leaderboardNextMilestone">Loading next milestone...</p>
+                    <p id="leaderboardNextMilestone"></p>
                     <div class="progress-bar">
                         <div class="progress-fill" id="leaderboardProgressFill" style="width: 0%;"></div>
                     </div>
-                    <p id="leaderboardProgressText" style="font-size: 0.85rem; color: #666;">Waiting for leaderboard data...</p>
+                    <p id="leaderboardProgressText" style="font-size: 0.85rem; color: #666;"></p>
                 </div>
             </div>
         </section>
 
         <!-- Filter & Sort Options -->
-        <section class="filter-section">
+        <section class="filter-section kd-fade-in" style="animation-delay:.08s;">
             <div class="filter-controls">
                 <div class="filter-group">
                     <label for="timeRange">Time Period:</label>
@@ -116,7 +143,7 @@
         </section>
 
         <!-- Leaderboard Table -->
-        <section class="leaderboard-section">
+        <section class="leaderboard-section kd-fade-in" style="animation-delay:.14s;">
             <h2>Top Players</h2>
             <div class="leaderboard-table">
                 <div class="table-header">
@@ -143,7 +170,7 @@
         </section>
 
         <!-- Statistics Section -->
-        <section class="statistics-section">
+        <section class="statistics-section kd-fade-in" style="animation-delay:.2s;">
             <h2>Community Statistics</h2>
             <div class="stats-cards">
                 <div class="stat-card">
@@ -187,8 +214,14 @@
         .leaderboard-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem) clamp(2rem, 5vw, 3.5rem);
             color: #1f2937;
+        }
+
+        .leaderboard-container h1,
+        .leaderboard-container h2,
+        .leaderboard-container h3 {
+            font-family: 'Poppins', 'Inter', sans-serif;
         }
 
         .your-ranking {
@@ -196,17 +229,47 @@
         }
 
         .ranking-card {
-            background: linear-gradient(135deg, #173a8a 0%, #244ec4 100%);
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #7c3aed 130%);
             color: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 12px 28px rgba(23, 58, 138, 0.28);
+            border-radius: 22px;
+            padding: 2.2rem;
+            box-shadow: 0 22px 46px rgba(30, 64, 175, 0.28);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
+        .ranking-card::before,
+        .ranking-card::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        .ranking-card::before {
+            width: 260px;
+            height: 260px;
+            top: -110px;
+            right: -60px;
+            background: rgba(255,255,255,0.12);
+        }
+
+        .ranking-card::after {
+            width: 180px;
+            height: 180px;
+            bottom: -100px;
+            left: 20%;
+            background: rgba(236,72,153,0.22);
+            filter: blur(4px);
+        }
+
         .ranking-card h2 {
+            color: #ffffff;
             margin-top: 0;
             margin-bottom: 1.5rem;
+            font-weight: 800;
         }
 
         .ranking-display {
@@ -243,9 +306,15 @@
         .rank-stat {
             background: rgba(255,255,255,0.14);
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: 14px;
             text-align: center;
             backdrop-filter: blur(4px);
+            transition: transform 0.25s ease, background 0.25s ease;
+        }
+
+        .rank-stat:hover {
+            transform: translateY(-3px);
+            background: rgba(255,255,255,0.2);
         }
 
         .rank-stat .stat-label {
@@ -276,12 +345,12 @@
         }
 
         .filter-section {
-            background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
-            border-radius: 12px;
-            padding: 1.5rem;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 1.5rem 1.75rem;
             margin-bottom: 2rem;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-            border: 1px solid #e6ebf5;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+            border: 1px solid rgba(148,163,184,0.14);
         }
 
         .filter-controls {
@@ -305,25 +374,27 @@
         .select-input {
             padding: 0.75rem;
             border: 2px solid #cfd8ea;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1rem;
             cursor: pointer;
             background: white;
             color: #1f2937;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .select-input:focus {
             outline: none;
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
 
         .leaderboard-section {
-            background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
             margin-bottom: 2rem;
-            border: 1px solid #e6ebf5;
+            border: 1px solid rgba(148,163,184,0.14);
         }
 
         .leaderboard-section h2 {
@@ -346,32 +417,42 @@
 
         .podium-position {
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 18px;
             padding: 1.5rem;
             text-align: center;
             border: 2px solid #d8e0f2;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .podium-position:hover {
+            transform: translateY(-6px);
         }
 
         .podium-position.first-place {
             border-color: #ffd700;
-            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.2);
+            box-shadow: 0 14px 30px rgba(255, 215, 0, 0.24);
             transform: scale(1.05);
+        }
+
+        .podium-position.first-place:hover {
+            transform: scale(1.05) translateY(-6px);
         }
 
         .podium-position.second-place {
             border-color: #c0c0c0;
-            box-shadow: 0 4px 8px rgba(192, 192, 192, 0.1);
+            box-shadow: 0 8px 18px rgba(192, 192, 192, 0.16);
         }
 
         .podium-position.third-place {
             border-color: #cd7f32;
-            box-shadow: 0 4px 8px rgba(205, 127, 50, 0.1);
+            box-shadow: 0 8px 18px rgba(205, 127, 50, 0.16);
         }
 
         .medal {
-            font-size: 2rem;
+            font-size: 2.2rem;
             margin-bottom: 0.5rem;
+            animation: kdIconPulse 2.6s ease-in-out infinite;
+            display: inline-block;
         }
 
         .position-info h3 {
@@ -449,7 +530,7 @@
             padding: 1rem 2rem;
             border-bottom: 1px solid #e6ebf5;
             align-items: center;
-            transition: all 0.2s ease;
+            transition: background 0.2s ease;
             cursor: pointer;
         }
 
@@ -486,12 +567,21 @@
         .user-avatar {
             width: 40px;
             height: 40px;
+            min-width: 40px;
             border-radius: 50%;
             background: #e0e0e0;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
+            overflow: hidden;
+        }
+
+        .user-avatar svg,
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         .user-details {
@@ -520,19 +610,20 @@
         }
 
         .btn-small {
-            background: var(--primary);
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
+            padding: 0.5rem 1.1rem;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 0.85rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn-small:hover {
-            background: #5568d3;
             transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(37,99,235,0.28);
         }
 
         .load-more {
@@ -541,11 +632,11 @@
         }
 
         .statistics-section {
-            background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
             padding: 2rem;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-            border: 1px solid #e6ebf5;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(148,163,184,0.14);
         }
 
         .statistics-section h2 {
@@ -562,16 +653,16 @@
 
         .stat-card {
             background: #f3f7ff;
-            border-radius: 12px;
+            border-radius: 18px;
             padding: 2rem;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             border: 1px solid #dfe7f7;
         }
 
         .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 32px rgba(15,23,42,0.12);
         }
 
         .stat-icon {
@@ -645,6 +736,160 @@
             .stats-cards {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            .position-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* ---- UX/UI refresh ---- */
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-group label::before {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .filter-group:nth-child(1) label::before { content: "\f017"; }
+        .filter-group:nth-child(2) label::before { content: "\f19d"; }
+        .filter-group:nth-child(3) label::before { content: "\f0dc"; }
+
+        .leaderboard-section h2,
+        .statistics-section h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .table-row {
+            border-radius: 12px;
+        }
+
+        .table-row.your-row {
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
+        }
+
+        .rank-badge {
+            min-width: 42px;
+            text-align: center;
+        }
+
+        .podium-position {
+            position: relative;
+        }
+
+        .podium-position.first-place::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            background: radial-gradient(circle at 50% 0%, rgba(255,215,0,0.14), transparent 60%);
+            pointer-events: none;
+        }
+
+        .load-more .btn-secondary {
+            padding: 0.75rem 2rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .load-more .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        /* ---- Dark theme overrides ---- */
+        :root[data-theme="dark"] .leaderboard-container {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .select-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .podium-section {
+            background: linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(124,58,237,0.1) 100%);
+        }
+
+        :root[data-theme="dark"] .podium-position {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .podium-position.first-place {
+            border-color: #ffd700;
+        }
+
+        :root[data-theme="dark"] .podium-position.second-place {
+            border-color: #94a3b8;
+        }
+
+        :root[data-theme="dark"] .podium-position.third-place {
+            border-color: #cd7f32;
+        }
+
+        :root[data-theme="dark"] .position-info h3,
+        :root[data-theme="dark"] .username,
+        :root[data-theme="dark"] .user-name,
+        :root[data-theme="dark"] .stat-card h3 {
+            color: #f1f5f9;
+        }
+
+        :root[data-theme="dark"] .position-stats .stat {
+            background: var(--surface-card-alt);
+        }
+
+        :root[data-theme="dark"] .position-stats .label {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .position-stats .value {
+            color: #93c5fd;
+        }
+
+        :root[data-theme="dark"] .table-header {
+            background: var(--surface-card-alt);
+            color: #e2e8f0;
+        }
+
+        :root[data-theme="dark"] .rank-badge {
+            background: #232e45;
+            color: #dbeafe;
+        }
+
+        :root[data-theme="dark"] .rank-badge.current {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        :root[data-theme="dark"] .user-avatar {
+            background: #232e45;
+        }
+
+        :root[data-theme="dark"] .accuracy-badge {
+            background: rgba(16, 185, 129, 0.16);
+            color: #6ee7b7;
+        }
+
+        :root[data-theme="dark"] .table-row.your-row {
+            background: linear-gradient(90deg, rgba(37,99,235,0.14), rgba(124,58,237,0.12));
+        }
+
+        :root[data-theme="dark"] .stat-card {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .stat-number {
+            color: #93c5fd;
         }
     </style>
 
@@ -663,13 +908,8 @@
                     return window.KumpasPortal.getCurrentUser();
                 }
 
-                try {
-                    const stored = JSON.parse(localStorage.getItem('currentUser'));
-                    if (stored && stored.email) {
-                        return stored;
-                    }
-                } catch (_) {
-                    // ignore
+                if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
+                    return window.KumpasSession.getCurrentUser();
                 }
 
                 return { name: 'Learner', email: '', yearLevel: '1', role: 'student' };
@@ -807,7 +1047,7 @@
                 const modulesCompleted = currentUser ? Number(currentUser.modulesCompleted || 0) : 0;
                 const totalModules = window.KumpasPortal && Array.isArray(window.KumpasPortal.MODULES)
                     ? window.KumpasPortal.MODULES.length
-                    : 8;
+                    : 0;
                 const accuracy = currentUser ? Number(currentUser.accuracy || 0) : 0;
                 const streak = currentUser ? Number(currentUser.streak || 0) : 0;
 
@@ -882,13 +1122,22 @@
                 `;
             }
 
+            function buildAvatarHtml(entry, isCurrentUser) {
+                const hasAvatarData = entry && (entry.photoUrl || entry.avatarId);
+                if (hasAvatarData && window.KumpasPortal && typeof window.KumpasPortal.renderAvatarMarkup === 'function') {
+                    return window.KumpasPortal.renderAvatarMarkup({ photoUrl: entry.photoUrl, avatarId: entry.avatarId });
+                }
+                const initialStyle = isCurrentUser ? ' style="background: var(--primary); color: white;"' : '';
+                return `<span${initialStyle}>${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</span>`;
+            }
+
             function buildRow(entry, isCurrentUser) {
                 return `
                     <div class="table-row${isCurrentUser ? ' your-row' : ''}" data-email="${escapeHtml(entry.email)}">
                         <div class="col-rank"><span class="rank-badge${isCurrentUser ? ' current' : ''}">${entry.rank}</span></div>
                         <div class="col-user">
                             <div class="user-info">
-                                <div class="user-avatar"${isCurrentUser ? ' style="background: var(--primary); color: white;"' : ''}>${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</div>
+                                <div class="user-avatar">${buildAvatarHtml(entry, isCurrentUser)}</div>
                                 <div class="user-details">
                                     <p class="user-name">${isCurrentUser ? '<strong>You</strong>' : escapeHtml(entry.name)}</p>
                                     <p class="user-program">${escapeHtml(entry.role || 'student')}</p>
@@ -1010,6 +1259,14 @@
 
             document.addEventListener('DOMContentLoaded', function () {
                 refreshLeaderboard();
+
+                // Navbar dropdown
+                const _navToggle = document.getElementById('navUserToggle');
+                const _navDrop = document.getElementById('navUserDropdown');
+                if (_navToggle && _navDrop) {
+                    _navToggle.addEventListener('click', function(e) { e.stopPropagation(); _navDrop.classList.toggle('open'); });
+                    document.addEventListener('click', function() { _navDrop.classList.remove('open'); });
+                }
             });
 
             window.updateLeaderboard = updateLeaderboard;

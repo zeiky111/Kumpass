@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard-pro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         .tab-content {
             animation: fadeIn 0.3s ease-in;
@@ -42,28 +44,212 @@
         .announcement-item small {
             color: #9ca3af;
         }
+
+        .module-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .module-toolbar .toolbar-copy {
+            color: #6b7280;
+            font-size: 0.92rem;
+            margin-top: 4px;
+        }
+
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .module-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .module-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .module-card-header > div {
+            min-width: 0;
+        }
+
+        .module-card-title {
+            margin: 0;
+            font-size: 1.05rem;
+            color: #111827;
+            line-height: 1.35;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .module-card-description {
+            margin: 0;
+            color: #6b7280;
+            line-height: 1.55;
+            font-size: 0.95rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .module-card-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .module-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .module-card-files {
+            border-top: 1px solid #eef2f7;
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .module-card-files h4 {
+            margin: 0;
+            font-size: 0.88rem;
+            color: #111827;
+        }
+
+        .module-file-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            min-width: 0;
+        }
+
+        .module-file-item > div {
+            min-width: 0;
+        }
+
+        .module-file-item > div > div {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .module-file-item small {
+            color: #6b7280;
+        }
+
+        .module-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+
+        .module-card-quiz-hint {
+            color: #475569;
+            font-size: 0.88rem;
+            line-height: 1.4;
+            margin-top: 6px;
+            max-width: 100%;
+        }
+
+        .module-card-actions .btn-sm {
+            flex: 1 1 120px;
+        }
+
+        .materials-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .materials-list a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .materials-list a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 1024px) {
+            .module-card-actions .btn-sm {
+                flex: 1 1 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modal-split-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
-<body>
+<body class="pro-dashboard instructor-theme">
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container navbar-container">
-            <a href="index.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hands"></i>
-                </div>
+            <a href="instructor-dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
                 <span>Kumpas</span>
             </a>
-            
             <ul class="nav-menu" id="navMenu">
                 <li><a href="instructor-dashboard.html" class="nav-link active">Dashboard</a></li>
             </ul>
-            
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -79,6 +265,7 @@
                 <li><a href="#modules" class="sidebar-link" onclick="switchTab('modules')"><i class="fas fa-book"></i> Manage Modules</a></li>
                 <li><a href="#students" class="sidebar-link" onclick="switchTab('students')"><i class="fas fa-users"></i> Monitor Students</a></li>
                 <li><a href="#announcements" class="sidebar-link" onclick="switchTab('announcements')"><i class="fas fa-bell"></i> Announcements</a></li>
+                <li><a href="#game-levels" class="sidebar-link" onclick="switchTab('game-levels')"><i class="fas fa-layer-group"></i> Game Levels</a></li>
                 <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </aside>
@@ -89,8 +276,8 @@
                 <!-- Welcome Section -->
                 <div class="dashboard-welcome">
                     <div>
-                        <h1 id="instructorWelcomeTitle">Welcome, Instructor! 👋</h1>
-                        <p id="instructorWelcomeCopy">Manage your FSL classes and track student progress</p>
+                        <h1 id="instructorWelcomeTitle"></h1>
+                        <p id="instructorWelcomeCopy"></p>
                     </div>
                 </div>
 
@@ -103,7 +290,7 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="stat-content">
-                                <div class="stat-value" id="instructorTotalStudents">0</div>
+                                <div class="stat-value" id="instructorTotalStudents">--</div>
                                 <div class="stat-label">Total Students</div>
                             </div>
                         </div>
@@ -113,7 +300,7 @@
                                 <i class="fas fa-book"></i>
                             </div>
                             <div class="stat-content">
-                                <div class="stat-value" id="instructorModulesCreated">0</div>
+                                <div class="stat-value" id="instructorModulesCreated">--</div>
                                 <div class="stat-label">Modules Created</div>
                             </div>
                         </div>
@@ -123,7 +310,7 @@
                                 <i class="fas fa-chart-bar"></i>
                             </div>
                             <div class="stat-content">
-                                <div class="stat-value" id="instructorAverageCompletion">0%</div>
+                                <div class="stat-value" id="instructorAverageCompletion">--</div>
                                 <div class="stat-label">Avg. Completion</div>
                             </div>
                         </div>
@@ -133,7 +320,7 @@
                                 <i class="fas fa-award"></i>
                             </div>
                             <div class="stat-content">
-                                <div class="stat-value" id="instructorAnnouncementsCount">0</div>
+                                <div class="stat-value" id="instructorAnnouncementsCount">--</div>
                                 <div class="stat-label">Announcements</div>
                             </div>
                         </div>
@@ -143,25 +330,26 @@
                 <!-- Manage Modules Tab -->
                 <div id="modules" class="tab-content" style="display: none;">
                     <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Manage Learning Modules</h3>
-                        <button class="btn btn-primary btn-sm" onclick="openModuleModal()">+ Add Module</button>
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">Manage Learning Modules</h3>
+                            </div>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <select id="moduleYearFilter" class="form-input" style="width:auto;" onchange="changeModuleYearFilter(this.value)">
+                                    <option value="all">All Years</option>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" onclick="openModuleModal()">+ Add Module</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="instructorModulesGrid" class="module-grid"></div>
+                            <div id="modulePagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Module Title</th>
-                                    <th>Year Level</th>
-                                    <th>Status</th>
-                                    <th>Students</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="instructorModulesTable"></tbody>
-                        </table>
-                    </div>
-                </div>
                 </div>
 
                 <!-- Monitor Students Tab -->
@@ -171,18 +359,22 @@
                         <h3 class="card-title">Monitor Student Progress</h3>
                     </div>
                     <div class="card-body">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Student Name</th>
-                                    <th>Year Level</th>
-                                    <th>Modules Completed</th>
-                                    <th>Overall Progress</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="instructorStudentsTable"></tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Avatar</th>
+                                        <th>Student Name</th>
+                                        <th>Year Level</th>
+                                        <th>Modules Completed</th>
+                                        <th>Overall Progress</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="instructorStudentsTable"></tbody>
+                            </table>
+                        </div>
+                        <div id="studentPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                     </div>
                 </div>
                 </div>
@@ -198,6 +390,23 @@
                         <div id="instructorAnnouncementsList" style="margin-top: 20px;"></div>
                     </div>
                 </div>
+                </div>
+
+                <!-- Game Levels Tab -->
+                <div id="game-levels" class="tab-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">Manage Game Levels</h3>
+                                <p style="color:#6b7280;font-size:0.92rem;margin-top:4px;">Add levels and content (words, sentences, scenarios) for each interactive game.</p>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="openLevelModal()">+ Add Level</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
+                            <div id="instructorGameLevelsList"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -226,10 +435,6 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Activities Count</label>
-                    <input type="number" id="moduleActivitiesCount" class="form-input" min="0" value="0" required>
-                </div>
-                <div class="form-group">
                     <label class="form-label">Status</label>
                     <select id="moduleStatus" class="form-input" required>
                         <option value="draft">Draft</option>
@@ -254,9 +459,13 @@
                         <ul id="moduleFileItems" style="list-style: none; padding: 0; margin: 5px 0;"></ul>
                     </div>
                 </div>
-                <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('moduleModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Module</button>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <button type="button" id="moduleQuizBuilderBtn" class="btn btn-info" style="opacity:1; cursor:pointer;" onclick="handleModuleQuizButton()" title="Save the module and open quiz builder">Add Quiz</button>
+                    <small id="moduleQuizHelpText" style="color:#6b7280; font-size:0.84rem; display:block; text-align:right;">Click Add Quiz to save the module and open the quiz builder.</small>
+                    <div style="display:flex; gap:10px; width:100%; justify-content:flex-end; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('moduleModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Module</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -292,26 +501,245 @@
         </div>
     </div>
 
+    <div id="moduleMaterialsModal" class="modal">
+        <div class="modal-content" style="max-width: 760px; width: 94%;">
+            <div class="modal-header">
+                <h2 id="moduleMaterialsTitle">Manage Materials</h2>
+                <button class="modal-close" onclick="closeModal('moduleMaterialsModal')">&times;</button>
+            </div>
+            <div class="modal-split-grid" style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;">
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Uploaded Materials</label>
+                        <div id="moduleMaterialsList" class="materials-list"></div>
+                    </div>
+                </div>
+                <div>
+                    <input type="hidden" id="materialsModuleId">
+                    <div class="form-group">
+                        <label class="form-label">Add More Files</label>
+                        <input type="file" id="materialsFile" class="form-input" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.jpg,.jpeg,.png,.mp3,.wav,.zip,.rar,.7z,.txt,.xls,.xlsx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="materialsDescription" class="form-input" rows="3" placeholder="Optional note for the selected files"></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="uploadMaterialsFromModal()">Upload Materials</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('moduleMaterialsModal')">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="levelModal" class="modal">
+        <div class="modal-content" style="max-width:1080px; width:96%;">
+            <div class="modal-header">
+                <h2 id="levelModalTitle">Add Level</h2>
+                <button class="modal-close" onclick="closeModal('levelModal')">&times;</button>
+            </div>
+            <div class="modal-split-grid" style="display:grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items:start;">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                        <div>
+                            <h3 style="margin:0; font-size:1rem;">Existing Levels</h3>
+                            <p style="margin:4px 0 0; color:#6b7280; font-size:0.9rem;">Reference the current progression before adding a new level.</p>
+                        </div>
+                        <span id="levelReferenceCount" style="background:#e5e7eb; color:#374151; border-radius:999px; padding:4px 10px; font-size:0.8rem;">0</span>
+                    </div>
+                    <div id="levelReferenceList" style="display:flex; flex-direction:column; gap:10px; max-height:520px; overflow:auto;"></div>
+                </div>
+                <form onsubmit="saveLevel(event)" style="min-width:0;">
+                    <input type="hidden" id="levelId">
+                    <div class="form-group">
+                        <label class="form-label">Game</label>
+                        <select id="levelGameKey" class="form-input" required onchange="handleLevelGameChange(this.value)">
+                            <option value="sign_match">Sign Match Game</option>
+                            <option value="typing">Sign-to-Word Typing Game</option>
+                            <option value="sentence">Sentence Builder Game</option>
+                            <option value="scenario">Scenario-Based Game</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Difficulty</label>
+                        <select id="levelDifficulty" class="form-input" required>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Level Number</label>
+                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Title (optional)</label>
+                        <input type="text" id="levelTitle" class="form-input" placeholder="e.g. Greetings Basics">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox" style="display:flex;align-items:center;gap:10px;">
+                            <input type="checkbox" id="levelPublished" checked>
+                            Published
+                        </label>
+                    </div>
+                    <div id="levelDynamicFields"></div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:14px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('levelModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Level</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="levelItemsModal" class="modal">
+        <div class="modal-content" style="max-width: 820px; width: 94%;">
+            <div class="modal-header">
+                <h2 id="levelItemsTitle">Manage Level Content</h2>
+                <button class="modal-close" onclick="closeModal('levelItemsModal')">&times;</button>
+            </div>
+            <div class="modal-split-grid" style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;">
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Content Items</label>
+                        <div id="levelItemsList" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;"></div>
+                    </div>
+                </div>
+                <div>
+                    <input type="hidden" id="levelItemId">
+                    <input type="hidden" id="levelItemsLevelId">
+                    <input type="hidden" id="levelItemsGameKey">
+
+                    <!-- Sign Match / Typing: one word + one video -->
+                    <div id="itemFormSimple">
+                        <div class="form-group">
+                            <label class="form-label">Word</label>
+                            <input type="text" id="simpleWord" class="form-input" placeholder="e.g. Hello">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sign Video</label>
+                            <div id="simpleVideoPicker"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sentence Builder: ordered signs forming the correct sentence -->
+                    <div id="itemFormSentence" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">Signs (in order)</label>
+                            <div id="sentenceSignsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+                            <button type="button" class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="addSentenceSignRow()">+ Add Sign</button>
+                            <p style="color:#6b7280;font-size:0.8rem;margin-top:6px;">The word bank and correct order are built automatically from the signs above.</p>
+                        </div>
+                    </div>
+
+                    <!-- Scenario-Based: scenario text + question + multiple video options -->
+                    <div id="itemFormScenario" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">Scenario</label>
+                            <textarea id="scenarioText" class="form-input" rows="2" placeholder="e.g. You bump into someone and need to apologize."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Question</label>
+                            <input type="text" id="scenarioQuestion" class="form-input" placeholder="e.g. Which sign response should you use?">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Options (select the correct one)</label>
+                            <div id="scenarioOptionsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+                            <button type="button" class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="addScenarioOptionRow()">+ Add Option</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Order</label>
+                        <input type="number" id="levelItemOrder" class="form-input" min="0" value="0">
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveLevelItem()">Save Item</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="resetLevelItemForm()">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
+    <script src="js/portal.js"></script>
     <script>
         const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+        let currentUserPromise = null;
 
-        function getCurrentUser() {
-            try {
-                const stored = JSON.parse(localStorage.getItem('currentUser'));
-                if (stored && stored.email) {
-                    return stored;
+        async function getSessionCurrentUser() {
+            if (window.KumpasSession && typeof window.KumpasSession.ensureCurrentUser === 'function') {
+                const user = await window.KumpasSession.ensureCurrentUser();
+                if (user && (user.email || user.username)) {
+                    return user;
                 }
-            } catch (_) {
-                // ignore
             }
 
-            return { name: 'Instructor', email: '', role: 'instructor' };
+            try {
+                const response = await fetch(`${API_BASE}/auth/me/`, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+                if (!response.ok) return null;
+                const data = await response.json();
+                return data.user || null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        async function getCurrentUser() {
+            if (!currentUserPromise) {
+                currentUserPromise = getSessionCurrentUser();
+            }
+
+            const sessionUser = await currentUserPromise;
+            if (sessionUser && (sessionUser.email || sessionUser.username)) {
+                return sessionUser;
+            }
+
+            return { name: 'Instructor', email: '', username: '', role: 'instructor' };
+        }
+
+        async function getInstructorActorIdentifier() {
+            const currentUser = await getCurrentUser();
+            return currentUser.email || currentUser.username || '';
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        async function ensureCsrfToken() {
+            const existing = getCookie('csrftoken');
+            if (existing) return existing;
+            try {
+                await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+            } catch (_) {}
+            return getCookie('csrftoken');
         }
 
         async function requestJson(path, options = {}) {
+            // Ensure CSRF token is included for unsafe methods when available
+            let headers = { 'Content-Type': 'application/json' };
+            const method = (options.method || 'GET').toUpperCase();
+            if (method !== 'GET' && typeof ensureCsrfToken === 'function') {
+                try {
+                    const csrfToken = await ensureCsrfToken();
+                    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                } catch (_) {
+                    // ignore and proceed without CSRF header
+                }
+            }
+
             const response = await fetch(`${API_BASE}${path}`, {
-                headers: { 'Content-Type': 'application/json' },
+                headers,
+                credentials: options.credentials || 'include',
                 ...options,
             });
 
@@ -347,6 +775,15 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function safeAttr(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function formatYearLabel(yearLevel) {
             const normalized = String(yearLevel || '').trim();
             const labels = { '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year' };
@@ -376,36 +813,133 @@
             document.getElementById('instructorAnnouncementsCount').textContent = summary.totalAnnouncements ?? 0;
         }
 
+        function getInstructorStudentPage() {
+            return Number(window.__studentPage || 1);
+        }
+
+        function setInstructorStudentPage(page) {
+            window.__studentPage = Math.max(1, Number(page || 1));
+        }
+
+        function getInstructorModulePage() {
+            return Number(window.__modulePage || 1);
+        }
+
+        function setInstructorModulePage(page) {
+            window.__modulePage = Math.max(1, Number(page || 1));
+        }
+
+        function getInstructorModuleYearFilter() {
+            return String(window.__moduleYearFilter || 'all');
+        }
+
+        async function changeModuleYearFilter(yearLevel) {
+            window.__moduleYearFilter = String(yearLevel || 'all');
+            setInstructorModulePage(1);
+            await refreshInstructorDashboard();
+        }
+
+        function sanitizeInstructorInput(value) {
+            return String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+        }
+
+        function validateModulePayload(title, description) {
+            if (!title) return 'Module title is required.';
+            if (!description) return 'Module description is required.';
+            return '';
+        }
+
+        function validateAnnouncementPayload(title, message) {
+            if (!title) return 'Title is required.';
+            if (!message) return 'Message is required.';
+            return '';
+        }
+
         function renderModules(modules) {
-            const target = document.getElementById('instructorModulesTable');
+            const target = document.getElementById('instructorModulesGrid');
+            const pagination = document.getElementById('modulePagination');
             if (!target) return;
 
             target.innerHTML = (modules && modules.length)
                 ? modules.map(module => {
-                    const filesCount = Array.isArray(module.files) ? module.files.length : 0;
-                    const filesIndicator = filesCount > 0 ? `<span style="color: #10b981; font-size: 0.75rem; margin-left: 4px;">📎 ${filesCount}</span>` : '';
+                    const files = Array.isArray(module.files) ? module.files : [];
+                    const filesCount = files.length;
+                    const previewFiles = files.slice(0, 3);
                     return `
-                    <tr>
-                        <td>${safeText(module.title)}${filesIndicator}</td>
-                        <td>${safeText(formatYearLabel(module.year_level))}</td>
-                        <td>${getStatusBadge(module.status)}</td>
-                        <td>${Number(module.studentCount || 0)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
-                        </td>
-                    </tr>
-                `}).join('')
-                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No modules found in the database.</td></tr>';
+                        <article class="module-card" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0">
+                            <div class="module-card-header">
+                                <div>
+                                    <div class="module-card-meta" style="margin-bottom: 10px;">
+                                        <span class="module-chip">${safeText(formatYearLabel(module.year_level))}</span>
+                                        ${getStatusBadge(module.status)}
+                                    </div>
+                                    <h4 class="module-card-title">${safeText(module.title)}</h4>
+                                </div>
+                                <span class="module-chip" style="background:#ecfeff;color:#0f766e;">${Number(module.studentCount || 0)} students</span>
+                            </div>
+                            <p class="module-card-description">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</p>
+                            <div class="module-card-meta">
+                                <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
+                                <span class="module-chip">📎 ${filesCount} materials</span>
+                                <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
+                            </div>
+                            <div class="module-card-files">
+                                <h4>Recent materials</h4>
+                                ${filesCount
+                                    ? previewFiles.map(file => `
+                                        <div class="module-file-item">
+                                            <div>
+                                                <div style="font-weight:600;color:#111827;">${safeText(file.file_name)}</div>
+                                                <small>${safeText(file.file_type || 'file')} • ${safeText(file.description || 'No description')}</small>
+                                            </div>
+                                            <span style="color:#2563eb;font-size:0.85rem;font-weight:600;">Open</span>
+                                        </div>
+                                    `).join('')
+                                    : '<div style="color:#6b7280;font-size:0.9rem;">No materials uploaded yet.</div>'}
+                            </div>
+                            <div class="module-card-actions" onclick="event.stopPropagation();">
+                                <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
+                                <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
+                                <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
+                            </div>
+                        </article>
+                    `;
+                }).join('')
+                : '<div style="padding: 18px; color: #6b7280;">No modules found in the database.</div>';
+
+            if (pagination) {
+                const pageInfo = window.__modulePagination || {};
+                const page = Number(pageInfo.page || getInstructorModulePage());
+                const pageSize = Number(pageInfo.limit || 10);
+                const total = Number(pageInfo.total || modules.length || 0);
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                const start = total ? ((page - 1) * pageSize) + 1 : 0;
+                const end = total ? Math.min(page * pageSize, total) : 0;
+                pagination.innerHTML = `
+                    <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeModulePage(${page - 1})">Prev</button>
+                        <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeModulePage(${page + 1})">Next</button>
+                    </div>
+                `;
+            }
         }
 
         function renderStudents(students) {
             const target = document.getElementById('instructorStudentsTable');
+            const pagination = document.getElementById('studentPagination');
             if (!target) return;
 
             target.innerHTML = (students && students.length)
-                ? students.map(student => `
+                ? students.map(student => {
+                    const avatarHtml = (window.KumpasPortal && typeof window.KumpasPortal.renderAvatarMarkup === 'function')
+                        ? window.KumpasPortal.renderAvatarMarkup({ photoUrl: student.photoUrl, avatarId: student.avatarId })
+                        : '<i class="fas fa-user" style="color:#94a3b8;"></i>';
+                    return `
                     <tr>
+                        <td><div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:#e2e8f0;display:flex;align-items:center;justify-content:center;">${avatarHtml}</div></td>
                         <td>${safeText(student.name)}</td>
                         <td>${safeText(student.yearLabel || formatYearLabel(student.yearLevel))}</td>
                         <td>${Number(student.modulesCompleted || 0)} of ${Number(student.totalModules || 0)}</td>
@@ -416,11 +950,24 @@
                             ${Number(student.overallProgress || 0)}%
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="viewStudentProfile('${safeText(student.email)}')">View Profile</button>
+                            <button class="btn btn-sm btn-primary" onclick="viewStudentProfile('${safeAttr(student.name)}', '${safeAttr(student.email)}', '${safeAttr(student.yearLabel || formatYearLabel(student.yearLevel))}', '${Number(student.modulesCompleted || 0)}', '${Number(student.totalModules || 0)}', '${Number(student.overallProgress || 0)}', '${Number(student.points || 0)}', '${Number(student.accuracy || 0)}')">View Profile</button>
                         </td>
                     </tr>
-                `).join('')
-                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No student progress records found yet.</td></tr>';
+                `;
+                }).join('')
+                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No student progress records found yet.</td></tr>';
+
+            if (pagination) {
+                const page = Number(window.__studentPagination && window.__studentPagination.page ? window.__studentPagination.page : getInstructorStudentPage());
+                const pageSize = Number(window.__studentPagination && window.__studentPagination.pageSize ? window.__studentPagination.pageSize : 5);
+                const total = Number(window.__studentPagination && window.__studentPagination.total ? window.__studentPagination.total : students.length);
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                pagination.innerHTML = `
+                    <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeStudentPage(${page - 1})">Prev</button>
+                    <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                    <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeStudentPage(${page + 1})">Next</button>
+                `;
+            }
         }
 
         function renderAnnouncements(announcements) {
@@ -450,7 +997,6 @@
             document.getElementById('moduleId').value = module ? module.id : '';
             document.getElementById('moduleTitle').value = module ? module.title || '' : '';
             document.getElementById('moduleYearLevel').value = module ? module.year_level || '1' : '1';
-            document.getElementById('moduleActivitiesCount').value = module ? module.activities_count || 0 : 0;
             document.getElementById('moduleStatus').value = module ? module.status || 'draft' : 'draft';
             document.getElementById('moduleSortOrder').value = module ? module.sort_order || 0 : 0;
             document.getElementById('moduleDescription').value = module ? module.description || '' : '';
@@ -463,31 +1009,47 @@
             document.getElementById('announcementPublished').checked = announcement ? Boolean(announcement.is_published) : true;
         }
 
+        async function changeStudentPage(page) {
+            setInstructorStudentPage(page);
+            await refreshInstructorDashboard();
+        }
+
+        async function changeModulePage(page) {
+            setInstructorModulePage(page);
+            await refreshInstructorDashboard();
+        }
+
         async function refreshInstructorDashboard() {
-            const currentUser = getCurrentUser();
+            const currentUser = await getCurrentUser();
+            const actorId = currentUser.email || currentUser.username || '';
             
-            // Redirect to login if no email (not logged in)
-            if (!currentUser.email) {
+            if (!actorId) {
                 alert('Please log in first to access the instructor dashboard.');
                 window.location.href = 'login.html';
                 return;
             }
 
             try {
-                const response = await requestJson(`/instructor/dashboard/?email=${encodeURIComponent(currentUser.email)}`);
-                window.__instructorModules = Array.isArray(response.modules) ? response.modules : [];
+                const studentPage = getInstructorStudentPage();
+                const modulePage = getInstructorModulePage();
+                const moduleYearFilter = getInstructorModuleYearFilter();
+                const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5`);
+                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}`);
+                window.__instructorModules = Array.isArray(modulesResponse.modules) ? modulesResponse.modules : [];
+                window.__modulePagination = modulesResponse || { page: modulePage, limit: 8, total: Array.isArray(modulesResponse.modules) ? modulesResponse.modules.length : 0 };
                 window.__instructorAnnouncements = Array.isArray(response.announcements) ? response.announcements : [];
+                window.__studentPagination = response.pagination || { page: studentPage, pageSize: 5, total: Array.isArray(response.students) ? response.students.length : 0 };
                 const welcomeTitle = document.getElementById('instructorWelcomeTitle');
                 const welcomeCopy = document.getElementById('instructorWelcomeCopy');
                 if (welcomeTitle) {
-                    welcomeTitle.textContent = `Welcome, ${response.currentUser?.name || currentUser.name || 'Instructor'}! 👋`;
+                    welcomeTitle.textContent = `Welcome, ${response.currentUser?.name || currentUser.name || currentUser.username || 'Instructor'}! 👋`;
                 }
                 if (welcomeCopy) {
                     welcomeCopy.textContent = 'Manage your FSL modules, announcements, and student progress from live database records.';
                 }
 
                 setOverviewStats(response.summary || {});
-                renderModules(response.modules || []);
+                renderModules(window.__instructorModules);
                 renderStudents(response.students || []);
                 renderAnnouncements(response.announcements || []);
             } catch (error) {
@@ -512,6 +1074,10 @@
             if (activeLink) {
                 activeLink.classList.add('active');
             }
+
+            if (tab === 'game-levels') {
+                loadGameLevels();
+            }
         }
 
         function openModuleModal(moduleId = '') {
@@ -521,6 +1087,26 @@
             const title = document.getElementById('moduleModalTitle');
             if (title) {
                 title.textContent = module ? 'Edit Module' : 'Add New Module';
+            }
+            const quizButton = document.getElementById('moduleQuizBuilderBtn');
+            const quizHelp = document.getElementById('moduleQuizHelpText');
+            if (quizButton) {
+                if (module && module.id) {
+                    quizButton.style.display = 'inline-block';
+                    quizButton.disabled = false;
+                    quizButton.style.opacity = '1';
+                    quizButton.style.cursor = 'pointer';
+                } else {
+                    quizButton.style.display = 'none';
+                }
+            }
+            if (quizHelp) {
+                if (module && module.id) {
+                    quizHelp.style.display = 'block';
+                    quizHelp.textContent = 'You can now add quiz questions for this module.';
+                } else {
+                    quizHelp.style.display = 'none';
+                }
             }
             openModal('moduleModal');
         }
@@ -536,22 +1122,69 @@
             openModal('announcementModal');
         }
 
+        function renderModuleMaterials(module) {
+            const target = document.getElementById('moduleMaterialsList');
+            if (!target) return;
+
+            const files = Array.isArray(module && module.files) ? module.files : [];
+            if (!files.length) {
+                target.innerHTML = '<div style="padding:14px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No materials uploaded yet. Add files from the right panel.</div>';
+                return;
+            }
+
+            target.innerHTML = files.map(file => `
+                <div class="module-file-item">
+                    <div>
+                        <div style="font-weight:700;color:#111827;">${safeText(file.file_name)}</div>
+                        <small>${safeText(file.file_type || 'file')} • ${safeText(file.description || 'No description')}</small>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+                        ${file.file_url ? `<a href="${safeText(file.file_url)}" target="_blank" rel="noopener">Download</a>` : ''}
+                        <button class="btn btn-sm btn-danger" type="button" onclick="deleteModuleFile(${Number(module.id || 0)}, ${Number(file.id || 0)})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openModuleMaterialsModal(moduleId = '') {
+            const currentModules = window.__instructorModules || [];
+            const module = currentModules.find(item => Number(item.id) === Number(moduleId));
+            if (!module) {
+                alert('Module not found. Refresh the dashboard and try again.');
+                return;
+            }
+
+            document.getElementById('materialsModuleId').value = String(module.id || '');
+            document.getElementById('moduleMaterialsTitle').textContent = `Materials: ${module.title || 'Module'}`;
+            document.getElementById('materialsDescription').value = '';
+            const fileInput = document.getElementById('materialsFile');
+            if (fileInput) fileInput.value = '';
+            renderModuleMaterials(module);
+            openModal('moduleMaterialsModal');
+        }
+
         async function saveModule(event) {
             event.preventDefault();
-            const currentUser = getCurrentUser();
             const moduleId = document.getElementById('moduleId').value;
+            const title = sanitizeInstructorInput(document.getElementById('moduleTitle').value);
+            const description = sanitizeInstructorInput(document.getElementById('moduleDescription').value);
             const payload = {
-                email: currentUser.email,
-                title: document.getElementById('moduleTitle').value.trim(),
+                actorEmail: await getInstructorActorIdentifier(),
+                title,
                 year_level: document.getElementById('moduleYearLevel').value,
-                activities_count: Number(document.getElementById('moduleActivitiesCount').value || 0),
                 status: document.getElementById('moduleStatus').value,
                 sort_order: Number(document.getElementById('moduleSortOrder').value || 0),
-                description: document.getElementById('moduleDescription').value.trim(),
+                description,
             };
 
-            if (!payload.title) {
-                alert('Module title is required.');
+            const moduleError = validateModulePayload(payload.title, payload.description);
+            if (moduleError) {
+                alert(moduleError);
+                return;
+            }
+
+            if (!payload.actorEmail) {
+                alert('Missing instructor identity. Please sign in as an instructor before saving modules.');
                 return;
             }
 
@@ -574,47 +1207,99 @@
             }
         }
 
-        async function uploadModuleFiles(moduleId, files) {
-            const currentUser = getCurrentUser();
-            
+        async function uploadModuleFiles(moduleId, files, descriptionPrefix = '') {
+            const actorId = await getInstructorActorIdentifier();
+            if (!actorId) {
+                throw new Error('Missing instructor identity. Please sign in as an instructor before uploading files.');
+            }
+
+            const errors = [];
+
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('email', currentUser.email);
-                formData.append('description', file.name);
-                
+                formData.append('actorEmail', actorId);
+                formData.append('description', descriptionPrefix || file.name);
+
                 try {
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
                         body: formData,
                     });
-                    
+
                     if (!response.ok) {
-                        const errorData = await response.json();
+                        const errorData = await response.json().catch(() => ({}));
+                        const message = typeof errorData.error === 'string'
+                            ? errorData.error
+                            : JSON.stringify(errorData);
+                        errors.push(`${file.name}: ${message}`);
                         console.error(`Failed to upload ${file.name}:`, errorData);
                     } else {
                         console.log(`Successfully uploaded ${file.name}`);
                     }
                 } catch (error) {
+                    errors.push(`${file.name}: ${error.message || error}`);
                     console.error(`Error uploading ${file.name}:`, error);
                 }
             }
+
+            if (errors.length) {
+                throw new Error(`Upload failed: ${errors.join(' | ')}`);
+            }
+        }
+
+        async function uploadMaterialsFromModal() {
+            const moduleId = Number(document.getElementById('materialsModuleId').value || 0);
+            const fileInput = document.getElementById('materialsFile');
+            const description = sanitizeInstructorInput(document.getElementById('materialsDescription').value);
+
+            if (!moduleId) {
+                alert('Missing module selection.');
+                return;
+            }
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('Select at least one file to upload.');
+                return;
+            }
+
+            try {
+                await uploadModuleFiles(moduleId, fileInput.files, description);
+                await refreshInstructorDashboard();
+                openModuleMaterialsModal(moduleId);
+            } catch (error) {
+                alert(`Failed to upload file(s): ${error.message}`);
+            }
+        }
+
+        async function deleteModuleFile(moduleId, fileId) {
+            if (!confirm('Delete this material?')) {
+                return;
+            }
+
+            await requestJson(`/instructor/modules/${moduleId}/files/${fileId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await refreshInstructorDashboard();
+            openModuleMaterialsModal(moduleId);
         }
 
         async function saveAnnouncement(event) {
             event.preventDefault();
-            const currentUser = getCurrentUser();
             const announcementId = document.getElementById('announcementId').value;
+            const title = sanitizeInstructorInput(document.getElementById('announcementTitle').value);
+            const message = sanitizeInstructorInput(document.getElementById('announcementMessage').value);
             const payload = {
-                email: currentUser.email,
-                title: document.getElementById('announcementTitle').value.trim(),
-                message: document.getElementById('announcementMessage').value.trim(),
+                actorEmail: await getInstructorActorIdentifier(),
+                title,
+                message,
                 is_published: document.getElementById('announcementPublished').checked,
             };
 
-            if (!payload.title || !payload.message) {
-                alert('Title and message are required.');
+            const announcementError = validateAnnouncementPayload(payload.title, payload.message);
+            if (announcementError) {
+                alert(announcementError);
                 return;
             }
 
@@ -630,12 +1315,82 @@
                 return;
             }
 
-            const currentUser = getCurrentUser();
             await requestJson(`/instructor/modules/${moduleId}/`, {
                 method: 'DELETE',
-                body: JSON.stringify({ email: currentUser.email }),
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
             });
             await refreshInstructorDashboard();
+        }
+
+        async function handleModuleQuizButton() {
+            const moduleId = document.getElementById('moduleId').value;
+            if (moduleId) {
+                openModuleQuizBuilder(moduleId);
+                return;
+            }
+
+            const title = sanitizeInstructorInput(document.getElementById('moduleTitle').value || '');
+            const description = sanitizeInstructorInput(document.getElementById('moduleDescription').value || '');
+            const yearLevel = document.getElementById('moduleYearLevel').value;
+            const status = document.getElementById('moduleStatus').value;
+            const sortOrder = Number(document.getElementById('moduleSortOrder').value || 0);
+            const moduleError = validateModulePayload(title, description);
+
+            if (moduleError) {
+                alert(moduleError);
+                return;
+            }
+
+            const payload = {
+                actorEmail: await getInstructorActorIdentifier(),
+                title,
+                year_level: yearLevel,
+                status,
+                sort_order: sortOrder,
+                description,
+            };
+
+            const quizButton = document.getElementById('moduleQuizBuilderBtn');
+            if (quizButton) {
+                quizButton.disabled = true;
+                quizButton.textContent = 'Saving...';
+            }
+
+            try {
+                const moduleResponse = await requestJson('/instructor/modules/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+
+                const finalModuleId = moduleResponse.id;
+                if (!finalModuleId) {
+                    throw new Error('Unable to create module before opening quiz builder.');
+                }
+
+                document.getElementById('moduleId').value = finalModuleId;
+
+                const fileInput = document.getElementById('moduleFile');
+                if (fileInput && fileInput.files.length > 0) {
+                    await uploadModuleFiles(finalModuleId, fileInput.files);
+                }
+
+                openModuleQuizBuilder(finalModuleId);
+            } catch (error) {
+                alert(`Failed to create module: ${error.message}`);
+            } finally {
+                if (quizButton) {
+                    quizButton.disabled = false;
+                    quizButton.textContent = 'Add Quiz';
+                }
+            }
+        }
+
+        function openModuleQuizBuilder(moduleId) {
+            if (!moduleId) {
+                alert('Module is not yet saved. Please save the module before opening the quiz builder.');
+                return;
+            }
+            window.location.href = `module-quiz.html?module=${encodeURIComponent(moduleId)}`;
         }
 
         async function deleteAnnouncement(announcementId) {
@@ -643,16 +1398,703 @@
                 return;
             }
 
-            const currentUser = getCurrentUser();
             await requestJson(`/instructor/announcements/${announcementId}/`, {
                 method: 'DELETE',
-                body: JSON.stringify({ email: currentUser.email }),
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
             });
             await refreshInstructorDashboard();
         }
 
-        function viewStudentProfile(email) {
-            alert(`Viewing live database profile for ${email}`);
+        const GAME_LABELS = {
+            sign_match: 'Sign Match Game',
+            typing: 'Sign-to-Word Typing Game',
+            sentence: 'Sentence Builder Game',
+            scenario: 'Scenario-Based Game',
+        };
+        const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+        const GAME_PAGES = {
+            sign_match: 'sign-match-game.html',
+            typing: 'typing-game.html',
+            sentence: 'sentence-game.html',
+            scenario: 'scenario-game.html',
+        };
+
+        async function previewLevel(levelId) {
+            const currentLevels = window.__gameLevels || [];
+            const level = currentLevels.find(item => Number(item.id) === Number(levelId));
+            if (!level) return;
+            const page = GAME_PAGES[level.game_key];
+            if (!page) return;
+            if (!Number(level.items_count || 0)) {
+                alert('This level has no content yet. Add content before previewing.');
+                return;
+            }
+            const actorId = await getInstructorActorIdentifier();
+            const url = `${page}?previewLevelId=${encodeURIComponent(levelId)}&previewActor=${encodeURIComponent(actorId)}`;
+            window.open(url, '_blank');
+        }
+
+        function getGameLevelsFilter() {
+            return window.__gameLevelsFilter || 'sign_match';
+        }
+
+        function validateLevelPayload(gameKey, levelNumber) {
+            if (!gameKey) return 'Game is required.';
+            if (!levelNumber || levelNumber < 1) return 'Level number must be at least 1.';
+            return '';
+        }
+
+        function renderGameLevelTabs() {
+            const target = document.getElementById('gameLevelGameTabs');
+            if (!target) return;
+            const activeGame = getGameLevelsFilter();
+            target.innerHTML = Object.keys(GAME_LABELS).map(key => `
+                <button type="button" class="btn btn-sm ${key === activeGame ? 'btn-primary' : 'btn-secondary'}" onclick="switchGameLevelsGame('${key}')">${safeText(GAME_LABELS[key])}</button>
+            `).join('');
+        }
+
+        function renderGameLevels() {
+            const target = document.getElementById('instructorGameLevelsList');
+            if (!target) return;
+            const activeGame = getGameLevelsFilter();
+            const levels = (window.__gameLevels || []).filter(level => level.game_key === activeGame);
+
+            if (!levels.length) {
+                target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
+                return;
+            }
+
+            target.innerHTML = levels.map(level => `
+                <div class="announcement-item">
+                    <h4>
+                        ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)} &middot; Level ${Number(level.level_number)}
+                        ${level.title ? ` &mdash; ${safeText(level.title)}` : ''}
+                        ${level.is_published ? '' : ' <span style="color:#b45309;font-size:0.8rem;">(Draft)</span>'}
+                    </h4>
+                    <p>${Number(level.items_count || 0)} content item(s)</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+                        <button class="btn btn-sm btn-info" onclick="previewLevel(${Number(level.id)})">Preview as Student</button>
+                        <button class="btn btn-sm btn-secondary" onclick="openLevelItemsModal(${Number(level.id)})">Manage Content</button>
+                        <button class="btn btn-sm btn-secondary" onclick="openLevelModal(${Number(level.id)})">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteLevel(${Number(level.id)})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchGameLevelsGame(gameKey) {
+            window.__gameLevelsFilter = gameKey;
+            renderGameLevelTabs();
+            renderGameLevels();
+            if (document.getElementById('levelModal')?.classList.contains('active')) {
+                renderLevelReference(gameKey);
+            }
+        }
+
+        async function loadGameLevels() {
+            try {
+                const actorId = await getInstructorActorIdentifier();
+                const response = await requestJson(`/instructor/game-levels/?actorEmail=${encodeURIComponent(actorId)}`);
+                window.__gameLevels = Array.isArray(response) ? response : [];
+                renderGameLevelTabs();
+                renderGameLevels();
+                if (document.getElementById('levelModal')?.classList.contains('active')) {
+                    renderLevelReference(document.getElementById('levelGameKey')?.value || getGameLevelsFilter());
+                }
+            } catch (error) {
+                console.error('Game levels error:', error);
+            }
+        }
+
+        function renderLevelReference(gameKey) {
+            const levels = (window.__gameLevels || []).filter(l => l.game_key === gameKey);
+            const container = document.getElementById('levelReferenceList');
+            const count = document.getElementById('levelReferenceCount');
+            if (!container || !count) return;
+
+            count.textContent = String(levels.length || 0);
+            if (!levels.length) {
+                container.innerHTML = '<div style="padding:12px;color:#6b7280;">No levels yet for this game.</div>';
+                return;
+            }
+
+            container.innerHTML = levels.map(level => {
+                const assigned = (level.items || []).find(item => item.media_url);
+                return `
+                    <div style="padding:12px; border-radius:10px; background:#ffffff; border:1px solid #e5e7eb;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+                            <div>
+                                <div style="font-weight:600;">Level ${Number(level.level_number)} — ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}</div>
+                                <div style="margin-top:4px; color:#6b7280; font-size:0.92rem;">${level.title ? safeText(level.title) : `${Number(level.items_count || 0)} item(s)`}</div>
+                                <div style="margin-top:6px; color:#4b5563; font-size:0.85rem;">${assigned ? `Assigned video: ${safeText(assigned.prompt || assigned.media_url)}` : 'No assigned video'}</div>
+                            </div>
+                            <div style="text-align:right; color:#6b7280; font-size:0.82rem;">
+                                ${level.is_published ? 'Published' : 'Draft'}<br>${formatDateTime(level.updated_at || level.created_at)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleLevelGameChange(gameKey) {
+            const container = document.getElementById('levelDynamicFields');
+            if (!container) return;
+            renderLevelReference(gameKey);
+
+            if (gameKey === 'sign_match' || gameKey === 'typing') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Assigned Sign Video</label>
+                        <div id="levelPrimaryVideoPicker"></div>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Choose an existing video or upload a new one for this level.</small>
+                    </div>
+                `;
+                document.getElementById('levelPrimaryVideoPicker').innerHTML = renderVideoPicker('level_primary', '', '');
+                ensureSignVideoLibrary().then(() => {
+                    const picker = document.getElementById('levelPrimaryVideoPicker');
+                    if (picker) picker.innerHTML = renderVideoPicker('level_primary', '', '');
+                }).catch(() => {});
+            } else if (gameKey === 'sentence') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Preview Sentence (optional)</label>
+                        <input type="text" id="levelPreviewSentence" class="form-input" placeholder="e.g. I am fine">
+                        <small style="color:#6b7280; display:block; margin-top:6px;">This text helps create a primary sentence-level item automatically.</small>
+                    </div>
+                `;
+            } else if (gameKey === 'scenario') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Scenario Lead (optional)</label>
+                        <textarea id="levelScenarioLead" class="form-input" rows="2" placeholder="Short scenario description"></textarea>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Add a starting prompt for the scenario if you want quick setup.</small>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        function openLevelModal(levelId = '') {
+            const currentLevels = window.__gameLevels || [];
+            const level = levelId ? currentLevels.find(item => Number(item.id) === Number(levelId)) : null;
+
+            document.getElementById('levelId').value = level ? level.id : '';
+            document.getElementById('levelGameKey').value = level ? level.game_key : getGameLevelsFilter();
+            document.getElementById('levelDifficulty').value = level ? level.difficulty : 'easy';
+            document.getElementById('levelNumber').value = level ? level.level_number : 1;
+            document.getElementById('levelTitle').value = level ? (level.title || '') : '';
+            document.getElementById('levelPublished').checked = level ? Boolean(level.is_published) : true;
+
+            const title = document.getElementById('levelModalTitle');
+            if (title) {
+                title.textContent = level ? 'Edit Level' : 'Add Level';
+            }
+
+            const currentGame = level ? level.game_key : getGameLevelsFilter();
+            handleLevelGameChange(currentGame);
+
+            openModal('levelModal');
+        }
+
+        async function saveLevel(event) {
+            event.preventDefault();
+            const levelId = document.getElementById('levelId').value;
+            const payload = {
+                actorEmail: await getInstructorActorIdentifier(),
+                game_key: document.getElementById('levelGameKey').value,
+                difficulty: document.getElementById('levelDifficulty').value,
+                level_number: Number(document.getElementById('levelNumber').value || 1),
+                title: sanitizeInstructorInput(document.getElementById('levelTitle').value),
+                is_published: document.getElementById('levelPublished').checked,
+            };
+
+            const levelError = validateLevelPayload(payload.game_key, payload.level_number);
+            if (levelError) {
+                alert(levelError);
+                return;
+            }
+
+            const path = levelId ? `/instructor/game-levels/${levelId}/` : '/instructor/game-levels/';
+            const method = levelId ? 'PATCH' : 'POST';
+            let savedLevel = null;
+            try {
+                savedLevel = await requestJson(path, { method, body: JSON.stringify(payload) });
+            } catch (error) {
+                alert(`Failed to save level: ${error.message}`);
+                return;
+            }
+
+            // Auto-create a primary level item when adding a new level with starter data.
+            if (!levelId && savedLevel && savedLevel.id) {
+                const gameKey = payload.game_key;
+                let itemPayload = null;
+
+                if (gameKey === 'sign_match' || gameKey === 'typing') {
+                    const video = document.getElementById('picker-video-level_primary')?.value || '';
+                    const name = sanitizeInstructorInput(document.getElementById('picker-name-level_primary')?.value || '');
+                    if (video) {
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: name || 'Primary level item',
+                            answer: '',
+                            media_url: video,
+                            extra_data: {},
+                            order: 0,
+                        };
+                    }
+                } else if (gameKey === 'sentence') {
+                    const sentence = sanitizeInstructorInput(document.getElementById('levelPreviewSentence')?.value || '');
+                    if (sentence) {
+                        const words = sentence.toLowerCase().split(/\s+/).filter(Boolean);
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: sentence,
+                            answer: sentence,
+                            media_url: '',
+                            extra_data: { words, signs: [] },
+                            order: 0,
+                        };
+                    }
+                } else if (gameKey === 'scenario') {
+                    const lead = sanitizeInstructorInput(document.getElementById('levelScenarioLead')?.value || '');
+                    if (lead) {
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: lead,
+                            answer: '',
+                            media_url: '',
+                            extra_data: {},
+                            order: 0,
+                        };
+                    }
+                }
+
+                if (itemPayload) {
+                    try {
+                        await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
+                            method: 'POST',
+                            body: JSON.stringify(itemPayload),
+                        });
+                    } catch (warnError) {
+                        console.warn('Could not create initial level item:', warnError);
+                    }
+                }
+            }
+
+            closeModal('levelModal');
+            await loadGameLevels();
+        }
+
+        async function deleteLevel(levelId) {
+            if (!confirm('Delete this level and all of its content?')) {
+                return;
+            }
+            await requestJson(`/instructor/game-levels/${levelId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await loadGameLevels();
+        }
+
+        // ---- Video picker widget (used by simple/sentence/scenario item forms) ----
+
+        async function ensureSignVideoLibrary() {
+            if (!window.__signVideoLibrary) {
+                try {
+                    const response = await fetch(`${API_BASE}/sign-videos/?scope=games`);
+                    window.__signVideoLibrary = response.ok ? await response.json() : [];
+                } catch (error) {
+                    window.__signVideoLibrary = [];
+                }
+            }
+            return window.__signVideoLibrary;
+        }
+
+        function videoPickerOptionsHtml(selectedUrl) {
+            const library = window.__signVideoLibrary || [];
+            const opts = library.map(video => `
+                <option value="${safeAttr(video.video_url)}" data-word="${safeAttr(video.word)}" ${video.video_url === selectedUrl ? 'selected' : ''}>${safeText(video.word)}</option>
+            `).join('');
+            return `<option value="">-- Select existing video --</option>${opts}`;
+        }
+
+        let pickerUidCounter = 0;
+        function nextPickerUid() {
+            pickerUidCounter += 1;
+            return `p${Date.now()}_${pickerUidCounter}`;
+        }
+
+        function renderVideoPicker(uid, selectedUrl = '', selectedWord = '') {
+            return `
+                <div class="video-picker" data-uid="${uid}">
+                    <select id="picker-select-${uid}" class="form-input" onchange="onVideoPickerSelect('${uid}')">
+                        ${videoPickerOptionsHtml(selectedUrl)}
+                    </select>
+                    <div style="margin-top:6px;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleVideoUpload('${uid}')">Upload new video</button>
+                        ${selectedUrl ? `<a href="${safeAttr(selectedUrl)}" target="_blank" rel="noopener" style="margin-left:8px;font-size:0.82rem;">Preview</a>` : ''}
+                    </div>
+                    <div id="picker-upload-${uid}" style="display:none; margin-top:8px; padding:10px; background:#f3f4f6; border-radius:4px;">
+                        <input type="text" id="picker-word-${uid}" class="form-input" placeholder="Word / phrase for this video" value="${safeAttr(selectedWord)}" style="margin-bottom:6px;">
+                        <input type="file" id="picker-file-${uid}" class="form-input" accept=".mp4,.mov,.webm,.avi,.mkv" style="margin-bottom:6px;">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="uploadVideoForPicker('${uid}')">Upload &amp; Use</button>
+                    </div>
+                    <input type="hidden" id="picker-video-${uid}" value="${safeAttr(selectedUrl)}">
+                    <input type="hidden" id="picker-name-${uid}" value="${safeAttr(selectedWord)}">
+                </div>
+            `;
+        }
+
+        function onVideoPickerSelect(uid) {
+            const select = document.getElementById(`picker-select-${uid}`);
+            if (!select) return;
+            const option = select.options[select.selectedIndex];
+            document.getElementById(`picker-video-${uid}`).value = select.value || '';
+            document.getElementById(`picker-name-${uid}`).value = option ? (option.dataset.word || '') : '';
+        }
+
+        function toggleVideoUpload(uid) {
+            const box = document.getElementById(`picker-upload-${uid}`);
+            if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function uploadVideoForPicker(uid) {
+            const wordInput = document.getElementById(`picker-word-${uid}`);
+            const fileInput = document.getElementById(`picker-file-${uid}`);
+            const word = sanitizeInstructorInput(wordInput ? wordInput.value : '');
+            if (!word) {
+                alert('Enter the word/phrase for this video.');
+                return;
+            }
+            if (!fileInput || !fileInput.files || !fileInput.files.length) {
+                alert('Choose a video file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('word', word);
+            formData.append('actorEmail', await getInstructorActorIdentifier());
+            formData.append('video', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', body: formData });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${response.status})`);
+                }
+                const library = window.__signVideoLibrary || (window.__signVideoLibrary = []);
+                if (!library.some(video => video.id === data.id)) {
+                    library.push(data);
+                }
+                document.getElementById(`picker-video-${uid}`).value = data.video_url || '';
+                document.getElementById(`picker-name-${uid}`).value = data.word || word;
+                const select = document.getElementById(`picker-select-${uid}`);
+                if (select) select.innerHTML = videoPickerOptionsHtml(data.video_url);
+                toggleVideoUpload(uid);
+            } catch (error) {
+                alert(`Failed to upload video: ${error.message}`);
+            }
+        }
+
+        // ---- Sentence Builder: repeatable ordered sign rows ----
+
+        let sentenceSignRows = [];
+
+        function addSentenceSignRow(prefill = {}) {
+            sentenceSignRows.push({ uid: nextPickerUid(), video: prefill.video || '', name: prefill.name || '' });
+            renderSentenceSignRows();
+        }
+
+        function removeSentenceSignRow(uid) {
+            sentenceSignRows = sentenceSignRows.filter(row => row.uid !== uid);
+            renderSentenceSignRows();
+        }
+
+        function renderSentenceSignRows() {
+            const target = document.getElementById('sentenceSignsList');
+            if (!target) return;
+            target.innerHTML = sentenceSignRows.length
+                ? sentenceSignRows.map((row, idx) => `
+                    <div class="learning-file-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:0.85rem;color:#6b7280;">Sign ${idx + 1}</strong>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeSentenceSignRow('${row.uid}')">Remove</button>
+                        </div>
+                        ${renderVideoPicker(row.uid, row.video, row.name)}
+                    </div>
+                `).join('')
+                : '<div style="padding:10px;color:#6b7280;font-size:0.85rem;">No signs added yet.</div>';
+        }
+
+        // ---- Scenario-Based: repeatable option rows ----
+
+        let scenarioOptionRows = [];
+
+        function addScenarioOptionRow(prefill = {}) {
+            scenarioOptionRows.push({ uid: nextPickerUid(), video: prefill.video || '', name: prefill.name || '', correct: Boolean(prefill.correct) });
+            renderScenarioOptionRows();
+        }
+
+        function removeScenarioOptionRow(uid) {
+            scenarioOptionRows = scenarioOptionRows.filter(row => row.uid !== uid);
+            renderScenarioOptionRows();
+        }
+
+        function renderScenarioOptionRows() {
+            const target = document.getElementById('scenarioOptionsList');
+            if (!target) return;
+            target.innerHTML = scenarioOptionRows.length
+                ? scenarioOptionRows.map((row, idx) => `
+                    <div class="learning-file-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:0.85rem;color:#374151;display:flex;align-items:center;gap:6px;">
+                                <input type="radio" name="scenarioCorrectOption" value="${row.uid}" ${row.correct ? 'checked' : ''}>
+                                Option ${idx + 1} — correct answer
+                            </label>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeScenarioOptionRow('${row.uid}')">Remove</button>
+                        </div>
+                        ${renderVideoPicker(row.uid, row.video, row.name)}
+                    </div>
+                `).join('')
+                : '<div style="padding:10px;color:#6b7280;font-size:0.85rem;">No options added yet.</div>';
+        }
+
+        // ---- Manage Content modal: list, form switching, save/delete ----
+
+        function renderLevelItems(items) {
+            const target = document.getElementById('levelItemsList');
+            if (!target) return;
+            const gameKey = document.getElementById('levelItemsGameKey').value;
+
+            target.innerHTML = (items && items.length)
+                ? items.map(item => {
+                    const extra = item.extra_data || {};
+                    let preview = '';
+                    if (gameKey === 'sentence') {
+                        const words = Array.isArray(extra.words) ? extra.words : [];
+                        preview = `<div style="color:#6b7280;font-size:0.85rem;">Sentence: ${safeText(words.join(' ') || item.answer || '(no signs yet)')}</div>`;
+                    } else if (gameKey === 'scenario') {
+                        const options = Array.isArray(extra.options) ? extra.options : [];
+                        const correctOption = options.find(option => option.correct);
+                        preview = `
+                            <div style="color:#6b7280;font-size:0.85rem;">${options.length} option(s) &middot; Correct: ${safeText((correctOption && correctOption.name) || item.answer || '-')}</div>
+                        `;
+                    } else {
+                        preview = item.media_url ? `<div style="color:#6b7280;font-size:0.85rem;">Video: ${safeText(item.media_url)}</div>` : '<div style="color:#b45309;font-size:0.85rem;">No video assigned yet</div>';
+                    }
+                    return `
+                        <div class="learning-file-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+                            <div style="display:flex; justify-content:space-between; gap:10px;">
+                                <div class="learning-file-name">${safeText(item.prompt)}</div>
+                                <div style="display:flex; gap:8px;">
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="editLevelItem(${Number(item.id)})">Edit</button>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteLevelItem(${Number(item.id)})">Delete</button>
+                                </div>
+                            </div>
+                            ${preview}
+                        </div>
+                    `;
+                }).join('')
+                : '<div style="padding:16px;color:#6b7280;">No content items yet. Add one using the form.</div>';
+        }
+
+        function showItemFormForGame(gameKey) {
+            document.getElementById('itemFormSimple').style.display = (gameKey === 'sentence' || gameKey === 'scenario') ? 'none' : 'block';
+            document.getElementById('itemFormSentence').style.display = gameKey === 'sentence' ? 'block' : 'none';
+            document.getElementById('itemFormScenario').style.display = gameKey === 'scenario' ? 'block' : 'none';
+        }
+
+        function resetLevelItemForm() {
+            const gameKey = document.getElementById('levelItemsGameKey').value;
+            document.getElementById('levelItemId').value = '';
+            document.getElementById('levelItemOrder').value = '0';
+
+            document.getElementById('simpleWord').value = '';
+            document.getElementById('simpleVideoPicker').innerHTML = renderVideoPicker('simple', '', '');
+
+            document.getElementById('scenarioText').value = '';
+            document.getElementById('scenarioQuestion').value = '';
+
+            sentenceSignRows = [];
+            renderSentenceSignRows();
+            scenarioOptionRows = [];
+            renderScenarioOptionRows();
+
+            showItemFormForGame(gameKey);
+        }
+
+        function editLevelItem(itemId) {
+            const items = window.__currentLevelItems || [];
+            const item = items.find(entry => Number(entry.id) === Number(itemId));
+            if (!item) return;
+            const gameKey = document.getElementById('levelItemsGameKey').value;
+            const extra = item.extra_data || {};
+
+            document.getElementById('levelItemId').value = item.id;
+            document.getElementById('levelItemOrder').value = item.order || 0;
+
+            if (gameKey === 'sentence') {
+                sentenceSignRows = (Array.isArray(extra.signs) ? extra.signs : []).map(sign => ({
+                    uid: nextPickerUid(),
+                    video: sign.video || '',
+                    name: sign.name || '',
+                }));
+                renderSentenceSignRows();
+            } else if (gameKey === 'scenario') {
+                document.getElementById('scenarioText').value = item.prompt || '';
+                document.getElementById('scenarioQuestion').value = extra.question || '';
+                scenarioOptionRows = (Array.isArray(extra.options) ? extra.options : []).map(option => ({
+                    uid: nextPickerUid(),
+                    video: option.video || '',
+                    name: option.name || '',
+                    correct: Boolean(option.correct),
+                }));
+                renderScenarioOptionRows();
+            } else {
+                document.getElementById('simpleWord').value = item.prompt || '';
+                document.getElementById('simpleVideoPicker').innerHTML = renderVideoPicker('simple', item.media_url || '', item.prompt || '');
+            }
+        }
+
+        async function openLevelItemsModal(levelId) {
+            const currentLevels = window.__gameLevels || [];
+            const level = currentLevels.find(item => Number(item.id) === Number(levelId));
+            document.getElementById('levelItemsLevelId').value = levelId;
+            document.getElementById('levelItemsGameKey').value = level ? level.game_key : 'sign_match';
+
+            await ensureSignVideoLibrary();
+            resetLevelItemForm();
+
+            const title = document.getElementById('levelItemsTitle');
+            if (title && level) {
+                title.textContent = `Manage Content — ${GAME_LABELS[level.game_key] || level.game_key} (${DIFFICULTY_LABELS[level.difficulty] || level.difficulty}, Level ${level.level_number})`;
+            }
+
+            try {
+                const actorId = await getInstructorActorIdentifier();
+                const items = await requestJson(`/instructor/game-levels/${levelId}/items/?actorEmail=${encodeURIComponent(actorId)}`);
+                window.__currentLevelItems = Array.isArray(items) ? items : [];
+                renderLevelItems(window.__currentLevelItems);
+            } catch (error) {
+                alert(`Failed to load level content: ${error.message}`);
+            }
+            openModal('levelItemsModal');
+        }
+
+        async function saveLevelItem() {
+            const levelId = document.getElementById('levelItemsLevelId').value;
+            const itemId = document.getElementById('levelItemId').value;
+            const gameKey = document.getElementById('levelItemsGameKey').value;
+            const order = Number(document.getElementById('levelItemOrder').value || 0);
+            const actorEmail = await getInstructorActorIdentifier();
+
+            let payload;
+            if (gameKey === 'sentence') {
+                const signs = sentenceSignRows.map(row => ({
+                    name: sanitizeInstructorInput(document.getElementById(`picker-name-${row.uid}`)?.value || ''),
+                    video: document.getElementById(`picker-video-${row.uid}`)?.value || '',
+                })).filter(sign => sign.name && sign.video);
+
+                const wordCount = signs.reduce((sum, sign) => sum + sign.name.trim().split(/\s+/).filter(Boolean).length, 0);
+                if (wordCount < 2) {
+                    alert('A sentence needs at least 2 words — add more signs so the player has an actual sentence to build, not a single word.');
+                    return;
+                }
+                const words = signs.map(sign => sign.name.toLowerCase());
+                payload = {
+                    actorEmail,
+                    prompt: words.join(' '),
+                    answer: words.join(' '),
+                    media_url: signs[0].video,
+                    extra_data: { signs, words, correct: words },
+                    order,
+                };
+            } else if (gameKey === 'scenario') {
+                const scenarioText = sanitizeInstructorInput(document.getElementById('scenarioText').value);
+                const question = sanitizeInstructorInput(document.getElementById('scenarioQuestion').value);
+                if (!scenarioText) {
+                    alert('Scenario text is required.');
+                    return;
+                }
+                const checkedRadio = document.querySelector('input[name="scenarioCorrectOption"]:checked');
+                const correctUid = checkedRadio ? checkedRadio.value : '';
+                const options = scenarioOptionRows.map(row => ({
+                    name: sanitizeInstructorInput(document.getElementById(`picker-name-${row.uid}`)?.value || ''),
+                    video: document.getElementById(`picker-video-${row.uid}`)?.value || '',
+                    correct: row.uid === correctUid,
+                })).filter(option => option.name && option.video);
+
+                if (options.length < 2) {
+                    alert('Add at least two options.');
+                    return;
+                }
+                if (!options.some(option => option.correct)) {
+                    alert('Select which option is correct.');
+                    return;
+                }
+                payload = {
+                    actorEmail,
+                    prompt: scenarioText,
+                    answer: (options.find(option => option.correct) || {}).name || '',
+                    media_url: '',
+                    extra_data: { question, options },
+                    order,
+                };
+            } else {
+                const word = sanitizeInstructorInput(document.getElementById('simpleWord').value);
+                if (!word) {
+                    alert('Word is required.');
+                    return;
+                }
+                const video = document.getElementById('picker-video-simple')?.value || '';
+                payload = {
+                    actorEmail,
+                    prompt: word,
+                    answer: '',
+                    media_url: video,
+                    extra_data: {},
+                    order,
+                };
+            }
+
+            const path = itemId ? `/instructor/game-levels/${levelId}/items/${itemId}/` : `/instructor/game-levels/${levelId}/items/`;
+            const method = itemId ? 'PATCH' : 'POST';
+            try {
+                await requestJson(path, { method, body: JSON.stringify(payload) });
+            } catch (error) {
+                alert(`Failed to save content item: ${error.message}`);
+                return;
+            }
+            await openLevelItemsModal(levelId);
+            await loadGameLevels();
+        }
+
+        async function deleteLevelItem(itemId) {
+            if (!confirm('Delete this content item?')) {
+                return;
+            }
+            const levelId = document.getElementById('levelItemsLevelId').value;
+            await requestJson(`/instructor/game-levels/${levelId}/items/${itemId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await openLevelItemsModal(levelId);
+            await loadGameLevels();
+        }
+
+        function viewStudentProfile(name, email, yearLabel, modulesCompleted, totalModules, overallProgress, points, accuracy) {
+            alert(
+                `Student Profile\n\n` +
+                `Name: ${name || 'N/A'}\n` +
+                `Email: ${email || 'N/A'}\n` +
+                `Year Level: ${yearLabel || 'N/A'}\n` +
+                `Modules Completed: ${modulesCompleted || 0} of ${totalModules || 0}\n` +
+                `Progress: ${overallProgress || 0}%\n` +
+                `Points: ${points || 0}\n` +
+                `Accuracy: ${accuracy || 0}%`
+            );
         }
 
         function openModal(modalId) {
@@ -696,10 +2138,10 @@
         });
 
         document.addEventListener('DOMContentLoaded', async function () {
-            const currentUser = getCurrentUser();
+            const currentUser = await getCurrentUser();
             const welcomeTitle = document.getElementById('instructorWelcomeTitle');
             if (welcomeTitle) {
-                welcomeTitle.textContent = `Welcome, ${currentUser.name || 'Instructor'}! 👋`;
+                welcomeTitle.textContent = `Welcome, ${currentUser.name || currentUser.username || 'Instructor'}! 👋`;
             }
             const welcomeCopy = document.getElementById('instructorWelcomeCopy');
             if (welcomeCopy) {
@@ -713,6 +2155,16 @@
             }
             switchTab('overview');
         });
+    </script>
+    <script>
+    (function() {
+        const _t = document.getElementById('navUserToggle');
+        const _d = document.getElementById('navUserDropdown');
+        if (_t && _d) {
+            _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
+            document.addEventListener('click', function() { _d.classList.remove('open'); });
+        }
+    })();
     </script>
 </body>
 </html>

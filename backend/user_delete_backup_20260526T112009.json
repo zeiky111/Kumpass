@@ -1,0 +1,224 @@
+{
+  "users": [
+    {
+      "id": 18,
+      "username": "zyyydetorres@gmail.com",
+      "email": "zyyydetorres@gmail.com",
+      "first_name": "Kyla",
+      "last_name": "Ramirez"
+    },
+    {
+      "id": 19,
+      "username": "test.otp@example.com",
+      "email": "test.otp@example.com",
+      "first_name": "OTP",
+      "last_name": "Tester"
+    },
+    {
+      "id": 20,
+      "username": "real-test@example.com",
+      "email": "real-test@example.com",
+      "first_name": "SMTP",
+      "last_name": "Tester"
+    }
+  ],
+  "related": {
+    "18": {
+      "auth_user_groups.user_id": [],
+      "auth_user_user_permissions.user_id": [],
+      "signtext_userprofile.user_id": [
+        {
+          "id": 17,
+          "full_name": "Kyla Ramirez",
+          "year_level": "3",
+          "role": "student",
+          "security_pin": "",
+          "created_at": "2026-05-26 10:22:14.608292+08:00",
+          "user_id": 18,
+          "active": 0,
+          "first_name": "Kyla",
+          "middle_name": "",
+          "last_name": "Ramirez",
+          "suffix": "",
+          "photo": ""
+        }
+      ],
+      "django_admin_log.user_id": [],
+      "signtext_userlearningstate.user_id": [
+        {
+          "id": 17,
+          "state": {
+            "rank": 0,
+            "points": 0,
+            "streak": 0,
+            "accuracy": 0,
+            "leaderboard": [],
+            "performance": [],
+            "achievements": [],
+            "moduleProgress": {
+              "lesson1": 0,
+              "lesson2": 0,
+              "lesson3": 0,
+              "lesson4": 0,
+              "lesson5": 0,
+              "lesson6": 0,
+              "lesson7": 0,
+              "lesson8": 0
+            },
+            "recentActivity": [],
+            "weeklyActivity": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "practiceMinutes": 0,
+            "completedActivities": 0
+          },
+          "created_at": "2026-05-26 10:24:05.101070+08:00",
+          "updated_at": "2026-05-26 10:24:05.105086+08:00",
+          "user_id": 18
+        }
+      ],
+      "signtext_learningmodule.created_by_id": [],
+      "signtext_learningmodule.updated_by_id": [],
+      "signtext_announcement.created_by_id": [],
+      "signtext_announcement.updated_by_id": [],
+      "signtext_modulefile.uploaded_by_id": [],
+      "signtext_emailotp.user_id": [],
+      "signtext_game.created_by_id": [],
+      "signtext_gamecontent.created_by_id": []
+    },
+    "19": {
+      "auth_user_groups.user_id": [],
+      "auth_user_user_permissions.user_id": [],
+      "signtext_userprofile.user_id": [],
+      "django_admin_log.user_id": [],
+      "signtext_userlearningstate.user_id": [],
+      "signtext_learningmodule.created_by_id": [],
+      "signtext_learningmodule.updated_by_id": [],
+      "signtext_announcement.created_by_id": [],
+      "signtext_announcement.updated_by_id": [],
+      "signtext_modulefile.uploaded_by_id": [],
+      "signtext_emailotp.user_id": [
+        {
+          "id": 9,
+          "otp": "813725",
+          "created_at": "2026-05-26 10:23:31.229298+08:00",
+          "expires_at": "2026-05-26 10:38:31.227299+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 10,
+          "otp": "760875",
+          "created_at": "2026-05-26 10:23:51.264123+08:00",
+          "expires_at": "2026-05-26 10:38:51.263122+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 13,
+          "otp": "234653",
+          "created_at": "2026-05-26 10:29:30.163056+08:00",
+          "expires_at": "2026-05-26 10:44:30.163056+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 14,
+          "otp": "689355",
+          "created_at": "2026-05-26 10:29:50.122770+08:00",
+          "expires_at": "2026-05-26 10:44:50.122770+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 19,
+          "otp": "690055",
+          "created_at": "2026-05-26 10:30:30.124636+08:00",
+          "expires_at": "2026-05-26 10:45:30.124636+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 20,
+          "otp": "776496",
+          "created_at": "2026-05-26 10:30:34.473733+08:00",
+          "expires_at": "2026-05-26 10:45:34.473733+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 23,
+          "otp": "579910",
+          "created_at": "2026-05-26 10:30:46.850381+08:00",
+          "expires_at": "2026-05-26 10:45:46.850381+08:00",
+          "attempts": 0,
+          "user_id": 19
+        },
+        {
+          "id": 24,
+          "otp": "443621",
+          "created_at": "2026-05-26 10:30:53.259082+08:00",
+          "expires_at": "2026-05-26 10:45:53.259082+08:00",
+          "attempts": 0,
+          "user_id": 19
+        }
+      ],
+      "signtext_game.created_by_id": [],
+      "signtext_gamecontent.created_by_id": []
+    },
+    "20": {
+      "auth_user_groups.user_id": [],
+      "auth_user_user_permissions.user_id": [],
+      "signtext_userprofile.user_id": [],
+      "django_admin_log.user_id": [],
+      "signtext_userlearningstate.user_id": [],
+      "signtext_learningmodule.created_by_id": [],
+      "signtext_learningmodule.updated_by_id": [],
+      "signtext_announcement.created_by_id": [],
+      "signtext_announcement.updated_by_id": [],
+      "signtext_modulefile.uploaded_by_id": [],
+      "signtext_emailotp.user_id": [
+        {
+          "id": 11,
+          "otp": "666730",
+          "created_at": "2026-05-26 10:24:14.289473+08:00",
+          "expires_at": "2026-05-26 10:39:14.288475+08:00",
+          "attempts": 0,
+          "user_id": 20
+        },
+        {
+          "id": 12,
+          "otp": "646834",
+          "created_at": "2026-05-26 10:29:23.914581+08:00",
+          "expires_at": "2026-05-26 10:44:23.914581+08:00",
+          "attempts": 0,
+          "user_id": 20
+        },
+        {
+          "id": 21,
+          "otp": "638391",
+          "created_at": "2026-05-26 10:30:37.607954+08:00",
+          "expires_at": "2026-05-26 10:45:37.607954+08:00",
+          "attempts": 0,
+          "user_id": 20
+        },
+        {
+          "id": 22,
+          "otp": "828479",
+          "created_at": "2026-05-26 10:30:41.541025+08:00",
+          "expires_at": "2026-05-26 10:45:41.540033+08:00",
+          "attempts": 0,
+          "user_id": 20
+        }
+      ],
+      "signtext_game.created_by_id": [],
+      "signtext_gamecontent.created_by_id": []
+    }
+  }
+}

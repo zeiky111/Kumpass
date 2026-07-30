@@ -1,67 +1,181 @@
+// Session-based authentication using HTTP-only cookies
+const DEFAULT_API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return '';
+}
+
+async function ensureCsrfToken(base = DEFAULT_API_BASE) {
+    const existingToken = getCookie('csrftoken');
+    if (existingToken) {
+        return existingToken;
+    }
+
+    try {
+        await fetch(`${base}/auth/csrf/`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+    } catch (_) {
+        return '';
+    }
+
+    return getCookie('csrftoken');
+}
+
+// Check if user is authenticated with the backend
+async function isUserAuthenticated() {
+    try {
+        const response = await fetch(`${DEFAULT_API_BASE}/auth/me/`, {
+            method: 'GET',
+            credentials: 'include' // Important: send cookies
+        });
+        return response.ok;
+    } catch (_) {
+        return false;
+    }
+}
+
+// Get current user from backend session
+async function getCurrentUser() {
+    try {
+        const response = await fetch(`${DEFAULT_API_BASE}/auth/me/`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.user || null;
+    } catch (_) {
+        return null;
+    }
+}
+
+// Require authentication on protected pages
+async function requireAuth() {
+    const isAuth = await isUserAuthenticated();
+    if (!isAuth) {
+        window.location.replace('login.html');
+        return false;
+    }
+    return true;
+}
+
+// Logout user
+async function logoutUser() {
+    try {
+        await fetch(`${DEFAULT_API_BASE}/auth/logout/`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (_) {
+        // Continue logout even if request fails
+    }
+    window.location.replace('index.html');
+}
+
 // Login and Registration Form Handler
 document.addEventListener('DOMContentLoaded', function() {
-    const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+    const API_BASE = DEFAULT_API_BASE;
 
-    async function postJson(path, payload) {
-        const response = await fetch(`${API_BASE}${path}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
+    function getUrl(path, base = API_BASE) {
+        return `${base.replace(/\/$/, '')}${path}`;
+    }
+
+    async function postJson(path, payload, base = API_BASE) {
+        let response;
+        try {
+            const csrfToken = await ensureCsrfToken(base);
+            response = await fetch(getUrl(path, base), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {})
+                },
+                credentials: 'include', // Important: send and receive cookies
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            throw new Error(`Cannot reach the backend at ${base}. Start the Django server and try again.`);
+        }
 
         let data = {};
+        let responseText = '';
         try {
-            data = await response.json();
+            responseText = await response.text();
+            if (responseText) {
+                try {
+                    data = JSON.parse(responseText);
+                } catch (_) {
+                    data = {};
+                }
+            }
         } catch (_) {
             data = {};
         }
 
         if (!response.ok) {
-            let message = data.error || 'Request failed';
+            let message = data.error || data.detail || responseText || `Request failed (${response.status})`;
             if (typeof message === 'object') {
                 message = Object.values(message).flat().join(' ');
             }
-            throw new Error(message);
+            const error = new Error(message);
+            error.status = response.status;
+            error.data = data;
+            throw error;
         }
 
         return data;
-    }
-
-    function saveCurrentUser(user) {
-        localStorage.setItem('currentUser', JSON.stringify({
-            name: user.name,
-            email: user.email,
-            yearLevel: user.yearLevel,
-            role: user.role
-        }));
     }
 
     // Handle registration form submission
     const registerForm = document.getElementById('registerForm');
     const yearLevelSelect = document.getElementById('yearLevel');
 
-    function sanitizeName(value) {
+    function sanitizeNamePart(value) {
         return String(value || '')
             .replace(/[<>]/g, '')
             .replace(/\s+/g, ' ')
-            .trim();
+            .trim()
+            .split(' ')
+            .filter(Boolean)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     }
     
+    function setButtonLoading(form, loadingText) {
+        const button = form.querySelector('button[type="submit"]');
+        if (!button) return () => {};
+        const originalHtml = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText}`;
+        return () => {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        };
+    }
+
     if (registerForm) {
         registerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const fullname = sanitizeName(document.getElementById('fullname').value);
+
+            const firstName = sanitizeNamePart(document.getElementById('firstName').value);
+            const middleName = sanitizeNamePart(document.getElementById('middleName').value);
+            const lastName = sanitizeNamePart(document.getElementById('lastName').value);
+            const suffix = sanitizeNamePart(document.getElementById('suffix').value);
             const email = String(document.getElementById('email').value || '').trim().toLowerCase();
             const yearLevel = yearLevelSelect ? String(yearLevelSelect.value || '').trim() : '';
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
             // Validation
-            if (!fullname || !email || !password || !confirmPassword) {
-                alert('Please fill in all fields');
+            if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                alert('Please fill in all required fields');
                 return;
             }
 
@@ -80,20 +194,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            const restoreButton = setButtonLoading(registerForm, 'Creating account...');
             try {
                 const result = await postJson('/auth/signup/', {
-                    fullname,
+                    firstName,
+                    middleName,
+                    lastName,
+                    suffix,
                     email,
                     yearLevel,
                     password,
                     confirmPassword
                 });
 
-                saveCurrentUser(result.user);
-                alert('Registration successful! Redirecting to your dashboard...');
-                window.location.href = result.redirect || 'dashboard.html';
+                if (result.error && result.error !== 'email_delivery_failed') {
+                    throw new Error(result.message || result.error || 'Registration failed');
+                }
+
+                const redirectTarget = new URL(result.redirect || 'verify-email.html', window.location.href).href;
+                let message = result.message || 'Registration successful! A verification code was sent to your email.';
+                if (result.warning === 'email_delivery_failed' || result.error === 'email_delivery_failed') {
+                    message = 'Your account was created, but we could not send the verification email automatically. Please use the verification page to resend the code.';
+                }
+                alert(`${message}\nYou will be redirected to the verification page.`);
+                window.location.replace(redirectTarget);
             } catch (error) {
-                alert(`Signup failed: ${error.message}`);
+                restoreButton();
+                const errorMsg = error.message || 'Registration failed';
+                alert(`Registration Error: ${errorMsg}\n\nPlease check your information and try again.`);
             }
         });
     }
@@ -107,6 +235,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    function setupPasswordToggles() {
+        document.querySelectorAll('.password-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const fieldContainer = this.closest('.password-field');
+                if (!fieldContainer) return;
+                const input = fieldContainer.querySelector('.form-input');
+                if (!input) return;
+
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                const icon = this.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                }
+                this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            });
+        });
+    }
+
+    setupPasswordToggles();
+
     // Handle login form submission
     const loginForm = document.getElementById('loginForm');
     
@@ -114,18 +264,46 @@ document.addEventListener('DOMContentLoaded', function() {
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const email = String(document.getElementById('email').value || '').trim().toLowerCase();
+            const loginId = String(document.getElementById('email').value || '').trim();
             const password = document.getElementById('password').value;
-            
-            try {
-                const result = await postJson('/auth/login/', {
-                    email,
-                    password
-                });
 
-                saveCurrentUser(result.user);
-                window.location.href = result.redirect || 'dashboard.html';
+            if (!loginId || !password) {
+                alert('Please enter your email/username and password.');
+                return;
+            }
+            
+            const restoreButton = setButtonLoading(loginForm, 'Signing in...');
+            try {
+                let result;
+                try {
+                    result = await postJson('/auth/login/', {
+                        email: loginId,
+                        password
+                    });
+                } catch (firstError) {
+                    // If the stored API base is different from the default, retry
+                    // using the default backend when the error indicates the stored
+                    // API is unreachable or returned a 401 (account may exist on
+                    // the default backend).
+                    const msg = String(firstError && firstError.message || '');
+                    const status = firstError && firstError.status;
+                    const networkFailed = msg.includes('Cannot reach the backend') || msg.includes('Failed to fetch') || msg.includes('NetworkError');
+                    const shouldRetryWithDefault = API_BASE !== DEFAULT_API_BASE && (networkFailed || status === 401);
+                    if (shouldRetryWithDefault) {
+                        console.warn('Retrying login using default backend API base because stored API base failed:', msg || status);
+                        result = await postJson('/auth/login/', {
+                            email: loginId,
+                            password
+                        }, DEFAULT_API_BASE);
+                    } else {
+                        throw firstError;
+                    }
+                }
+
+                const redirectTarget = new URL(result.redirect || 'dashboard.html', window.location.href).href;
+                window.location.replace(redirectTarget);
             } catch (error) {
+                restoreButton();
                 alert(`Login failed: ${error.message}`);
             }
         });

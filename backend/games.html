@@ -1,0 +1,436 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Games - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background-color: #4169e1;
+            padding: 15px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        
+        .navbar a:hover {
+            opacity: 0.8;
+        }
+        
+        .navbar a.logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navbar .logo img {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+        
+        .navbar a.logout-btn {
+            float: right;
+            margin-right: 0;
+        }
+        
+        .navbar a.profile-link {
+            float: right;
+            margin-right: 20px;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .page-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .page-header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Loading and Error States */
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* Games List */
+        .games-section {
+            margin-bottom: 50px;
+        }
+
+        .game-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4169e1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .game-icon {
+            font-size: 28px;
+        }
+
+        /* Difficulty Tabs */
+        .difficulty-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-tab {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .difficulty-tab:hover {
+            border-color: #4169e1;
+            color: #4169e1;
+        }
+
+        .difficulty-tab.active {
+            background: #4169e1;
+            color: white;
+            border-color: #4169e1;
+        }
+
+        .difficulty-tab.easy { border-left: 4px solid #27ae60; }
+        .difficulty-tab.easy.active { background: #27ae60; border-left: 4px solid #27ae60; }
+
+        .difficulty-tab.medium { border-left: 4px solid #f39c12; }
+        .difficulty-tab.medium.active { background: #f39c12; border-left: 4px solid #f39c12; }
+
+        .difficulty-tab.hard { border-left: 4px solid #e74c3c; }
+        .difficulty-tab.hard.active { background: #e74c3c; border-left: 4px solid #e74c3c; }
+
+        /* Levels Grid */
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .level-btn {
+            padding: 20px 15px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .level-btn:hover {
+            border-color: #4169e1;
+            transform: scale(1.05);
+        }
+
+        .level-btn.level-1 { color: #4169e1; }
+        .level-btn.level-2 { color: #27ae60; }
+        .level-btn.level-3 { color: #f39c12; }
+        .level-btn.level-4 { color: #e74c3c; }
+        .level-btn.level-5 { color: #9b59b6; }
+
+        .level-info {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 8px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 24px;
+            }
+
+            .levels-grid {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                gap: 10px;
+            }
+
+            .difficulty-tabs {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="navbar">
+        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="learning.html">Learn</a>
+        <a href="activities.html">Activities</a>
+        <a href="translator.html">Translators</a>
+        <a href="leaderboard.html">Leaderboard</a>
+        <a href="profile.html" class="profile-link">Profile</a>
+        <a href="index.html" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>🎮 Interactive Games</h1>
+            <p>Learn sign language through fun and interactive games</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <!-- Loading State -->
+        <div id="loadingMessage" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading games...
+        </div>
+
+        <!-- Games Container -->
+        <div id="gamesContainer" style="display: none;"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">🎮</div>
+            <p>No games available for your year level yet.</p>
+        </div>
+    </div>
+
+    <script src="js/portal.js"></script>
+    <script>
+        let currentGame = null;
+        let currentDifficulty = null;
+        let games = [];
+
+        // Initialize page
+        async function initializeGames() {
+            try {
+                // Check authentication
+                const stored = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!stored.id) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Fetch games from API
+                const response = await fetch('/api/games/', {
+                    headers: {
+                        'Authorization': Bearer ${localStorage.getItem('token') || ''}
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = 'index.html';
+                    }
+                    throw new Error(Failed to load games: {response.status});
+                }
+
+                const data = await response.json();
+                games = data.games || [];
+
+                document.getElementById('loadingMessage').style.display = 'none';
+
+                if (games.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                } else {
+                    renderGames();
+                    document.getElementById('gamesContainer').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading games:', error);
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        function renderGames() {
+            const container = document.getElementById('gamesContainer');
+            container.innerHTML = '';
+
+            games.forEach(game => {
+                if (!game.difficulties || game.difficulties.length === 0) return;
+
+                const gameSection = document.createElement('div');
+                gameSection.className = 'games-section';
+
+                const gameTitle = document.createElement('div');
+                gameTitle.className = 'game-title';
+                gameTitle.innerHTML = \
+                    <span class="game-icon">\</span>
+                    <span>\</span>
+                \;
+                gameSection.appendChild(gameTitle);
+
+                // Difficulty tabs
+                const difficultyTabs = document.createElement('div');
+                difficultyTabs.className = 'difficulty-tabs';
+
+                game.difficulties.forEach((difficulty, index) => {
+                    const tab = document.createElement('button');
+                    tab.className = \difficulty-tab \\;
+                    if (index === 0) tab.classList.add('active');
+                    tab.textContent = difficulty.difficulty.charAt(0).toUpperCase() + difficulty.difficulty.slice(1);
+                    tab.onclick = () => selectDifficulty(game.id, difficulty, tab);
+                    difficultyTabs.appendChild(tab);
+                });
+                gameSection.appendChild(difficultyTabs);
+
+                // Levels grid
+                const levelsGrid = document.createElement('div');
+                levelsGrid.className = 'levels-grid';
+                levelsGrid.id = \levels-\\;
+
+                // Show levels for first difficulty by default
+                const firstDifficulty = game.difficulties[0];
+                renderLevels(levelsGrid, game.id, firstDifficulty.levels);
+
+                gameSection.appendChild(levelsGrid);
+                container.appendChild(gameSection);
+            });
+        }
+
+        function renderLevels(container, gameId, levels) {
+            container.innerHTML = '';
+            
+            if (!levels || levels.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;"><p>No levels available</p></div>';
+                return;
+            }
+
+            levels.forEach(level => {
+                const levelBtn = document.createElement('button');
+                levelBtn.className = \level-btn level-\\;
+                levelBtn.innerHTML = \
+                    <div>Level \</div>
+                    <div class="level-info">\ items</div>
+                \;
+                levelBtn.onclick = () => selectLevel(level.id);
+                container.appendChild(levelBtn);
+            });
+        }
+
+        function selectDifficulty(gameId, difficulty, tabElement) {
+            // Update active tab
+            const tabs = tabElement.parentElement.querySelectorAll('.difficulty-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            tabElement.classList.add('active');
+
+            // Update levels grid
+            const levelsGrid = document.getElementById(\levels-\\);
+            renderLevels(levelsGrid, gameId, difficulty.levels);
+
+            currentDifficulty = difficulty;
+        }
+
+        async function selectLevel(gameLevelId) {
+            try {
+                // Fetch content for this level
+                const response = await fetch(\/api/games/content/?gameLevelId=\\, {
+                    headers: {
+                        'Authorization': \Bearer \\
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load level content');
+                }
+
+                const data = await response.json();
+                
+                // Store content in localStorage for the game to use
+                localStorage.setItem('currentGameContent', JSON.stringify(data));
+
+                // TODO: Redirect to actual game based on game type
+                // For now, just show the content
+                console.log('Game content:', data);
+                alert(\Level \ has \ items!\);
+
+            } catch (error) {
+                console.error('Error loading level:', error);
+                alert('Failed to load level: ' + error.message);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeGames);
+    </script>
+</body>
+</html>

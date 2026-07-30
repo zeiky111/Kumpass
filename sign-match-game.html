@@ -5,100 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Match Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/bg-orbs.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="js/theme.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #eff6ff;
+            color: #1f2937;
         }
-        
-        /* Navbar */
-        .navbar {
-            background-color: #4169e1;
-            padding: 15px;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        h1, h2, h3 {
+            font-family: 'Poppins', 'Inter', sans-serif;
         }
-        
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            margin-right: 20px;
-            font-size: 15px;
-            transition: opacity 0.2s;
-        }
-        
-        .navbar a:hover {
-            opacity: 0.8;
-        }
-        
-        .navbar a.logo {
-            font-size: 24px;
-            font-weight: bold;
-            margin-right: 30px;
-        }
-        
-        .navbar a.logout-btn {
-            float: right;
-            margin-right: 0;
-        }
-        
-        .navbar a.profile-link {
-            float: right;
-            margin-right: 20px;
-        }
-        
+
+
         /* Container */
         .container {
             max-width: 900px;
             margin: 0 auto;
-            padding: 30px 20px;
+            padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.25rem) clamp(2rem, 5vw, 3.5rem);
         }
-        
+
         /* Page Header */
         .page-header {
-            margin-bottom: 30px;
+            margin-bottom: 28px;
             text-align: center;
         }
-        
+
         .page-header h1 {
-            font-size: 32px;
+            font-size: clamp(1.35rem, 2.2vw + 1rem, 2rem);
+            font-weight: 800;
             margin-bottom: 10px;
-            color: #333;
+            color: #ffffff;
+            letter-spacing: -0.02em;
         }
-        
+
         .page-header p {
-            color: #666;
+            color: rgba(255,255,255,0.88);
             font-size: 16px;
         }
-        
+
         /* Game Card */
         .game-card {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
             padding: 40px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
         }
-        
+
         .game-card h2 {
             font-size: 24px;
             margin-bottom: 10px;
-            color: #333;
+            color: #0f172a;
+            font-weight: 700;
         }
-        
+
         .game-info {
-            color: #666;
+            color: #64748b;
             margin-bottom: 20px;
             padding: 15px;
-            background: #f5f5f5;
-            border-radius: 6px;
+            background: #f8fafc;
+            border-radius: 12px;
         }
         
         /* Difficulty Selector */
@@ -119,26 +95,36 @@
         }
         
         .difficulty-btn {
-            padding: 8px 16px;
-            border: 2px solid #ddd;
+            padding: 9px 18px;
+            border: 2px solid #e2e8f0;
             background: white;
-            border-radius: 6px;
+            border-radius: 999px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.25s;
         }
-        
+
         .difficulty-btn:hover {
-            border-color: #4169e1;
-            color: #4169e1;
+            border-color: #2563eb;
+            color: #2563eb;
         }
-        
+
         .difficulty-btn.selected {
-            background: #4169e1;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
-            border-color: #4169e1;
+            border-color: transparent;
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
         }
-        
+
+        .difficulty-btn.locked,
+        .difficulty-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+            border-color: #ccc;
+            background: #f9f9f9;
+            color: #777;
+        }
+
         /* Score Section */
         .score-section {
             display: flex;
@@ -146,25 +132,31 @@
             margin-bottom: 30px;
             justify-content: center;
         }
-        
+
         .score-box {
-            background: #f5f5f5;
+            background: #f8fafc;
+            border: 1px solid rgba(148,163,184,0.14);
             padding: 15px 25px;
-            border-radius: 6px;
+            border-radius: 16px;
             text-align: center;
+            transition: transform 0.2s ease;
         }
-        
+
+        .score-box:hover {
+            transform: translateY(-3px);
+        }
+
         .score-box .label {
             font-size: 12px;
-            color: #666;
+            color: #64748b;
             font-weight: 600;
             text-transform: uppercase;
         }
-        
+
         .score-box .value {
             font-size: 24px;
             font-weight: bold;
-            color: #4169e1;
+            color: #2563eb;
         }
         
         /* Game Play Area */
@@ -176,14 +168,21 @@
             text-align: center;
             margin: 30px 0;
             padding: 20px;
-            background: #f0f0f0;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
         }
 
         .sign-video {
             width: min(460px, 100%);
-            border-radius: 8px;
+            aspect-ratio: 4 / 3;
+            border-radius: 14px;
             background: #000;
+            display: block;
+            object-fit: contain;
+            object-position: center center;
+            box-shadow: 0 12px 28px rgba(15,23,42,0.14);
         }
         
         .question {
@@ -201,121 +200,244 @@
         
         .option-btn {
             padding: 15px;
-            border: 2px solid #ddd;
+            border: 2px solid #e2e8f0;
             background: white;
-            border-radius: 6px;
+            border-radius: 14px;
             cursor: pointer;
             font-size: 14px;
-            transition: all 0.3s;
+            transition: all 0.25s;
             text-align: left;
             font-weight: 600;
         }
-        
+
         .option-btn:hover {
-            border-color: #4169e1;
+            border-color: #2563eb;
             background: #f0f7ff;
+            transform: translateY(-2px);
         }
-        
+
         .option-btn.selected {
-            background: #4169e1;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
-            border-color: #4169e1;
+            border-color: transparent;
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
         }
-        
+
         /* Feedback */
         .feedback {
             padding: 15px;
-            border-radius: 6px;
+            border-radius: 14px;
             margin-bottom: 20px;
             font-weight: 600;
             text-align: center;
             display: none;
             font-size: 18px;
         }
-        
+
         .feedback.show {
             display: block;
+            animation: kdRiseIn 0.35s ease both;
         }
-        
+
         .feedback.correct {
             background: #d1fae5;
             color: #065f46;
         }
-        
+
         .feedback.incorrect {
             background: #fee2e2;
             color: #991b1b;
         }
-        
+
         /* Buttons */
         .button-group {
             display: flex;
             gap: 10px;
             justify-content: center;
         }
-        
+
         .btn {
-            padding: 12px 24px;
+            padding: 12px 26px;
             border: none;
-            border-radius: 6px;
+            border-radius: 999px;
             cursor: pointer;
             font-weight: 600;
             font-size: 14px;
-            transition: all 0.3s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
-        
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
         .btn-primary {
-            background: #4169e1;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
         }
-        
+
         .btn-primary:hover {
-            background: #2e52b8;
+            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
         }
-        
+
         .btn-secondary {
-            background: #ddd;
-            color: #333;
+            background: #e2e8f0;
+            color: #334155;
         }
-        
+
         .btn-secondary:hover {
-            background: #bbb;
+            background: #cbd5e1;
         }
-        
+
         .btn-back {
-            background: #666;
+            background: #475569;
             color: white;
             text-decoration: none;
             display: inline-block;
         }
-        
+
         .btn-back:hover {
-            background: #444;
+            background: #334155;
         }
         
         @media (max-width: 768px) {
             .game-card {
                 padding: 20px;
             }
-            
+
             .sign-display {
                 padding: 14px;
             }
         }
+
+        /* ---- Dark theme overrides ---- */
+        :root[data-theme="dark"] .game-card {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .game-card h2 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .game-info {
+            background: var(--surface-card-alt);
+            color: var(--text-muted);
+        }
+
+        :root[data-theme="dark"] .difficulty-section label {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .difficulty-btn {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .difficulty-btn.locked,
+        :root[data-theme="dark"] .difficulty-btn:disabled {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+            color: var(--text-muted);
+        }
+
+        :root[data-theme="dark"] .score-box {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .score-box .label {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .sign-display {
+            background: var(--surface-card-alt);
+        }
+
+        :root[data-theme="dark"] .question {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .option-btn {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .option-btn:hover {
+            background: rgba(37,99,235,0.16);
+        }
+
+        :root[data-theme="dark"] .feedback.correct {
+            background: rgba(16, 185, 129, 0.16);
+            color: #6ee7b7;
+        }
+
+        :root[data-theme="dark"] .feedback.incorrect {
+            background: rgba(239, 68, 68, 0.16);
+            color: #fca5a5;
+        }
+
+        :root[data-theme="dark"] .btn-secondary {
+            background: #232e45;
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .btn-secondary:hover {
+            background: #2a3448;
+        }
     </style>
 </head>
-<body data-required-year="1">
-    <!-- Navigation -->
-    <div class="navbar">
-        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo" style="width:72px;height:72px;object-fit:contain;vertical-align:middle;margin-right:8px;">Kumpas</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="learning.html">Learn</a>
-        <a href="activities.html">Activities</a>
-        <a href="translator.html">Translators</a>
-        <a href="leaderboard.html">Leaderboard</a>
-        <a href="profile.html" class="profile-link">Profile</a>
-        <a href="index.html" class="logout-btn">Logout</a>
+<body data-required-year="1" class="kd-animated-bg">
+    <div class="bg-orbs" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
     </div>
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="learning.html" class="nav-link">Learn</a></li>
+                <li><a href="activities.html" class="nav-link">Activities</a></li>
+                <li><a href="translator.html" class="nav-link">Translators</a></li>
+                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+            </ul>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <!-- Main Content -->
     <div class="container">
@@ -334,11 +456,11 @@
             <div class="difficulty-section">
                 <label>Difficulty Level:</label>
                 <div class="difficulty-buttons">
-                    <button class="difficulty-btn selected" type="button" onclick="setDifficulty('easy', this)">Easy (2-3 choices)</button>
-                    <button class="difficulty-btn" type="button" onclick="setDifficulty('medium', this)">Medium (4 choices)</button>
-                    <button class="difficulty-btn" type="button" onclick="setDifficulty('hard', this)">Hard (6+ choices)</button>
+                    <button class="difficulty-btn selected" data-level="easy" type="button" onclick="setDifficulty('easy', this)">Easy (4 choices)</button>
+                    <button class="difficulty-btn" data-level="medium" type="button" onclick="setDifficulty('medium', this)">Medium (6 choices)</button>
+                    <button class="difficulty-btn" data-level="hard" type="button" onclick="setDifficulty('hard', this)">Hard (8 choices)</button>
                 </div>
-                <div style="margin-top: 10px; color: #555; font-size: 13px;">Random Level: <strong id="randomLevelTag">Level 1</strong></div>
+                <div style="margin-top: 10px; color: #555; font-size: 13px;">Level: <strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></div>
             </div>
 
             <!-- Score Section -->
@@ -365,7 +487,6 @@
                 <div class="feedback" id="feedback"></div>
                 <div class="button-group">
                     <button class="btn btn-primary" type="button" onclick="submitAnswer()">Submit Answer</button>
-                    <button class="btn btn-secondary" type="button" onclick="nextQuestion()">Next Question</button>
                 </div>
                 <br><br>
                 <div class="button-group">
@@ -375,10 +496,12 @@
         </div>
     </div>
 
-    <script src="js/year-access.js"></script>
     <script src="js/portal.js"></script>
+    <script src="js/games-common.js"></script>
+    <script src="js/game-preview.js"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
+            if (window.KumpasGamePreview && window.KumpasGamePreview.active) return;
             if (!window.KumpasPortal || typeof window.KumpasPortal.recordProgress !== 'function') return;
             window.KumpasPortal.recordProgress({
                 moduleId: 'lesson2',
@@ -393,103 +516,123 @@
             });
         }
 
-        const questions = [
-            { label: 'Are you deaf or hearing', video: 'vid/are%20you%20deaf%20or%20hearing.mp4' },
-            { label: 'Come here', video: 'vid/come%20here.mp4' },
-            { label: 'Come lets eat', video: 'vid/come%20lets%20eat.mp4' },
-            { label: 'Excuse', video: 'vid/excuse%20.mp4' },
-            { label: 'Hello', video: 'vid/hello.mp4' },
-            { label: 'How are you', video: 'vid/how%20are%20you.mp4' },
-            { label: 'I love you', video: 'vid/iloveyou.mp4' },
-            { label: 'Im sorry', video: 'vid/im%20sorry.mp4' },
-            { label: 'Try again', video: 'vid/try%20again.mp4' },
-            { label: 'Whats your name', video: 'vid/whats%20your%20name.mp4' }
-        ];
+        // Sign videos are loaded from the database (SignVideo table), populated
+        // from the "Sign Language" media library. scope=games excludes videos
+        // uploaded via the Admin "Sign Language Videos" manager, which are
+        // meant for Text-to-Sign only.
+        const SIGN_VIDEOS_API = `${KumpasGames.API_BASE}/sign-videos/?scope=games`;
+        const { videoMimeType } = KumpasGames;
 
-        let difficulty = 'easy';
-        let currentLevel = 1;
-        let score = 0;
-        let correct = 0;
-        let total = questions.length;
+        let fallbackQuestions = [];
+
+        async function loadFallbackQuestions() {
+            const response = await fetch(SIGN_VIDEOS_API);
+            if (!response.ok) throw new Error(`Failed to load sign videos (${response.status})`);
+            const items = await response.json();
+            fallbackQuestions = items.map(item => ({ label: item.word, video: item.video_url }));
+        }
+
+        // Difficulty only changes the number of multiple-choice options shown.
+        const engine = KumpasGames.createGameEngine({
+            choiceCounts: { easy: 3, medium: 4, hard: 6 },
+            pointBase: { easy: 10, medium: 14, hard: 18 },
+            fallbackQuestionCounts: { easy: 4, medium: 5, hard: 6 },
+        });
+
         let activeQuestions = [];
         let currentIndex = 0;
+        let answered = false;
+        let advanceTimer = null;
 
-        function chooseRandomLevel() {
-            const levels = [1, 2, 3];
-            currentLevel = levels[Math.floor(Math.random() * levels.length)];
+        function updateLevelTag() {
             const levelTag = document.getElementById('randomLevelTag');
-            if (levelTag) {
-                levelTag.textContent = `Level ${currentLevel}`;
+            const ofTotal = document.getElementById('levelOfTotal');
+            if (levelTag) levelTag.textContent = `Level ${engine.currentLevelNumber()}`;
+            if (ofTotal) {
+                const totalLevels = engine.totalLevelsForDifficulty(engine.state.difficulty);
+                ofTotal.textContent = totalLevels ? `of ${totalLevels}` : '';
             }
         }
 
-        function setDifficulty(level, button) {
-            difficulty = level;
-            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('selected'));
-            if (button) button.classList.add('selected');
-            resetGame();
+        function buildOptions(question) {
+            const count = engine.getChoiceCount();
+            const otherLabels = engine.getActivePool()
+                .map(item => item.label)
+                .filter(label => label !== question.label);
+
+            const distractors = engine.shuffle(otherLabels).slice(0, Math.max(1, count - 1));
+            const base = [question.label, ...distractors];
+            return engine.shuffle(base);
         }
 
-        function resetGame() {
-            chooseRandomLevel();
-            score = 0;
-            correct = 0;
+        function setDifficulty(level, button) {
+            if (!engine.canSelectDifficulty(level)) {
+                alert('Please finish the previous difficulty before continuing.');
+                return;
+            }
+            engine.setDifficulty(level, true);
+            startLevel();
+        }
+
+        function startLevel(resetScore = false) {
+            if (advanceTimer) {
+                clearTimeout(advanceTimer);
+                advanceTimer = null;
+            }
+            if (resetScore) {
+                engine.state.score = 0;
+                engine.state.correct = 0;
+            }
             currentIndex = 0;
-            activeQuestions = shuffle(questions.slice()).slice(0, getQuestionLimit());
-            total = activeQuestions.length;
+            activeQuestions = engine.buildQuestionsForCurrentLevel();
+            engine.state.total = activeQuestions.length;
+            engine.updateDifficultyButtons();
             updateScores();
             nextQuestion();
         }
 
-        function shuffle(array) {
-            return array
-                .map(value => ({ value, sort: Math.random() }))
-                .sort((a, b) => a.sort - b.sort)
-                .map(item => item.value);
-        }
-
-        function getOptionCount() {
-            if (difficulty === 'easy') return Math.min(4, 2 + currentLevel);
-            if (difficulty === 'medium') return Math.min(6, 3 + currentLevel);
-            return Math.min(8, 5 + currentLevel);
-        }
-
-        function getQuestionLimit() {
-            if (difficulty === 'easy') return Math.min(questions.length, 4 + currentLevel);
-            if (difficulty === 'medium') return Math.min(questions.length, 5 + currentLevel);
-            return Math.min(questions.length, 6 + currentLevel);
-        }
-
-        function buildOptions(question) {
-            const count = getOptionCount();
-            const otherLabels = questions
-                .map(item => item.label)
-                .filter(label => label !== question.label);
-
-            const distractors = shuffle(otherLabels).slice(0, Math.max(1, count - 1));
-            const base = [question.label, ...distractors];
-            return shuffle(base);
-        }
-
         function nextQuestion() {
             if (currentIndex >= activeQuestions.length) {
-                resetGame();
+                const result = engine.advance();
+                if (result === 'next-level') {
+                    startLevel(false);
+                } else if (result === 'next-difficulty') {
+                    const nextDifficulty = engine.state.difficulty === 'easy' ? 'medium' : 'hard';
+                    KumpasGames.showCompletionModal({
+                        title: '🎉 Difficulty Complete!',
+                        message: `You finished all levels on ${engine.state.difficulty}. Moving on to ${nextDifficulty}.`,
+                        continueLabel: `Starting ${nextDifficulty[0].toUpperCase()}${nextDifficulty.slice(1)}...`,
+                        autoContinueAfterMs: 1400,
+                        onContinue: () => {
+                            engine.setDifficulty(nextDifficulty, false);
+                            startLevel(false);
+                        },
+                    });
+                } else {
+                    KumpasGames.showCompletionModal({
+                        title: '🏆 Game Complete!',
+                        message: 'You completed every difficulty. Restarting at Easy so you can play again.',
+                        continueLabel: 'Play Again',
+                        onContinue: () => {
+                            engine.setDifficulty('easy', true);
+                            startLevel(false);
+                        },
+                    });
+                }
                 return;
             }
-            
+
+            answered = false;
+            updateLevelTag();
+
             const question = activeQuestions[currentIndex];
-            const signDiv = document.getElementById('sign');
-            signDiv.innerHTML = `
-                <video class="sign-video" controls playsinline preload="metadata">
-                    <source src="${question.video}" type="video/mp4">
-                </video>
-            `;
-            
+            KumpasGames.replaceVideoContent(document.getElementById('sign'), question.video);
+
             const optionsDiv = document.getElementById('options');
-            optionsDiv.innerHTML = '';
-            
+            KumpasGames.clearMediaContainer(optionsDiv);
+
             const opts = buildOptions(question);
-            
+
             opts.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
@@ -498,7 +641,7 @@
                 btn.onclick = () => selectOption(opt, btn);
                 optionsDiv.appendChild(btn);
             });
-            
+
             document.getElementById('feedback').classList.remove('show', 'correct', 'incorrect');
             document.getElementById('feedback').textContent = '';
             clearFeedback();
@@ -510,42 +653,50 @@
         }
 
         function submitAnswer() {
+            if (answered) return;
+
             const question = activeQuestions[currentIndex];
             const selected = document.querySelector('.option-btn.selected');
             const feedbackDiv = document.getElementById('feedback');
-            
+
             if (!selected) {
                 alert('Please select an answer!');
                 return;
             }
-            
-            const isCorrect = selected.textContent === question.label;
-            
+
+            answered = true;
+            document.querySelectorAll('.option-btn').forEach(btn => btn.style.pointerEvents = 'none');
+
+            const isCorrect = engine.normalizeText(selected.textContent) === engine.normalizeText(question.label);
+
             if (isCorrect) {
-                correct++;
-                score += 10;
+                const points = engine.getPointValue();
+                engine.state.correct++;
+                engine.state.score += points;
                 feedbackDiv.classList.remove('incorrect');
                 feedbackDiv.classList.add('correct', 'show');
                 feedbackDiv.textContent = '✓ Correct! Great job!';
-                awardGameProgress(10, 10, currentIndex + 1 >= total);
+                awardGameProgress(points, 10, currentIndex + 1 >= activeQuestions.length && !engine.hasNextLevel());
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');
                 feedbackDiv.textContent = `✗ Incorrect. The correct answer is: ${question.label}`;
             }
-            
+
             updateScores();
 
-            setTimeout(() => {
+            if (advanceTimer) clearTimeout(advanceTimer);
+            advanceTimer = setTimeout(() => {
+                advanceTimer = null;
                 currentIndex += 1;
                 nextQuestion();
             }, 900);
         }
 
         function updateScores() {
-            document.getElementById('score').textContent = score;
-            document.getElementById('correct').textContent = correct;
-            document.getElementById('total').textContent = total;
+            document.getElementById('score').textContent = engine.state.score;
+            document.getElementById('correct').textContent = engine.state.correct;
+            document.getElementById('total').textContent = engine.state.total;
         }
 
         function clearFeedback() {
@@ -553,8 +704,51 @@
             feedbackDiv.classList.remove('show', 'correct', 'incorrect');
         }
 
+        function getActivePool() { return engine.getActivePool(); }
+        function canSelectDifficulty(level) { return engine.canSelectDifficulty(level); }
+        function switchDifficulty(level, resetScore = true) {
+            engine.setDifficulty(level, resetScore);
+            startLevel(false);
+        }
+
         // Initialize game
-        resetGame();
+        Promise.all([
+            loadFallbackQuestions(),
+            KumpasGames.loadGameLevels('sign_match').then(levels => {
+                engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
+                    levels,
+                    item => (item.prompt && item.media_url) ? { label: item.prompt, video: item.media_url } : null
+                );
+            }),
+        ])
+            .then(() => {
+                engine.state.fallbackPool = fallbackQuestions;
+                const levelCounts = {
+                    easy: engine.totalLevelsForDifficulty('easy') || '1 (default set)',
+                    medium: engine.totalLevelsForDifficulty('medium') || '1 (default set)',
+                    hard: engine.totalLevelsForDifficulty('hard') || '1 (default set)',
+                };
+                KumpasGames.initInstructionsModal({
+                    title: 'Sign Match Game',
+                    icon: '🎯',
+                    objective: 'Watch a sign-language video and pick the word that matches its meaning.',
+                    howToPlay: [
+                        'A short sign-language video plays for each question.',
+                        'Choose the word you think matches the sign from the options shown.',
+                        'Click "Submit Answer" to check your choice, then move to the next question.',
+                    ],
+                    scoring: [
+                        'Correct answers earn points based on your difficulty and current level.',
+                        'Harder difficulties and higher levels are worth more points.',
+                    ],
+                    levelCounts,
+                    onStart: () => startLevel(true),
+                });
+            })
+            .catch(err => {
+                console.error('Failed to load sign videos:', err);
+                document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load sign videos. Please refresh the page.</p>';
+            });
     </script>
 </body>
 </html>

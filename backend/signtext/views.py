@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.utils import timezone
 from typing import Any
 from django.db import DatabaseError, OperationalError
+from django.db.models import Q
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -554,7 +555,16 @@ def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
 
 
-def _create_and_send_otp(user: User, request: Any, minutes_valid: int = 15) -> dict:
+def _find_user_by_identifier(identifier: str) -> User | None:
+    normalized = str(identifier or "").strip().lower()
+    if not normalized:
+        return None
+    return User.objects.filter(
+        Q(username__iexact=normalized) | Q(email__iexact=normalized)
+    ).first()
+
+
+def _create_and_send_otp(user: User, request: Any, minutes_valid: int = 15, purpose: str = "verification") -> dict:
     otp = _generate_otp()
     expires = timezone.now() + timedelta(minutes=minutes_valid)
     
@@ -570,18 +580,21 @@ def _create_and_send_otp(user: User, request: Any, minutes_valid: int = 15) -> d
     EmailOTP.objects.filter(user=user, expires_at__gte=timezone.now()).delete()
     EmailOTP.objects.create(user=user, otp=otp, expires_at=expires)
     
-    # send email with OTP
-    subject = "Your Kumpas verification code"
-    message = f"Your verification code is: {otp}\nIt will expire in {minutes_valid} minutes."
+    if purpose == "password_reset":
+        subject = "Your Kumpas password reset code"
+        message = f"Your password reset code is: {otp}\nIt will expire in {minutes_valid} minutes."
+    else:
+        subject = "Your Kumpas verification code"
+        message = f"Your verification code is: {otp}\nIt will expire in {minutes_valid} minutes."
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
     
     try:
-        logger.info(f"Attempting to send OTP {otp} to {recipient_email}")
+        logger.info(f"Attempting to send {purpose} OTP {otp} to {recipient_email}")
         send_mail(subject, message, from_email, [recipient_email], fail_silently=False)
         logger.info(f"OTP successfully sent to {recipient_email}")
         return {"ok": True, "error": None}
     except Exception as e:
-        error_msg = f"Failed to send verification email to {recipient_email}: {str(e)}"
+        error_msg = f"Failed to send {purpose} email to {recipient_email}: {str(e)}"
         logger.exception(error_msg)
         return {"ok": False, "error": error_msg}
 
@@ -652,7 +665,7 @@ def signup(request: Any) -> Response:
             }
             if not result.get("ok"):
                 response["message"] = "Account already exists but verification email could not be sent right now. You can try resending it on the verification page."
-                response["error"] = "email_delivery_failed"
+                response["warning"] = "email_delivery_failed"
                 response["details"] = "Check server logs for SMTP error."
             return Response(response, status=201)
 
@@ -708,7 +721,7 @@ def signup(request: Any) -> Response:
             "redirect": f"verify-email.html?email={email}",
         }
         if not otp_result.get("ok"):
-            response["error"] = "email_delivery_failed"
+            response["warning"] = "email_delivery_failed"
             response["details"] = otp_result.get("error")
 
         return Response(response, status=201)
@@ -899,6 +912,97 @@ def resend_verification(request: Any) -> Response:
         }, status=500)
 
     return Response({"message": "Verification code sent."})
+
+
+@csrf_exempt
+@api_view(["POST"])
+def request_password_reset(request: Any) -> Response:
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+    user = _find_user_by_identifier(email)
+    if not user:
+        return Response({"error": "User not found"}, status=404)
+
+    result = _create_and_send_otp(user, request, purpose="password_reset")
+    if not result.get("ok"):
+        details = result.get("error")
+        return Response({
+            "message": "Failed to send password reset code.",
+            "error": "email_delivery_failed",
+            "details": details,
+        }, status=500)
+
+    return Response({
+        "message": "Password reset code sent to your email.",
+        "redirect": f"reset-password.html?email={email}",
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+def resend_password_reset_code(request: Any) -> Response:
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+    user = _find_user_by_identifier(email)
+    if not user:
+        return Response({"error": "User not found"}, status=404)
+
+    now = timezone.now()
+    recent_otp = (
+        EmailOTP.objects.filter(user=user, expires_at__gte=now, created_at__gte=now - timedelta(seconds=60))
+        .order_by("-created_at")
+        .first()
+    )
+    if recent_otp:
+        return Response({"message": "A reset code was already sent recently. Please check your email."})
+
+    result = _create_and_send_otp(user, request, purpose="password_reset")
+    if not result.get("ok"):
+        details = result.get("error")
+        return Response({
+            "message": "Failed to send password reset code.",
+            "error": "email_delivery_failed",
+            "details": details,
+        }, status=500)
+
+    return Response({"message": "Password reset code sent."})
+
+
+@csrf_exempt
+@api_view(["POST"])
+def reset_password(request: Any) -> Response:
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    otp = str(request.data.get("otp") or request.query_params.get("otp") or "").strip()
+    new_password = str(request.data.get("newPassword") or "").strip()
+    confirm_password = str(request.data.get("confirmPassword") or "").strip()
+
+    if not email or not otp or not new_password or not confirm_password:
+        return Response({"error": "Email, reset code, and new passwords are required."}, status=400)
+    if new_password != confirm_password:
+        return Response({"error": "Passwords do not match"}, status=400)
+    if len(new_password) < 8:
+        return Response({"error": "Password must be at least 8 characters long"}, status=400)
+
+    user = _find_user_by_identifier(email)
+    if not user:
+        return Response({"error": "User not found"}, status=404)
+
+    now = timezone.now()
+    latest = EmailOTP.objects.filter(user=user, expires_at__gte=now).order_by("-created_at").first()
+    if not latest:
+        return Response({"error": "No valid reset code found. Request a new one."}, status=400)
+    if latest.otp != otp:
+        latest.attempts = (latest.attempts or 0) + 1
+        latest.save(update_fields=["attempts"])
+        return Response({"error": "Invalid reset code"}, status=400)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    EmailOTP.objects.filter(user=user).delete()
+
+    return Response({"message": "Password reset successfully. You can now log in."})
 
 
 @api_view(["GET", "POST"])
@@ -1865,29 +1969,13 @@ def game_level_items(request: Any, level_id: int) -> Response:
         return Response(GameLevelItemSerializer(items, many=True).data)
 
     payload = request.data.copy()
-    # Normalize values first so we can validate uniqueness for a "primary" item (order==0)
-    prompt_val = str(payload.get("prompt") or "").strip()
-    answer_val = str(payload.get("answer") or "").strip()
-    media_url_val = str(payload.get("media_url") or "").strip()
-    extra_data_val = payload.get("extra_data") or {}
-    try:
-        order_val = int(payload.get("order") or 0)
-    except Exception:
-        order_val = 0
-
-    # Prevent creating duplicate primary items for a level. Primary is treated as order==0.
-    if order_val == 0:
-        existing_primary = GameLevelItem.objects.filter(level=level, order=0).exists()
-        if existing_primary:
-            return Response({"error": "A primary content item (order=0) already exists for this level. Delete or change it first."}, status=409)
-
     serializer = GameLevelItemSerializer(data={
         "level": level.id,
-        "prompt": prompt_val,
-        "answer": answer_val,
-        "media_url": media_url_val,
-        "extra_data": extra_data_val,
-        "order": order_val,
+        "prompt": str(payload.get("prompt") or "").strip(),
+        "answer": str(payload.get("answer") or "").strip(),
+        "media_url": str(payload.get("media_url") or "").strip(),
+        "extra_data": payload.get("extra_data") or {},
+        "order": int(payload.get("order") or 0),
     })
     if not serializer.is_valid():
         return Response({"error": serializer.errors}, status=400)
@@ -1910,16 +1998,6 @@ def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Respons
         return Response({"message": "Item deleted"})
 
     payload = request.data.copy()
-    # Pre-validate order uniqueness for primary (order==0) when updating
-    try:
-        new_order = int(payload.get("order") or item.order)
-    except Exception:
-        new_order = item.order
-    if new_order == 0:
-        # If another item (different pk) already uses order 0, deny the change
-        if GameLevelItem.objects.filter(level=level, order=0).exclude(pk=item.pk).exists():
-            return Response({"error": "Another primary content item (order=0) already exists for this level. Delete or change it first."}, status=409)
-
     serializer = GameLevelItemSerializer(
         item,
         data={
@@ -1928,7 +2006,7 @@ def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Respons
             "answer": str(payload.get("answer") if payload.get("answer") is not None else item.answer).strip(),
             "media_url": str(payload.get("media_url") if payload.get("media_url") is not None else item.media_url).strip(),
             "extra_data": payload.get("extra_data") if payload.get("extra_data") is not None else item.extra_data,
-            "order": new_order,
+            "order": int(payload.get("order") or item.order),
         },
         partial=True,
     )

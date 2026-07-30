@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module Quiz Builder - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/pages.css" />
+    <link rel="stylesheet" href="css/dashboard-pro.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <style>
+        .quiz-builder-container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.5rem) clamp(2rem, 5vw, 4rem);
+            display: grid;
+            grid-template-columns: 1.4fr 0.8fr;
+            gap: 1.75rem;
+        }
+
+        .quiz-panel,
+        .quiz-sidebar {
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            padding: 1.75rem;
+        }
+
+        .quiz-panel h1,
+        .quiz-panel h2 {
+            margin-top: 0;
+        }
+
+        .quiz-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .quiz-summary span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f3f4f6;
+            border-radius: 999px;
+            padding: 0.65rem 1rem;
+            font-size: 0.92rem;
+            color: #374151;
+        }
+
+        .quiz-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .quiz-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .quiz-form textarea,
+        .quiz-form input,
+        .quiz-form select {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            font-size: 0.95rem;
+            color: #111827;
+            background: #ffffff;
+        }
+
+        .quiz-form textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .quiz-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .quiz-list {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .quiz-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem 1rem 1.1rem;
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .quiz-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .quiz-card-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .quiz-card-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quiz-card-meta span {
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.82rem;
+        }
+
+        .quiz-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quiz-card-actions .btn {
+            padding: 0.55rem 0.9rem;
+            font-size: 0.85rem;
+        }
+
+        .quiz-help {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #475569;
+        }
+
+        .quiz-help strong {
+            color: #111827;
+        }
+
+        @media (max-width: 1024px) {
+            .quiz-builder-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="pro-dashboard instructor-theme pro-standalone">
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="instructor-dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="instructor-dashboard.html" class="nav-link">Dashboard</a></li>
+            </ul>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="quiz-builder-container">
+        <section class="quiz-panel">
+            <div class="page-heading">
+                <h1 id="moduleQuizTitle">Quiz Builder</h1>
+                <p id="moduleQuizSubtitle">Manage quiz questions for your selected module.</p>
+            </div>
+
+            <div class="quiz-summary" id="quizSummary"></div>
+
+            <div style="display:flex; justify-content:flex-end; margin-bottom:1.25rem;">
+                <button class="btn btn-primary" id="addQuizQuestionBtn" type="button">Add Question</button>
+            </div>
+
+            <div class="quiz-form" id="quizFormArea" style="display:none;">
+                <div class="form-group">
+                    <label for="quizQuestionText">Question</label>
+                    <textarea id="quizQuestionText" placeholder="Enter the question text" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="quizQuestionType">Question Type</label>
+                    <select id="quizQuestionType">
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="identification">Identification</option>
+                    </select>
+                </div>
+                <div class="form-group" id="quizChoicesGroup">
+                    <label for="quizQuestionChoices">Choices (one per line)</label>
+                    <textarea id="quizQuestionChoices" placeholder="Enter each answer choice on its own line"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="quizQuestionAnswer">Correct Answer</label>
+                    <input id="quizQuestionAnswer" type="text" placeholder="Enter the correct answer" required />
+                </div>
+                <div class="form-group">
+                    <label for="quizQuestionOrder">Display Order</label>
+                    <input id="quizQuestionOrder" type="number" min="0" value="0" />
+                </div>
+                <div class="quiz-actions">
+                    <button class="btn btn-primary" id="saveQuizQuestionBtn">Save Question</button>
+                    <button class="btn btn-secondary" id="cancelQuizEditBtn" type="button">Cancel</button>
+                </div>
+            </div>
+
+            <div class="quiz-list-area">
+                <h2 id="quizQuestionListTitle">Existing Questions</h2>
+                <div id="quizQuestionsList" class="quiz-list"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+        const moduleId = new URLSearchParams(window.location.search).get('module');
+        let currentQuizQuestions = [];
+        let editingQuestionId = '';
+
+        function getCurrentUser() {
+            if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
+                const currentUser = window.KumpasSession.getCurrentUser();
+                if (currentUser && (currentUser.email || currentUser.username)) {
+                    return currentUser;
+                }
+            }
+            return { name: 'Instructor', email: '', username: '', role: 'instructor' };
+        }
+
+        async function getInstructorActorIdentifier() {
+            // Prefer session-backed user (may be async)
+            if (window.KumpasSession && typeof window.KumpasSession.ensureCurrentUser === 'function') {
+                const u = await window.KumpasSession.ensureCurrentUser().catch(() => null);
+                if (u && (u.email || u.username)) return u.email || u.username || '';
+            }
+            if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
+                const currentUser = window.KumpasSession.getCurrentUser();
+                if (currentUser && (currentUser.email || currentUser.username)) return currentUser.email || currentUser.username || '';
+            }
+            const currentUser = getCurrentUser();
+            return currentUser.email || currentUser.username || '';
+        }
+
+        function sanitizeInstructorInput(value) {
+            return String(value == null ? '' : value).trim();
+        }
+
+        async function requestJson(path, options = {}) {
+            const response = await fetch(`${API_BASE}${path}`, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (_) {
+                data = {};
+            }
+
+            if (!response.ok) {
+                const message = typeof data.error === 'object'
+                    ? Object.values(data.error).flat().join(' ')
+                    : data.error || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+            return data;
+        }
+
+        function setStatusMessage(count) {
+            const summary = document.getElementById('quizSummary');
+            if (!summary) return;
+            summary.innerHTML = `
+                <span>Module ID: ${moduleId}</span>
+                <span>${count} question${count === 1 ? '' : 's'}</span>
+            `;
+        }
+
+        function clearStatusMessage() {
+            const summary = document.getElementById('quizSummary');
+            if (!summary) return;
+            summary.innerHTML = '';
+        }
+
+        function formatQuestionType(type) {
+            return type === 'identification' ? 'Identification' : 'Multiple Choice';
+        }
+
+        function updateChoiceVisibility() {
+            const questionType = document.getElementById('quizQuestionType').value;
+            const choicesGroup = document.getElementById('quizChoicesGroup');
+            if (questionType === 'multiple_choice') {
+                choicesGroup.style.display = 'block';
+            } else {
+                choicesGroup.style.display = 'none';
+            }
+        }
+
+        function toggleQuizForm(show) {
+            const quizFormArea = document.getElementById('quizFormArea');
+            if (quizFormArea) {
+                quizFormArea.style.display = show ? 'grid' : 'none';
+            }
+        }
+
+        function resetQuizForm() {
+            editingQuestionId = '';
+            document.getElementById('quizQuestionText').value = '';
+            document.getElementById('quizQuestionType').value = 'multiple_choice';
+            document.getElementById('quizQuestionChoices').value = '';
+            document.getElementById('quizQuestionAnswer').value = '';
+            document.getElementById('quizQuestionOrder').value = '0';
+            document.getElementById('saveQuizQuestionBtn').textContent = 'Save Question';
+            document.getElementById('moduleQuizTitle').textContent = 'Quiz Builder';
+            document.getElementById('moduleQuizSubtitle').textContent = 'Manage quiz questions for your selected module.';
+            updateChoiceVisibility();
+            toggleQuizForm(false);
+        }
+
+        function openQuizForm() {
+            resetQuizForm();
+            document.getElementById('moduleQuizTitle').textContent = 'Add New Question';
+            document.getElementById('moduleQuizSubtitle').textContent = 'Enter the question details below and click Save Question.';
+            toggleQuizForm(true);
+            document.getElementById('quizQuestionText').focus();
+        }
+
+        function renderQuizQuestions(questions) {
+            currentQuizQuestions = Array.isArray(questions) ? questions : [];
+            setStatusMessage(currentQuizQuestions.length);
+
+            const listTarget = document.getElementById('quizQuestionsList');
+            if (!listTarget) return;
+
+            if (!currentQuizQuestions.length) {
+                listTarget.innerHTML = '<div style="padding: 16px; color: #6b7280; background: #f8fafc; border-radius: 12px;">No questions yet. Add one using the form above.</div>';
+                return;
+            }
+
+            listTarget.innerHTML = currentQuizQuestions.map((question, index) => `
+                <div class="quiz-card">
+                    <div class="quiz-card-header">
+                        <div>
+                            <h3>Question ${index + 1}</h3>
+                            <div class="quiz-card-meta">
+                                <span>${formatQuestionType(question.question_type)}</span>
+                                <span>Order ${Number(question.order || 0)}</span>
+                            </div>
+                        </div>
+                        <div class="quiz-card-actions">
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="editQuizQuestion(${question.id})">Edit</button>
+                            <button class="btn btn-danger btn-sm" type="button" onclick="deleteQuizQuestion(${question.id})">Delete</button>
+                        </div>
+                    </div>
+                    <p style="margin: 0.5rem 0 0; color: #334155;">${sanitizeInstructorInput(question.question_text)}</p>
+                    ${question.question_type === 'multiple_choice' ? `
+                        <div style="margin-top: 0.9rem;">
+                            <strong>Choices:</strong>
+                            <ul style="margin: 0.5rem 0 0 1.25rem; color: #475569;">
+                                ${Array.isArray(question.choices) ? question.choices.map(choice => `<li>${sanitizeInstructorInput(choice)}</li>`).join('') : ''}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    <div style="margin-top: 0.75rem;">
+                        <span style="font-weight:600;">Answer:</span> ${sanitizeInstructorInput(question.correct_answer)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateQuizForm(question) {
+            editingQuestionId = String(question.id || '');
+            document.getElementById('quizQuestionText').value = question.question_text || '';
+            document.getElementById('quizQuestionType').value = question.question_type || 'multiple_choice';
+            document.getElementById('quizQuestionChoices').value = Array.isArray(question.choices) ? question.choices.join('\n') : '';
+            document.getElementById('quizQuestionAnswer').value = question.correct_answer || '';
+            document.getElementById('quizQuestionOrder').value = question.order || 0;
+            document.getElementById('saveQuizQuestionBtn').textContent = 'Update Question';
+            document.getElementById('moduleQuizTitle').textContent = 'Editing Question';
+            document.getElementById('moduleQuizSubtitle').textContent = 'Update the question or click cancel to choose another one.';
+            updateChoiceVisibility();
+            toggleQuizForm(true);
+            document.getElementById('quizQuestionText').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function loadModuleAndQuestions() {
+            clearStatusMessage();
+            if (!moduleId) {
+                document.getElementById('moduleQuizTitle').textContent = 'Module not selected';
+                document.getElementById('moduleQuizSubtitle').textContent = 'Please open the quiz builder from the instructor dashboard.';
+                return;
+            }
+
+            const actorEmail = await getInstructorActorIdentifier();
+            if (!actorEmail) {
+                alert('Please sign in as an instructor to use the quiz builder.');
+                return;
+            }
+
+            try {
+                const moduleData = await requestJson(`/instructor/modules/${moduleId}/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                document.getElementById('moduleQuizTitle').textContent = `Quiz Builder — ${moduleData.title || 'Module'}`;
+                document.getElementById('moduleQuizSubtitle').textContent = moduleData.description || 'Build questions for this module.';
+                await refreshQuizQuestions();
+            } catch (error) {
+                alert(`Unable to load module details: ${error.message}`);
+            }
+        }
+
+        async function refreshQuizQuestions() {
+            const actorEmail = await getInstructorActorIdentifier();
+            if (!actorEmail) return;
+
+            try {
+                const questions = await requestJson(`/instructor/modules/${moduleId}/quiz/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                renderQuizQuestions(questions);
+            } catch (error) {
+                alert(`Unable to load quiz questions: ${error.message}`);
+            }
+        }
+
+        async function saveQuizQuestion(event) {
+            event.preventDefault();
+            const actorEmail = getInstructorActorIdentifier();
+            const questionText = sanitizeInstructorInput(document.getElementById('quizQuestionText').value);
+            const questionType = document.getElementById('quizQuestionType').value;
+            const rawChoices = document.getElementById('quizQuestionChoices').value;
+            const correctAnswer = sanitizeInstructorInput(document.getElementById('quizQuestionAnswer').value);
+            const order = Number(document.getElementById('quizQuestionOrder').value || 0);
+
+            if (!questionText) {
+                alert('Please enter the question text.');
+                return;
+            }
+            if (!correctAnswer) {
+                alert('Please enter the correct answer.');
+                return;
+            }
+
+            let choices = [];
+            if (questionType === 'multiple_choice') {
+                choices = rawChoices.split('\n').map(item => sanitizeInstructorInput(item)).filter(Boolean);
+                if (choices.length < 2) {
+                    alert('Multiple choice questions require at least two answer options.');
+                    return;
+                }
+                if (!choices.includes(correctAnswer)) {
+                    alert('Correct answer must exactly match one of the provided choices.');
+                    return;
+                }
+            }
+
+            const payload = {
+                actorEmail,
+                question_text: questionText,
+                question_type: questionType,
+                choices,
+                correct_answer: correctAnswer,
+                order,
+            };
+
+            try {
+                const path = editingQuestionId
+                    ? `/instructor/modules/${moduleId}/quiz/${editingQuestionId}/`
+                    : `/instructor/modules/${moduleId}/quiz/`;
+                const method = editingQuestionId ? 'PATCH' : 'POST';
+                await requestJson(path + `?actorEmail=${encodeURIComponent(actorEmail)}`, {
+                    method,
+                    body: JSON.stringify(payload),
+                });
+                resetQuizForm();
+                await refreshQuizQuestions();
+            } catch (error) {
+                alert(`Could not save question: ${error.message}`);
+            }
+        }
+
+        function editQuizQuestion(questionId) {
+            const question = currentQuizQuestions.find(item => Number(item.id) === Number(questionId));
+            if (!question) {
+                alert('Question not found.');
+                return;
+            }
+            populateQuizForm(question);
+        }
+
+        async function deleteQuizQuestion(questionId) {
+            if (!confirm('Delete this question?')) {
+                return;
+            }
+            const actorEmail = getInstructorActorIdentifier();
+            try {
+                await requestJson(`/instructor/modules/${moduleId}/quiz/${questionId}/?actorEmail=${encodeURIComponent(actorEmail)}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ actorEmail }),
+                });
+                if (editingQuestionId === String(questionId)) {
+                    resetQuizForm();
+                }
+                await refreshQuizQuestions();
+            } catch (error) {
+                alert(`Unable to delete question: ${error.message}`);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            document.getElementById('quizQuestionType').addEventListener('change', updateChoiceVisibility);
+            document.getElementById('saveQuizQuestionBtn').addEventListener('click', saveQuizQuestion);
+            document.getElementById('cancelQuizEditBtn').addEventListener('click', function () {
+                resetQuizForm();
+            });
+            document.getElementById('addQuizQuestionBtn').addEventListener('click', openQuizForm);
+            resetQuizForm();
+            await loadModuleAndQuestions();
+        });
+    </script>
+    <script src="js/main.js"></script>
+    <script>
+    (function() {
+        const _t = document.getElementById('navUserToggle');
+        const _d = document.getElementById('navUserDropdown');
+        if (_t && _d) {
+            _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
+            document.addEventListener('click', function() { _d.classList.remove('open'); });
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -6,39 +6,67 @@
     <title>Text-to-Sign Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/bg-orbs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="js/theme.js"></script>
 </head>
-<body>
-    <!-- Navigation -->
-    <div class="navbar">
-        <a href="dashboard.html" class="logo"><img src="images/kumpas_logo.png" alt="Kumpas Logo">Kumpas</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="learning.html">Learn</a>
-        <a href="activities.html">Activities</a>
-        <a href="translator.html">Translators</a>
-        <a href="leaderboard.html">Leaderboard</a>
-        <a href="profile.html" style="float: right;">Profile</a>
-        <a href="index.html" style="float: right;">Logout</a>
+<body class="kd-animated-bg">
+    <div class="bg-orbs" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
     </div>
-
-    <!-- GE Selection Overlay -->
-    <div class="ge-overlay" id="geOverlay" aria-modal="true" role="dialog">
-        <div class="ge-modal">
-            <div class="ge-header">
-                <h2>Select GE Subject</h2>
-                <p>Choose a General Education subject to continue.</p>
-            </div>
-            <div class="ge-grid" id="geGrid"></div>
-            <div class="ge-actions">
-<button class="btn-primary" type="button" id="geContinueBtn" disabled>Continue</button>
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="dashboard.html" class="logo">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="learning.html" class="nav-link">Learn</a></li>
+                <li><a href="activities.html" class="nav-link">Activities</a></li>
+                <li><a href="translator.html" class="nav-link active">Translators</a></li>
+                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
+            </ul>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div style="padding: 20px;">
-        <h1>Text-to-Sign Translator</h1>
-        <p>Convert text to sign language demonstrations for learning and communication</p>
-        <br>
-    </div>
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="header-content">
+            <h1>Text-to-Sign Translator</h1>
+            <p>Convert text to sign language demonstrations for learning and communication</p>
+        </div>
+    </section>
 
     <!-- Main Content -->
     <main class="translator-container" id="translatorMain">
@@ -50,8 +78,7 @@
                     <textarea 
                         id="textInput" 
                         class="text-input" 
-                        placeholder="Type your text here... (max 200 characters)"
-                        maxlength="200"
+                        placeholder="Type your text here..."
                     ></textarea>
                     <div class="input-counter">
                         <span id="charCount">0</span>/200
@@ -70,17 +97,6 @@
                             <option value="emotions">Emotions</option>
                             <option value="school">School</option>
                         </select>
-                    <div class="option-group">
-                        <label>GE Subject:</label>
-                        <div class="chip-group" id="geChips">
-                            <button class="chip ge-chip is-active" type="button" data-ge="all">All GE</button>
-                            <button class="chip ge-chip" type="button" data-ge="ge1">GE 1</button>
-                            <button class="chip ge-chip" type="button" data-ge="ge2">GE 2</button>
-                            <button class="chip ge-chip" type="button" data-ge="ge3">GE 3</button>
-                            <button class="chip ge-chip" type="button" data-ge="ge4">GE 4</button>
-                        </div>
-                        <div class="chip-hint">Pick a GE subject to filter the quick examples.</div>
-                    </div>
                 </div>
 
                 <div class="button-group">
@@ -91,7 +107,7 @@
                 </div>
 
                 <div class="quick-examples">
-                    <h3>Quick Examples: <span class="ge-badge" id="geLabel">All GE</span></h3>
+                    <h3>Quick Examples</h3>
                     <div class="example-chips" id="exampleChips"></div>
                 </div>
             </section>
@@ -175,34 +191,17 @@
     </footer>
 
     <style>
-        /* Navbar Styles */
-        .navbar {
-            background-color: #4169e1;
-            padding: 15px;
-            color: white;
-        }
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            margin-right: 20px;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo img {
-            width: 72px;
-            height: 72px;
-            object-fit: contain;
-        }
-
         .translator-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem) clamp(2rem, 4vw, 3.5rem);
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .translator-container h1,
+        .translator-container h2,
+        .translator-container h3 {
+            font-family: 'Poppins', 'Inter', sans-serif;
         }
 
         .ge-overlay {
@@ -288,18 +287,26 @@
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
             margin-bottom: 3rem;
+            align-items: stretch;
         }
 
         .translator-panel {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
             padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+        }
+
+        .output-panel {
+            animation-delay: .08s;
         }
 
         .translator-panel h2 {
             margin-top: 0;
-            color: var(--dark);
+            color: #0f172a;
+            font-weight: 700;
             margin-bottom: 1.5rem;
         }
 
@@ -310,7 +317,7 @@
 
         .text-input {
             width: 100%;
-            min-height: 200px;
+            min-height: clamp(140px, 22vh, 220px);
             padding: 1rem;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
@@ -333,9 +340,29 @@
             margin-top: 0.5rem;
         }
 
+        .translator-container .btn-primary,
+        .translator-container .btn-secondary {
+            border-radius: 999px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .translator-container .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
+        }
+
+        .translator-container .btn-primary:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
+        }
+
+        .translator-container .btn-secondary:hover {
+            transform: translateY(-1px);
+        }
+
         .translator-options {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 14px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -427,7 +454,7 @@
 
         .quick-examples {
             background: #fff8f0;
-            border-radius: 8px;
+            border-radius: 14px;
             padding: 1rem;
         }
 
@@ -476,21 +503,22 @@
             background: white;
             border: 1px solid #ddd;
             padding: 0.5rem 1rem;
-            border-radius: 20px;
+            border-radius: 999px;
             cursor: pointer;
             font-size: 0.85rem;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
 
         .chip:hover {
-            background: var(--primary-blue);
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-color: transparent;
             color: white;
             transform: translateY(-2px);
         }
 
         .translation-result {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 16px;
             padding: 2rem;
             min-height: 300px;
             display: flex;
@@ -530,16 +558,17 @@
         .sign-card {
             background: white;
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 14px;
             padding: 1rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
         }
 
         .sign-card:hover {
             border-color: var(--primary-blue);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
         }
 
         .sign-video,
@@ -554,6 +583,7 @@
         .sign-video {
             display: block;
             object-fit: cover;
+            object-position: center top;
         }
 
         .sign-video-placeholder {
@@ -584,7 +614,7 @@
 
         .translation-details {
             background: #e8f5e9;
-            border-radius: 8px;
+            border-radius: 14px;
             padding: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -685,15 +715,20 @@
         }
 
         .help-section {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
             padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+            animation-delay: .15s;
         }
 
         .help-section h2 {
             text-align: center;
             margin-bottom: 2rem;
+            color: #0f172a;
+            font-weight: 800;
         }
 
         .help-cards {
@@ -703,16 +738,23 @@
         }
 
         .help-card {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8fafc;
+            border-radius: 16px;
             padding: 1.5rem;
             text-align: center;
+            border: 1px solid rgba(148,163,184,0.14);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .help-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(15,23,42,0.1);
         }
 
         .help-number {
             width: 40px;
             height: 40px;
-            background: var(--primary-blue);
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -720,6 +762,7 @@
             justify-content: center;
             font-weight: 700;
             margin: 0 auto 1rem;
+            box-shadow: 0 8px 18px rgba(37,99,235,0.24);
         }
 
         .help-card h3 {
@@ -730,6 +773,16 @@
             margin: 0;
             color: #666;
             font-size: 0.9rem;
+        }
+
+        @media (max-width: 1024px) {
+            .translator-grid {
+                gap: 1.25rem;
+            }
+
+            .translator-panel {
+                padding: 1.5rem;
+            }
         }
 
         @media (max-width: 768px) {
@@ -753,6 +806,156 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ---- Dark theme overrides ---- */
+        :root[data-theme="dark"] .translator-panel h2,
+        :root[data-theme="dark"] .help-section h2 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .translator-panel,
+        :root[data-theme="dark"] .help-section,
+        :root[data-theme="dark"] .history-section {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .ge-modal {
+            background: var(--surface-card);
+        }
+
+        :root[data-theme="dark"] .ge-header h2 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .ge-header p {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .ge-card {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .ge-card small {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .ge-card:hover {
+            background: rgba(37, 99, 235, 0.14);
+        }
+
+        :root[data-theme="dark"] .ge-card.is-selected {
+            background: rgba(37, 99, 235, 0.2);
+        }
+
+        :root[data-theme="dark"] .text-input,
+        :root[data-theme="dark"] .select-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .input-counter {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .translator-options {
+            background: var(--surface-card-alt);
+        }
+
+        :root[data-theme="dark"] .option-group label {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .slider {
+            background: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] #speedValue {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .quick-examples {
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        :root[data-theme="dark"] .quick-examples h3 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .chip {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .chip-hint {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .translation-result {
+            background: var(--surface-card-alt);
+        }
+
+        :root[data-theme="dark"] .demo-placeholder {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .signs-container h3 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-card {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .sign-card-text {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-card-meta {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .translation-details {
+            background: rgba(16, 185, 129, 0.12);
+        }
+
+        :root[data-theme="dark"] .translation-details h3 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .detail-label {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .history-item {
+            background: var(--surface-card-alt);
+        }
+
+        :root[data-theme="dark"] .history-item:hover {
+            background: rgba(37, 99, 235, 0.14);
+        }
+
+        :root[data-theme="dark"] .history-text {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .history-date {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .help-card {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .help-card p {
+            color: var(--text-muted-2);
+        }
     </style>
 
     <script src="js/main.js"></script>
@@ -762,36 +965,55 @@
         const speedControl = document.getElementById('speedControl');
         const speedValue = document.getElementById('speedValue');
         const exampleChips = document.getElementById('exampleChips');
-        const geLabel = document.getElementById('geLabel');
-        const geOverlay = document.getElementById('geOverlay');
-        const geGrid = document.getElementById('geGrid');
-        const geContinueBtn = document.getElementById('geContinueBtn');
 
-        const signLibrary = {
-            'are you deaf or hearing': { label: 'Are you deaf or hearing', category: 'everyday', video: 'vid/are%20you%20deaf%20or%20hearing.mp4', fallback: '🤟' },
-            'come here': { label: 'Come here', category: 'everyday', video: 'vid/come%20here.mp4', fallback: '👉' },
-            'come lets eat': { label: 'Come lets eat', category: 'everyday', video: 'vid/come%20lets%20eat.mp4', fallback: '🍽️' },
-            'excuse': { label: 'Excuse', category: 'everyday', video: 'vid/excuse%20.mp4', fallback: '🙋' },
-            'hello': { label: 'Hello', category: 'greetings', video: 'vid/hello.mp4', fallback: '👋' },
-            'how are you': { label: 'How are you', category: 'greetings', video: 'vid/how%20are%20you.mp4', fallback: '🙂' },
-            'i love you': { label: 'I love you', category: 'emotions', video: 'vid/iloveyou.mp4', fallback: '❤️' },
-            'iloveyou': { label: 'I love you', category: 'emotions', video: 'vid/iloveyou.mp4', fallback: '❤️' },
-            'im sorry': { label: 'Im sorry', category: 'emotions', video: 'vid/im%20sorry.mp4', fallback: '🙏' },
-            "i'm sorry": { label: 'Im sorry', category: 'emotions', video: 'vid/im%20sorry.mp4', fallback: '🙏' },
-            'try again': { label: 'Try again', category: 'school', video: 'vid/try%20again.mp4', fallback: '🔁' },
-            'whats your name': { label: 'Whats your name', category: 'greetings', video: 'vid/whats%20your%20name.mp4', fallback: '❓' },
-            "what's your name": { label: 'Whats your name', category: 'greetings', video: 'vid/whats%20your%20name.mp4', fallback: '❓' }
+        // Sign videos are loaded from the database (SignVideo table), which is
+        // populated from the "Sign Language" media library. Both the Games and
+        // Text-to-Sign modules read from this same API endpoint.
+        const SIGN_VIDEOS_API = 'http://127.0.0.1:8000/api/sign-videos/';
+
+        const BACKEND_TO_UI_CATEGORY = {
+            alphabet: 'school',
+            emotions: 'emotions',
+            everyday_words: 'everyday',
+            expressions: 'everyday',
+            greetings: 'greetings',
+            phrases: 'everyday',
+            responses: 'everyday',
         };
+
+        let signLibrary = {};
+        let signLibraryReady = false;
+
+        function videoMimeType(url) {
+            const clean = String(url || '').split('?')[0].toLowerCase();
+            if (clean.endsWith('.mov')) return 'video/quicktime';
+            if (clean.endsWith('.webm')) return 'video/webm';
+            return 'video/mp4';
+        }
+
+        async function loadSignLibrary() {
+            const response = await fetch(SIGN_VIDEOS_API);
+            if (!response.ok) {
+                throw new Error(`Failed to load sign videos (${response.status})`);
+            }
+            const items = await response.json();
+            const library = {};
+            items.forEach(item => {
+                library[String(item.key || '').toLowerCase()] = {
+                    label: item.word,
+                    category: BACKEND_TO_UI_CATEGORY[item.category] || 'everyday',
+                    video: item.video_url || '',
+                    fallback: '🤟',
+                };
+            });
+            signLibrary = library;
+            signLibraryReady = true;
+        }
 
         const geExamples = {
-            all: { label: 'All GE', examples: ['Hello', 'How are you', 'Whats your name', 'Im sorry', 'I love you'] },
-            ge1: { label: 'GE 1', examples: ['Hello', 'How are you', 'Whats your name'] },
-            ge2: { label: 'GE 2', examples: ['Are you deaf or hearing', 'Excuse', 'Try again'] },
-            ge3: { label: 'GE 3', examples: ['Come here', 'Come lets eat', 'Im sorry'] },
-            ge4: { label: 'GE 4', examples: ['I love you', 'Try again', 'How are you'] }
+            all: { label: 'All', examples: ['Hello', 'How are you', 'What is your name', 'Thank you', 'Sorry'] }
         };
 
-        let selectedGe = null;
         let lastTranslation = [];
         let currentSpeed = 1;
 
@@ -817,13 +1039,6 @@
             speedValue.textContent = map[Number(value).toFixed(1)] || `${value}x`;
         }
 
-        function buildAllExamples() {
-            const all = Object.keys(geExamples)
-                .filter(key => key !== 'all')
-                .flatMap(key => geExamples[key].examples);
-            geExamples.all.examples = Array.from(new Set(all)).slice(0, 10);
-        }
-
         function renderExampleChips(examples) {
             exampleChips.innerHTML = '';
             examples.forEach(text => {
@@ -834,37 +1049,6 @@
                 button.addEventListener('click', () => setExample(text));
                 exampleChips.appendChild(button);
             });
-        }
-
-        function renderGeOverlay() {
-            geGrid.innerHTML = '';
-            Object.keys(geExamples)
-                .filter(key => key !== 'all')
-                .forEach(key => {
-                    const item = geExamples[key];
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'ge-card';
-                    button.dataset.ge = key;
-                    button.innerHTML = `${item.label}<small>Tap to select</small>`;
-                    button.addEventListener('click', () => {
-                        selectedGe = key;
-                        document.querySelectorAll('.ge-card').forEach(card => {
-                            card.classList.toggle('is-selected', card.dataset.ge === key);
-                        });
-                        geContinueBtn.disabled = false;
-                    });
-                    geGrid.appendChild(button);
-                });
-        }
-
-        function setActiveGe(key) {
-            const config = geExamples[key] || geExamples.all;
-            document.querySelectorAll('.ge-chip').forEach(chip => {
-                chip.classList.toggle('is-active', chip.dataset.ge === key);
-            });
-            geLabel.textContent = config.label;
-            renderExampleChips(config.examples);
         }
 
         function normalizeWord(word) {
@@ -938,7 +1122,7 @@
 
         function renderSignCard(word, sign, index) {
             const mediaBlock = sign.video
-                ? `<video class="sign-video" controls playsinline preload="metadata" data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="video/mp4"></video>`
+                ? `<video class="sign-video" controls playsinline preload="metadata" muted data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
                 : `<div class="sign-video-placeholder"><div class="demo-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${sign.fallback}</div><span>Add video later</span></div>`;
 
             return `
@@ -1041,6 +1225,11 @@
         }
 
         function translateText() {
+            if (!signLibraryReady) {
+                alert('Sign videos are still loading, please wait a moment and try again.');
+                return;
+            }
+
             const text = textInput.value.trim();
             if (!text) {
                 alert('Please enter some text to translate');
@@ -1106,19 +1295,11 @@
             URL.revokeObjectURL(url);
         }
 
-        buildAllExamples();
-        setActiveGe('all');
-        renderGeOverlay();
+        renderExampleChips(geExamples.all.examples);
         setSpeedLabel(speedControl.value);
 
-        document.querySelectorAll('.ge-chip').forEach(chip => {
-            chip.addEventListener('click', () => setActiveGe(chip.dataset.ge));
-        });
-
-        geContinueBtn.addEventListener('click', () => {
-            if (!selectedGe) return;
-            setActiveGe(selectedGe);
-            geOverlay.classList.add('hidden');
+        loadSignLibrary().catch(err => {
+            console.error('Failed to load sign videos:', err);
         });
 
         textInput.addEventListener('input', function() {
@@ -1130,6 +1311,16 @@
             setSpeedLabel(this.value);
             if (lastTranslation.length) applyPlaybackSpeed();
         });
+
+        // Navbar dropdown
+        (function() {
+            const _t = document.getElementById('navUserToggle');
+            const _d = document.getElementById('navUserDropdown');
+            if (_t && _d) {
+                _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
+                document.addEventListener('click', function() { _d.classList.remove('open'); });
+            }
+        })();
     </script>
 </body>
 </html>

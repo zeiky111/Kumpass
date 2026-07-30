@@ -1,6 +1,16 @@
 from rest_framework import serializers
 
-from .models import Announcement, LearningModule, ModuleFile, SignPredictionLog, UserLearningState
+from .models import (
+    Announcement,
+    GameLevel,
+    GameLevelItem,
+    LearningModule,
+    ModuleFile,
+    QuizQuestion,
+    SignPredictionLog,
+    SignVideo,
+    UserLearningState,
+)
 
 
 class SignPredictionLogSerializer(serializers.ModelSerializer):
@@ -10,20 +20,21 @@ class SignPredictionLogSerializer(serializers.ModelSerializer):
 
 
 class SignupSerializer(serializers.Serializer):
-    fullname = serializers.CharField(max_length=120)
+    firstName = serializers.CharField(max_length=64)
+    middleName = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    lastName = serializers.CharField(max_length=64)
+    suffix = serializers.CharField(max_length=32, required=False, allow_blank=True)
     email = serializers.EmailField()
-    role = serializers.CharField(max_length=20, required=False, allow_blank=True)
     yearLevel = serializers.CharField(max_length=20, required=False, allow_blank=True)
     password = serializers.CharField(min_length=8, max_length=128)
     confirmPassword = serializers.CharField(min_length=8, max_length=128)
-    securityPin = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    # Public signup only supports student accounts; role and PIN are managed by admins/setup
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128)
-    role = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    securityPin = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    # Login accepts email or username plus password
 
 
 class LearningStateSerializer(serializers.ModelSerializer):
@@ -80,3 +91,107 @@ class ModuleFileSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.file.url)
             return obj.file.url
         return None
+
+
+class QuizQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            "id",
+            "module",
+            "question_text",
+            "question_type",
+            "choices",
+            "correct_answer",
+            "order",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class GameLevelItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameLevelItem
+        fields = ["id", "level", "prompt", "answer", "media_url", "extra_data", "order", "created_at", "updated_at"]
+
+
+class GameLevelSerializer(serializers.ModelSerializer):
+    items = GameLevelItemSerializer(many=True, read_only=True)
+    items_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GameLevel
+        fields = [
+            "id",
+            "game_key",
+            "difficulty",
+            "level_number",
+            "title",
+            "is_published",
+            "items",
+            "items_count",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_items_count(self, obj):
+        return obj.items.count()
+
+
+class SignVideoSerializer(serializers.ModelSerializer):
+    video_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SignVideo
+        fields = ["id", "key", "word", "category", "video_url", "order"]
+
+    def get_video_url(self, obj):
+        request = self.context.get("request")
+        if obj.video and hasattr(obj.video, "url"):
+            if request:
+                return request.build_absolute_uri(obj.video.url)
+            return obj.video.url
+        return None
+
+
+class AdminSignVideoSerializer(serializers.ModelSerializer):
+    video_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SignVideo
+        fields = [
+            "id",
+            "key",
+            "word",
+            "category",
+            "video_url",
+            "order",
+            "is_published",
+            "text_to_sign_only",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_video_url(self, obj):
+        request = self.context.get("request")
+        if obj.video and hasattr(obj.video, "url"):
+            if request:
+                return request.build_absolute_uri(obj.video.url)
+            return obj.video.url
+        return None
+
+
+class StudentQuizQuestionSerializer(serializers.ModelSerializer):
+    """Serializer for exposing quiz questions to students (do not include correct answers)."""
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            "id",
+            "module",
+            "question_text",
+            "question_type",
+            "choices",
+            "order",
+            "created_at",
+            "updated_at",
+        ]

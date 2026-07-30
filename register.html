@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Kumpas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
 </head>
-<body>
+<body class="register-page">
     <div class="auth-page">
         <div class="auth-container">
             <!-- Sidebar -->
             <div class="auth-sidebar">
-                <div class="logo">
-                    <span>Kumpas</span>
+                <div class="logo auth-brand">
+                    <img src="images/kumpas_logo.png" alt="Kumpas logo" class="auth-brand-logo">
+                    <div class="auth-brand-text">
+                        <span>Kumpas</span>
+                        <small>Sign Language Learning System</small>
+                    </div>
                 </div>
                 <h2>Join Kumpas Today!</h2>
                 <p>Create your account and start learning Filipino Sign Language through interactive games, real-time translation, and personalized learning paths.</p>
@@ -31,8 +36,23 @@
 
                 <form class="auth-form" id="registerForm">
                     <div class="form-group">
-                        <label for="fullname" class="form-label">Full Name</label>
-                        <input type="text" id="fullname" class="form-input" required>
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" id="firstName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="middleName" class="form-label">Middle Name</label>
+                        <input type="text" id="middleName" class="form-input" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" id="lastName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suffix" class="form-label">Suffix</label>
+                        <input type="text" id="suffix" class="form-input" placeholder="e.g. Jr., Sr., III">
                     </div>
 
                     <div class="form-group">
@@ -51,15 +71,25 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group password-field">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" class="form-input" required>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="password" class="form-input" required>
+                            <button type="button" class="password-toggle" aria-label="Show password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                         <div class="form-help">Password must be at least 8 characters</div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group password-field">
                         <label for="confirmPassword" class="form-label">Confirm Password</label>
-                        <input type="password" id="confirmPassword" class="form-input" required>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="confirmPassword" class="form-input" required>
+                            <button type="button" class="password-toggle" aria-label="Show password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="width: 100%;">

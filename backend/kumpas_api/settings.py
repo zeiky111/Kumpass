@@ -98,8 +98,59 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Allow frontend pages during development, including file:// origin.
 CORS_ALLOW_ALL_ORIGINS = True
+# Allow local file:// pages to make cross-origin requests during development.
+# django-cors-headers checks the literal "null" origin for file:// contexts.
+CORS_ALLOWED_ORIGINS = [
+    "null",
+]
+# Allow credentials (cookies) in CORS requests
+CORS_ALLOW_CREDENTIALS = True
+
+# Trust local frontend dev servers for CSRF origin checks during development.
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://127.0.0.1:5501",
+    "http://localhost:5501",
+    "http://127.0.0.1:5502",
+    "http://localhost:5502",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+
+# Session configuration - loaded from environment variables
+SESSION_ENGINE = os.getenv("SESSION_ENGINE", "django.contrib.sessions.backends.db")
+SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "604800"))  # 7 days in seconds
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = os.getenv("SESSION_COOKIE_HTTPONLY", "True").lower() == "true"  # Prevent JavaScript access to session cookies
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")  # CSRF protection: Strict, Lax, or None
+SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv("SESSION_EXPIRE_AT_BROWSER_CLOSE", "True").lower() == "true"  # Clear session when browser closes
+SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "sessionid")  # Name of the session cookie
+SESSION_SAVE_EVERY_REQUEST = os.getenv("SESSION_SAVE_EVERY_REQUEST", "False").lower() == "true"  # Save session on every request
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
 }
+
+# Email configuration - uses environment variables (or console backend by default)
+# To send real emails via Gmail set EMAIL_BACKEND to
+# 'django.core.mail.backends.smtp.EmailBackend' and provide credentials below
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Kumpas <no-reply@kumpas.local>")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+
+# Note: For Gmail you'll typically need to create an App Password and set
+# EMAIL_HOST_USER and EMAIL_HOST_PASSWORD. Alternatively keep the default
+# console backend for local development which prints emails to the server console.

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="verify-email-page">
+    <div class="auth-page">
+        <div class="auth-container">
+            <div class="auth-form-container">
+                <div class="auth-header">
+                    <h1>Verify Your Email</h1>
+                    <p>Enter the 6-digit code we sent to your email.</p>
+                </div>
+
+                <form id="verifyForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="verifyEmail" class="form-label">Email</label>
+                        <input type="email" id="verifyEmail" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="verifyCode" class="form-label">Verification Code</label>
+                        <input type="text" id="verifyCode" class="form-input" maxlength="6" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Verify</button>
+                </form>
+
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    <button id="resendBtn" class="btn btn-secondary" type="button">Resend Code</button>
+                    <a href="login.html" style="margin-left:auto; align-self:center;">Back to Login</a>
+                </div>
+
+                <div id="verifyMessage" style="margin-top:10px; color:#b91c1c;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const verifyForm = document.getElementById('verifyForm');
+            const verifyEmail = document.getElementById('verifyEmail');
+            const verifyCode = document.getElementById('verifyCode');
+            const resendBtn = document.getElementById('resendBtn');
+            const msg = document.getElementById('verifyMessage');
+
+            async function postJson(path, payload) {
+                const res = await fetch(`${API_BASE}${path}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'omit',
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Request failed');
+                return data;
+            }
+
+            // Prefill email from query string and lock the field so user can't change it
+            const qs = new URLSearchParams(window.location.search);
+            const prefillEmail = (qs.get('email') || '').trim();
+            if (prefillEmail) {
+                verifyEmail.value = prefillEmail;
+                verifyEmail.readOnly = true;
+            }
+
+            verifyForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                msg.style.color = '#b91c1c';
+                msg.textContent = '';
+                const email = (verifyEmail.value || '').trim().toLowerCase();
+                const otp = (verifyCode.value || '').trim();
+                if (!email || !otp) { msg.textContent = 'Email and code are required'; return; }
+                try {
+                    await postJson('/auth/verify-email/', { email, otp });
+                    msg.style.color = '#059669';
+                    msg.textContent = 'Email verified. Redirecting to login...';
+                    setTimeout(() => window.location.replace('login.html'), 900);
+                } catch (err) {
+                    msg.textContent = err.message || 'Verification failed';
+                }
+            });
+
+            resendBtn.addEventListener('click', async function () {
+                if (resendBtn.disabled) return;
+                resendBtn.disabled = true;
+                msg.style.color = '#b91c1c';
+                msg.textContent = '';
+                const email = (verifyEmail.value || '').trim().toLowerCase();
+                if (!email) {
+                    msg.textContent = 'Please provide your email first';
+                    resendBtn.disabled = false;
+                    return;
+                }
+                try {
+                    const res = await fetch(`${API_BASE}/auth/resend-verification/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'omit',
+                        body: JSON.stringify({ email }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        const details = data.details || data.error || data.message || 'Failed to resend code';
+                        msg.textContent = details;
+                        return;
+                    }
+                    msg.style.color = '#059669';
+                    msg.textContent = data.message || 'Verification code resent. Check your email.';
+                } catch (err) {
+                    msg.textContent = err.message || 'Failed to resend code';
+                } finally {
+                    resendBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

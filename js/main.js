@@ -1,6 +1,64 @@
 // Simple JavaScript for Kumpas
 // Basic features only
 
+(function () {
+  const API_BASE = 'http://127.0.0.1:8000/api';
+  let currentUserCache = null;
+  let currentUserPromise = null;
+
+  async function ensureCurrentUser() {
+    if (currentUserCache && currentUserCache.email) {
+      return currentUserCache;
+    }
+
+    if (!currentUserPromise) {
+      currentUserPromise = (async () => {
+        try {
+          const response = await fetch(`${API_BASE}/auth/me/`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            currentUserCache = null;
+            return null;
+          }
+
+          const payload = await response.json();
+          currentUserCache = payload && payload.user ? payload.user : null;
+          return currentUserCache;
+        } catch (_) {
+          currentUserCache = null;
+          return null;
+        } finally {
+          currentUserPromise = null;
+        }
+      })();
+    }
+
+    return currentUserPromise;
+  }
+
+  function getCurrentUser() {
+    return currentUserCache || {
+      name: 'Learner',
+      email: '',
+      username: '',
+      yearLevel: '1',
+      role: 'student'
+    };
+  }
+
+  window.KumpasSession = {
+    ensureCurrentUser,
+    getCurrentUser,
+    clearCurrentUser() {
+      currentUserCache = null;
+    }
+  };
+
+  void ensureCurrentUser();
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
   var hamburger = document.getElementById('hamburger');
   var navMenu = document.getElementById('navMenu');
@@ -35,6 +93,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Add logout handler to all navbar logout links
+  var logoutLinks = document.querySelectorAll('a[href="index.html"]');
+  for (var k = 0; k < logoutLinks.length; k++) {
+    var link = logoutLinks[k];
+    if (link.textContent.toLowerCase().includes('logout') || link.classList.contains('logout-btn')) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Call backend logout endpoint
+        fetch('http://127.0.0.1:8000/api/auth/logout/', {
+          method: 'POST',
+          credentials: 'include'
+        }).catch(_ => {
+          // Continue even if logout request fails
+        }).finally(() => {
+          if (window.KumpasSession && typeof window.KumpasSession.clearCurrentUser === 'function') {
+            window.KumpasSession.clearCurrentUser();
+          }
+          window.location.replace('index.html');
+        });
+      });
+    }
+  }
+
   initNavbarUserMenu();
 });
 
@@ -42,11 +123,11 @@ function initNavbarUserMenu() {
   var navbar = document.querySelector('.navbar');
   if (!navbar) return;
 
+  if (navbar.querySelector('.nav-user-menu')) return;
+
   var profileLink = navbar.querySelector('a.profile-link') || navbar.querySelector('a[href="profile.html"]');
   var logoutLink = navbar.querySelector('a.logout-btn') || navbar.querySelector('a[href="index.html"]');
   if (!profileLink || !logoutLink) return;
-
-  if (navbar.querySelector('.nav-user-menu')) return;
 
   var profileTarget = profileLink.closest('li') || profileLink;
   var logoutTarget = logoutLink.closest('li') || logoutLink;
@@ -70,9 +151,24 @@ function initNavbarUserMenu() {
   profileItem.innerHTML = '<i class="fas fa-id-badge"></i><span>Profile</span>';
 
   var logoutItem = document.createElement('a');
-  logoutItem.href = logoutLink.getAttribute('href') || 'index.html';
+  logoutItem.href = '#';
   logoutItem.className = 'logout';
   logoutItem.innerHTML = '<i class="fas fa-right-from-bracket"></i><span>Logout</span>';
+  logoutItem.addEventListener('click', function(e) {
+    e.preventDefault();
+    // Call backend logout endpoint
+    fetch('http://127.0.0.1:8000/api/auth/logout/', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(_ => {
+      // Continue even if logout request fails
+    }).finally(() => {
+      if (window.KumpasSession && typeof window.KumpasSession.clearCurrentUser === 'function') {
+        window.KumpasSession.clearCurrentUser();
+      }
+      window.location.replace('index.html');
+    });
+  });
 
   dropdown.appendChild(profileItem);
   dropdown.appendChild(logoutItem);

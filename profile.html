@@ -6,29 +6,56 @@
     <title>My Profile - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/bg-orbs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="js/theme.js"></script>
 </head>
-<body>
-    <!-- Navigation -->
+<body class="kd-animated-bg">
+    <div class="bg-orbs" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <script>
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
+    </script>
+    <!-- Navbar -->
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hands"></i>
-                </div>
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html">Dashboard</a></li>
-                <li><a href="learning.html">Learn</a></li>
-                <li><a href="translator.html">Translator</a></li>
-                <li><a href="leaderboard.html">Leaderboard</a></li>
-                <li><a href="profile.html" class="active">Profile</a></li>
-                <li><a href="index.html" class="logout-btn">Logout</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="learning.html" class="nav-link">Learn</a></li>
+                <li><a href="activities.html" class="nav-link">Activities</a></li>
+                <li><a href="translator.html" class="nav-link">Translators</a></li>
+                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
             </ul>
-            <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="profile.html" class="active"><i class="fas fa-user"></i> Profile</a>
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
             </div>
         </div>
     </nav>
@@ -36,28 +63,35 @@
     <!-- Main Content -->
     <main class="profile-container">
         <!-- Profile Header -->
-        <section class="profile-header">
+        <section class="profile-header kd-fade-in">
             <div class="header-content">
                 <div class="profile-avatar">
-                    <div class="avatar-placeholder">👤</div>
-                    <button class="upload-btn" onclick="uploadPhoto()">📷 Change Photo</button>
+                    <div class="avatar-container" onclick="chooseAvatar()" role="button" tabindex="0" aria-label="Change profile photo or avatar" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();chooseAvatar();}">
+                        <div class="avatar-placeholder"><i class="fas fa-user" style="font-size:3.4rem;opacity:0.85;"></i></div>
+                        <div class="avatar-overlay">
+                            <div class="avatar-overlay-hint">
+                                <i class="fas fa-camera"></i>
+                                <span>Edit</span>
+                            </div>
+                        </div>
+                        <div class="avatar-edit-badge"><i class="fas fa-pen"></i></div>
+                    </div>
                 </div>
                 <div class="profile-info">
-                    <h1>Your Profile</h1>
-                    <h2 id="profileDisplayName">John Michael Reyes</h2>
+                    <span class="profile-eyebrow">Your Profile</span>
+                    <h2 id="profileDisplayName"></h2>
                     <p class="user-meta">
-                        <span class="badge" id="profileYearLevel">2nd Year BSNED</span>
-                        <span class="badge primary" id="profileRole">Member since Jan 2025</span>
+                        <span class="badge" id="profileYearLevel"></span>
                     </p>
                 </div>
                 <div class="profile-rank">
                     <div class="rank-item">
                         <span class="rank-label">Global Rank</span>
-                        <span class="rank-value" id="profileRank">🥇 #15</span>
+                        <span class="rank-value" id="profileRank"></span>
                     </div>
                     <div class="rank-item">
                         <span class="rank-label">Total Points</span>
-                        <span class="rank-value" id="profilePoints">4,850</span>
+                        <span class="rank-value" id="profilePoints"></span>
                     </div>
                 </div>
             </div>
@@ -65,29 +99,29 @@
 
         <div class="profile-content">
             <!-- Left Sidebar -->
-            <aside class="profile-sidebar">
+            <aside class="profile-sidebar kd-fade-in" style="animation-delay:.06s;">
                 <div class="sidebar-card">
                     <h3>Quick Stats</h3>
                     <div class="stats-list">
                         <div class="stat-item">
                             <span class="stat-icon">📚</span>
                             <span class="stat-label">Modules Completed</span>
-                            <span class="stat-value" id="profileModulesCompleted">5/8</span>
+                            <span class="stat-value" id="profileModulesCompleted"></span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-icon">⭐</span>
                             <span class="stat-label">Accuracy Rate</span>
-                            <span class="stat-value" id="profileAccuracy">87%</span>
+                            <span class="stat-value" id="profileAccuracy">0%</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-icon">🔥</span>
                             <span class="stat-label">Current Streak</span>
-                            <span class="stat-value" id="profileStreak">12 days</span>
+                            <span class="stat-value" id="profileStreak">0 days</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-icon">⏱️</span>
                             <span class="stat-label">Time Invested</span>
-                            <span class="stat-value" id="profilePracticeTime">48 hrs</span>
+                            <span class="stat-value" id="profilePracticeTime">0 hrs</span>
                         </div>
                     </div>
                 </div>
@@ -104,7 +138,7 @@
             </aside>
 
             <!-- Main Content -->
-            <section class="profile-main">
+            <section class="profile-main kd-fade-in" style="animation-delay:.12s;">
                 <!-- Edit Profile Section -->
                 <div class="profile-section">
                     <div class="section-header">
@@ -116,27 +150,27 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="label">Full Name</span>
-                                <span class="value" id="profileFullName">John Michael Reyes</span>
+                                <span class="value" id="profileFullName"></span>
                             </div>
                             <div class="info-item">
                                 <span class="label">Email Address</span>
-                                <span class="value" id="profileEmail">john.reyes@ccca.edu.ph</span>
+                                <span class="value" id="profileEmail"></span>
                             </div>
                             <div class="info-item">
                                 <span class="label">Student ID</span>
-                                <span class="value" id="profileStudentId">2023-BSNED-1234</span>
+                                <span class="value" id="profileStudentId"></span>
                             </div>
                             <div class="info-item">
                                 <span class="label">Year Level</span>
-                                <span class="value" id="profileYearText">2nd Year</span>
+                                <span class="value" id="profileYearText"></span>
                             </div>
                             <div class="info-item">
                                 <span class="label">Contact Number</span>
-                                <span class="value" id="profileContactNumber">Not set</span>
+                                <span class="value" id="profileContactNumber"></span>
                             </div>
                             <div class="info-item">
                                 <span class="label">Hearing Status</span>
-                                <span class="value badge secondary" id="profileHearingStatus">Not set</span>
+                                <span class="value badge secondary" id="profileHearingStatus"></span>
                             </div>
                         </div>
                     </div>
@@ -195,74 +229,22 @@
                     </div>
                 </div>
 
-                <!-- Account Settings -->
-                <div class="profile-section">
-                    <h2>Account Settings</h2>
-                    <div class="settings-list">
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <h3>Password & Security</h3>
-                                <p>Update your password and manage security settings</p>
-                            </div>
-                            <button class="btn-secondary" onclick="changePassword()">Manage</button>
-                        </div>
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <h3>Email Notifications</h3>
-                                <p>Control what updates you receive via email</p>
-                            </div>
-                            <button class="btn-secondary" onclick="manageNotifications()">Configure</button>
-                        </div>
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <h3>Privacy Settings</h3>
-                                <p>Manage your profile visibility and data sharing</p>
-                            </div>
-                            <button class="btn-secondary" onclick="managePrivacy()">Privacy Options</button>
-                        </div>
-                        <div class="setting-item">
-                            <div class="setting-info">
-                                <h3>Connected Accounts</h3>
-                                <p>Manage your linked social media and Google accounts</p>
-                            </div>
-                            <button class="btn-secondary" onclick="manageConnections()">Manage Connections</button>
-                        </div>
-                        <div class="setting-item danger">
-                            <div class="setting-info">
-                                <h3>Delete Account</h3>
-                                <p>Permanently delete your account and all associated data</p>
-                            </div>
-                            <button class="btn-danger" onclick="deleteAccount()">Delete Account</button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Preferences -->
                 <div class="profile-section">
                     <h2>Learning Preferences</h2>
                     <div class="preferences-grid">
                         <div class="preference-group">
-                            <label>Preferred Learning Speed</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="speed" checked> Slow</label>
-                                <label><input type="radio" name="speed"> Normal</label>
-                                <label><input type="radio" name="speed"> Fast</label>
-                            </div>
-                        </div>
-                        <div class="preference-group">
-                            <label>Difficulty Level</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="difficulty"> Beginner</label>
-                                <label><input type="radio" name="difficulty" checked> Intermediate</label>
-                                <label><input type="radio" name="difficulty"> Advanced</label>
-                            </div>
-                        </div>
-                        <div class="preference-group">
                             <label>Theme Preference</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="theme" checked> Light</label>
-                                <label><input type="radio" name="theme"> Dark</label>
-                                <label><input type="radio" name="theme"> Auto</label>
+                            <div class="theme-switcher" id="themeSwitcher" role="radiogroup" aria-label="Theme Preference">
+                                <button type="button" class="theme-option" data-theme-value="light" role="radio" aria-checked="false">
+                                    <i class="fas fa-sun"></i><span>Light</span>
+                                </button>
+                                <button type="button" class="theme-option" data-theme-value="dark" role="radio" aria-checked="false">
+                                    <i class="fas fa-moon"></i><span>Dark</span>
+                                </button>
+                                <button type="button" class="theme-option" data-theme-value="auto" role="radio" aria-checked="false">
+                                    <i class="fas fa-circle-half-stroke"></i><span>Auto</span>
+                                </button>
                             </div>
                         </div>
                         <div class="preference-group">
@@ -288,70 +270,213 @@
     </footer>
 
     <script src="js/portal.js"></script>
+    <script>
+        // Navbar dropdown
+        const _navToggle = document.getElementById('navUserToggle');
+        const _navDrop = document.getElementById('navUserDropdown');
+        if (_navToggle && _navDrop) {
+            _navToggle.addEventListener('click', function(e) { e.stopPropagation(); _navDrop.classList.toggle('open'); });
+            document.addEventListener('click', function() { _navDrop.classList.remove('open'); });
+        }
+    </script>
 
     <style>
         .profile-container {
             min-height: calc(100vh - 60px);
-            background: #f8f9fa;
+            background: transparent;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .profile-container h1,
+        .profile-container h2,
+        .profile-container h3 {
+            font-family: 'Poppins', 'Inter', sans-serif;
         }
 
         .profile-header {
-            background: linear-gradient(135deg, var(--primary) 0%, #5568d3 100%);
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #7c3aed 130%);
             color: white;
-            padding: 3rem 2rem;
+            padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem);
+            box-shadow: 0 18px 40px rgba(30, 64, 175, 0.24);
+        }
+
+        .profile-header::before,
+        .profile-header::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        .profile-header::before {
+            width: 300px;
+            height: 300px;
+            top: -140px;
+            right: -70px;
+            background: rgba(255,255,255,0.12);
+        }
+
+        .profile-header::after {
+            width: 200px;
+            height: 200px;
+            bottom: -110px;
+            left: 15%;
+            background: rgba(236,72,153,0.22);
+            filter: blur(4px);
         }
 
         .header-content {
             max-width: 1200px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: auto 1fr 200px;
-            gap: 2rem;
+            display: flex;
             align-items: center;
+            gap: 2.5rem;
         }
 
         .profile-avatar {
+            flex: 0 0 auto;
             text-align: center;
         }
 
+        .avatar-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .profile-info {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .profile-rank {
+            flex: 0 0 auto;
+        }
+
+        .avatar-container:focus-visible {
+            outline: 3px solid #fff;
+            outline-offset: 4px;
+        }
+
         .avatar-placeholder {
-            width: 120px;
-            height: 120px;
-            background: rgba(255,255,255,0.2);
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.25);
+            border: 3px solid rgba(255,255,255,0.35);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4rem;
-            margin: 0 auto 1rem;
-        }
-
-        .upload-btn {
-            background: white;
-            color: var(--primary);
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 5rem;
             transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            overflow: hidden;
         }
 
-        .upload-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        .avatar-placeholder svg,
+        .avatar-placeholder img {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
-        .profile-info h1 {
-            margin: 0;
-            font-size: 1rem;
-            opacity: 0.9;
+        .avatar-container:hover .avatar-placeholder {
+            background: rgba(255,255,255,0.35);
+            border-color: rgba(255,255,255,0.5);
+            transform: scale(1.03);
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(15,23,42,0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.25s ease;
+            pointer-events: none;
+        }
+
+        .avatar-container:hover .avatar-overlay {
+            background: rgba(15,23,42,0.55);
+            opacity: 1;
+        }
+
+        .avatar-overlay-hint {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            color: #fff;
+            transform: translateY(6px);
+            transition: transform 0.25s ease;
+        }
+
+        .avatar-container:hover .avatar-overlay-hint {
+            transform: translateY(0);
+        }
+
+        .avatar-overlay-hint i {
+            font-size: 1.5rem;
+        }
+
+        .avatar-overlay-hint span {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .avatar-edit-badge {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            border: 2px solid rgba(37,99,235,0.15);
+            transition: transform 0.2s ease;
+        }
+
+        .avatar-container:hover .avatar-edit-badge {
+            transform: scale(1.1);
+        }
+
+        .profile-eyebrow {
+            display: inline-block;
+            color: #ffffff;
+            margin: 0 0 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            opacity: 0.75;
         }
 
         .profile-info h2 {
-            margin: 0.5rem 0 1rem;
-            font-size: 1.8rem;
+            color: #ffffff;
+            margin: 0 0 0.9rem;
+            font-size: clamp(1.35rem, 2.2vw + 1rem, 2rem);
+            font-weight: 800;
+            line-height: 1.2;
+            word-break: break-word;
         }
 
         .user-meta {
@@ -363,8 +488,9 @@
         .badge {
             background: rgba(255,255,255,0.2);
             padding: 0.4rem 0.8rem;
-            border-radius: 20px;
+            border-radius: 999px;
             font-size: 0.85rem;
+            font-weight: 600;
         }
 
         .badge.primary {
@@ -377,7 +503,7 @@
         }
 
         .profile-rank {
-            text-align: center;
+            text-align: right;
         }
 
         .rank-item {
@@ -399,7 +525,7 @@
         .profile-content {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: clamp(1.25rem, 3.5vw, 2rem);
             display: grid;
             grid-template-columns: 300px 1fr;
             gap: 2rem;
@@ -412,31 +538,67 @@
         }
 
         .sidebar-card {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
             padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 14px 32px rgba(15,23,42,0.08);
+            border: 1px solid rgba(148,163,184,0.14);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .sidebar-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(15,23,42,0.12);
         }
 
         .sidebar-card h3 {
             margin-top: 0;
+            margin-bottom: 1.1rem;
             color: var(--dark);
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-card h3::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            flex-shrink: 0;
         }
 
         .stats-list {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.6rem;
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.9rem;
+            padding: 0.7rem 0.6rem;
+            border-radius: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .stat-item:hover {
+            background: #f8fafc;
         }
 
         .stat-icon {
-            font-size: 1.5rem;
+            font-size: 1.15rem;
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(124,58,237,0.1));
         }
 
         .stat-label {
@@ -463,8 +625,8 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.8rem;
-            background: #f8f9fa;
-            border-radius: 6px;
+            background: #f8fafc;
+            border-radius: 12px;
             font-size: 0.9rem;
         }
 
@@ -473,8 +635,13 @@
             align-items: center;
             gap: 0.8rem;
             padding: 0.8rem;
-            background: #f8f9fa;
-            border-radius: 6px;
+            background: #f8fafc;
+            border-radius: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .achievement:hover {
+            transform: translateX(3px);
         }
 
         .achievement-icon {
@@ -493,10 +660,11 @@
         }
 
         .profile-section {
-            background: white;
-            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
             padding: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 14px 32px rgba(15,23,42,0.08);
+            border: 1px solid rgba(148,163,184,0.14);
         }
 
         .section-header {
@@ -644,13 +812,15 @@
             flex: 1;
             height: 8px;
             background: #e0e0e0;
-            border-radius: 4px;
+            border-radius: 999px;
             overflow: hidden;
         }
 
         .skill-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary), #27ae60);
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2563eb, #10b981);
+            transition: width 0.4s ease;
         }
 
         .skill-value {
@@ -660,40 +830,26 @@
             color: var(--primary);
         }
 
-        .settings-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        .profile-container .btn-primary,
+        .profile-container .btn-secondary,
+        .profile-container .btn-danger {
+            border-radius: 999px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
 
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+        .profile-container .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
         }
 
-        .setting-item:hover {
-            border-color: var(--primary);
-            background: #f8f9fa;
+        .profile-container .btn-primary:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
         }
 
-        .setting-item.danger {
-            border-color: #e74c3c;
-        }
-
-        .setting-info h3 {
-            margin: 0 0 0.3rem 0;
-            color: var(--dark);
-        }
-
-        .setting-info p {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #666;
+        .profile-container .btn-secondary:hover,
+        .profile-container .btn-danger:hover {
+            transform: translateY(-1px);
         }
 
         .btn-danger {
@@ -749,10 +905,71 @@
             cursor: pointer;
         }
 
+        .theme-switcher {
+            display: inline-flex;
+            gap: 0.4rem;
+            padding: 0.35rem;
+            background: #f1f5f9;
+            border-radius: 14px;
+            border: 1px solid rgba(148,163,184,0.24);
+            width: fit-content;
+        }
+
+        .theme-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .theme-option i {
+            font-size: 0.95rem;
+        }
+
+        .theme-option:hover {
+            background: rgba(37,99,235,0.08);
+            color: var(--primary);
+        }
+
+        .theme-option.active {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(37,99,235,0.28);
+        }
+
+        .theme-option:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
         @media (max-width: 1024px) {
             .header-content {
-                grid-template-columns: 1fr;
+                flex-direction: column;
                 text-align: center;
+                gap: 1.5rem;
+            }
+
+            .profile-info {
+                width: 100%;
+            }
+
+            .user-meta {
+                justify-content: center;
+            }
+
+            .profile-rank {
+                text-align: center;
+                display: flex;
+                gap: 2rem;
+                justify-content: center;
             }
 
             .progress-cards {
@@ -768,6 +985,18 @@
             }
         }
 
+        @media (max-width: 480px) {
+            .avatar-container {
+                width: 110px;
+                height: 110px;
+            }
+
+            .profile-rank {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
         @media (max-width: 768px) {
             .profile-content {
                 grid-template-columns: 1fr;
@@ -777,23 +1006,58 @@
                 grid-template-columns: 1fr;
             }
 
-            .setting-item {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: flex-start;
+            .form-actions {
+                grid-template-columns: 1fr;
             }
 
-            .setting-item .btn-secondary,
-            .setting-item .btn-danger {
-                width: 100%;
-            }
+        }
+
+        /* Dark theme overrides for this page's own surfaces */
+        :root[data-theme="dark"] .skill-meter {
+            background: #232e45;
+        }
+
+        :root[data-theme="dark"] .form-input {
+            background: #1a2233;
+            border-color: #2a3448;
+            color: #e5e7eb;
+        }
+
+        :root[data-theme="dark"] .theme-switcher {
+            background: #1a2233;
+            border-color: rgba(148,163,184,0.16);
+        }
+
+        :root[data-theme="dark"] .theme-option {
+            color: #9aa4b2;
+        }
+
+        :root[data-theme="dark"] .theme-option:hover {
+            background: rgba(59,130,246,0.14);
+            color: #dbeafe;
+        }
+
+        :root[data-theme="dark"] .badge.secondary {
+            background: #232e45;
+            color: #e5e7eb;
+        }
+
+        :root[data-theme="dark"] .stat-item:hover {
+            background: #1a2233;
+        }
+
+        :root[data-theme="dark"] .activity-item,
+        :root[data-theme="dark"] .achievement {
+            background: #1a2233;
         }
     </style>
 
     <script>
         function getProfileExtrasKey() {
             try {
-                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const currentUser = (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function')
+                    ? window.KumpasSession.getCurrentUser()
+                    : {};
                 const email = String(currentUser.email || '').trim().toLowerCase();
                 return `kumpasProfileExtras:${email || 'guest'}`;
             } catch (_) {
@@ -887,15 +1151,6 @@
             if (contactView) contactView.textContent = contact || 'Not set';
             if (hearingView) hearingView.textContent = hearing || 'Not set';
 
-            try {
-                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                currentUser.name = fullName;
-                if (email) currentUser.email = email;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            } catch (_) {
-                // ignore storage parse issues
-            }
-
             setProfileExtras({
                 studentId: studentId,
                 contactNumber: contact,
@@ -910,38 +1165,38 @@
             toggleEditProfile();
         }
 
+        function initThemeSwitcher() {
+            const switcher = document.getElementById('themeSwitcher');
+            if (!switcher) return;
+            const options = Array.from(switcher.querySelectorAll('.theme-option'));
+
+            function syncActiveState() {
+                const current = window.KumpasTheme ? window.KumpasTheme.get() : 'auto';
+                options.forEach(function (btn) {
+                    const isActive = btn.getAttribute('data-theme-value') === current;
+                    btn.classList.toggle('active', isActive);
+                    btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+                });
+            }
+
+            options.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const value = btn.getAttribute('data-theme-value');
+                    if (window.KumpasTheme) window.KumpasTheme.set(value);
+                    syncActiveState();
+                });
+            });
+
+            syncActiveState();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             bindProfileEditValues();
+            initThemeSwitcher();
         });
 
-        function uploadPhoto() {
-            alert('Photo upload feature coming soon!');
-        }
-
-        function changePassword() {
-            alert('Redirecting to password change page...');
-        }
-
-        function manageNotifications() {
-            alert('Redirecting to notification settings...');
-        }
-
-        function managePrivacy() {
-            alert('Redirecting to privacy settings...');
-        }
-
-        function manageConnections() {
-            alert('Redirecting to connected accounts...');
-        }
-
-        function deleteAccount() {
-            if (confirm('Are you sure? This action cannot be undone.')) {
-                alert('Account deletion process initiated...');
-            }
-        }
-
         function savePreferences() {
-            alert('Learning preferences saved!');
+            alert('Preferences saved!');
         }
     </script>
 </body>
