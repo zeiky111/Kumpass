@@ -102,6 +102,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # django-cors-headers checks the literal "null" origin for file:// contexts.
 CORS_ALLOWED_ORIGINS = [
     "null",
+    "https://kumpass-frontend.onrender.com",
 ]
 # Allow credentials (cookies) in CORS requests
 CORS_ALLOW_CREDENTIALS = True
@@ -116,14 +117,15 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5502",
     "http://127.0.0.1:3000",
     "http://localhost:3000",
+    "https://kumpass-frontend.onrender.com",
 ]
 
 # Session configuration - loaded from environment variables
 SESSION_ENGINE = os.getenv("SESSION_ENGINE", "django.contrib.sessions.backends.db")
 SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "604800"))  # 7 days in seconds
-SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = os.getenv("SESSION_COOKIE_HTTPONLY", "True").lower() == "true"  # Prevent JavaScript access to session cookies
-SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")  # CSRF protection: Strict, Lax, or None
+SESSION_COOKIE_SAMESITE = "None"  # Required for cross-site cookie sharing between Render frontend and backend
 SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv("SESSION_EXPIRE_AT_BROWSER_CLOSE", "True").lower() == "true"  # Clear session when browser closes
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "sessionid")  # Name of the session cookie
 SESSION_SAVE_EVERY_REQUEST = os.getenv("SESSION_SAVE_EVERY_REQUEST", "False").lower() == "true"  # Save session on every request

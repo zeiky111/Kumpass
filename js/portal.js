@@ -170,7 +170,9 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}/learning/state/?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`${API_BASE}/learning/state/?email=${encodeURIComponent(email)}`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         return null;
       }
@@ -195,7 +197,9 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}/learning/state/?email=${encodeURIComponent(normalizedEmail)}`);
+      const response = await fetch(`${API_BASE}/learning/state/?email=${encodeURIComponent(normalizedEmail)}`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         return null;
       }
@@ -275,7 +279,9 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}/student/content/?email=${encodeURIComponent(email)}&limit=50`);
+      const response = await fetch(`${API_BASE}/student/content/?email=${encodeURIComponent(email)}&limit=50`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         return null;
       }
@@ -321,6 +327,7 @@
       const response = await fetch(`${API_BASE}/learning/state/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, state }),
       });
 
@@ -644,6 +651,7 @@
           const resp = await fetch(`${API_BASE}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(payload),
           });
           if (!resp.ok) {
@@ -1453,6 +1461,7 @@
     try {
       const response = await fetch(`${API_BASE}/profile/photo/`, {
         method: 'POST',
+        credentials: 'include',
         body: form,
       });
       if (!response.ok) return null;
@@ -1892,6 +1901,7 @@
       try {
         const response = await fetch(`${API_BASE}/profile/photo/`, {
           method: 'POST',
+          credentials: 'include',
           body: form,
         });
 
