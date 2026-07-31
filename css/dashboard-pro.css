@@ -99,7 +99,15 @@ body.pro-dashboard .dashboard-sidebar {
 
 @media (min-width: 901px) {
   body.pro-dashboard .dashboard-sidebar {
-    position: relative;
+    /* Let the sidebar stretch to the full column height instead of the
+       fixed max-height/overflow-y scroll box from dashboard.css, which
+       clipped the menu (cut off "Game Levels"/"Logout") and made the
+       sidebar shorter than the main content, detaching it from the
+       footer below. */
+    position: sticky;
+    max-height: 100vh;
+    overflow-y: visible;
+    align-self: stretch;
   }
 }
 
