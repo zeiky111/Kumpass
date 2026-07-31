@@ -130,6 +130,12 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv("SESSION_EXPIRE_AT_BROWSER_CLOSE", "
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "sessionid")  # Name of the session cookie
 SESSION_SAVE_EVERY_REQUEST = os.getenv("SESSION_SAVE_EVERY_REQUEST", "False").lower() == "true"  # Save session on every request
 
+# Must match the session cookie settings above -- without these, browsers
+# silently drop the csrftoken cookie on cross-site requests between the
+# Render frontend and backend domains, causing "CSRF cookie not set" on login.
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "None"
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

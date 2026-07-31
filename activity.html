@@ -49,11 +49,11 @@
         <!-- Progress Bar -->
         <div class="activity-progress">
             <div class="progress-header">
-                <span class="lesson-title">Lesson 1: Basic Finger Spelling - Activity 2 of 4</span>
+                <span class="lesson-title" id="activityLessonTitle">Loading module…</span>
                 <button class="close-activity" onclick="exitActivity()">✕</button>
             </div>
             <div class="progress-bar-large">
-                <div class="progress-fill" style="width: 50%;"></div>
+                <div class="progress-fill" id="activityProgressFill" style="width: 0%;"></div>
             </div>
         </div>
 
@@ -63,18 +63,16 @@
             <section class="demo-section">
                 <div class="demo-card">
                     <h2>Watch & Learn</h2>
-                    <div class="video-container">
+                    <div class="video-container" id="activityVideoContainer">
                         <div class="video-placeholder">
                             <div class="video-icon">📹</div>
-                            <p>Sign Language Demonstration Video</p>
-                            <p style="font-size: 0.9rem; opacity: 0.7;">Shows how to perform the sign correctly</p>
+                            <p>No demonstration video uploaded for this module yet</p>
                         </div>
                     </div>
                     <div class="sign-info">
-                        <h3>Sign: "Hello"</h3>
-                        <p><strong>Category:</strong> Greetings</p>
-                        <p><strong>Description:</strong> Move your open right hand from your forehead downward, with fingers extended. The palm faces left.</p>
-                        <p><strong>Tips:</strong> Keep your hand movement smooth and deliberate. The expression on your face is important!</p>
+                        <h3 id="activityModuleTitle">Module</h3>
+                        <p id="activityModuleDescription"><strong>Description:</strong> Loading…</p>
+                        <p id="activityFilesNote" style="display:none;"><strong>Materials:</strong> <span id="activityFilesCount">0</span> file(s) available for this module.</p>
                     </div>
                 </div>
             </section>
@@ -99,27 +97,9 @@
             <!-- Activity Type: Quiz -->
             <section class="quiz-section">
                 <div class="quiz-card">
-                    <h2>Quiz: Identify the Sign</h2>
-                    <div class="quiz-question">
-                        <h3 id="questionText">Which sign means "Thank You"?</h3>
-                        <div class="quiz-options">
-                            <div class="quiz-option" onclick="selectAnswer(this, false)">
-                                <div class="option-icon">👋</div>
-                                <p>Waving Motion</p>
-                            </div>
-                            <div class="quiz-option" onclick="selectAnswer(this, true)">
-                                <div class="option-icon">🙏</div>
-                                <p>Hand to Chest (Correct)</p>
-                            </div>
-                            <div class="quiz-option" onclick="selectAnswer(this, false)">
-                                <div class="option-icon">☝️</div>
-                                <p>Pointing Up</p>
-                            </div>
-                            <div class="quiz-option" onclick="selectAnswer(this, false)">
-                                <div class="option-icon">👍</div>
-                                <p>Thumbs Up</p>
-                            </div>
-                        </div>
+                    <h2>Quiz</h2>
+                    <div id="activityQuizContainer">
+                        <p style="color:#6b7280;">Loading quiz…</p>
                     </div>
                 </div>
             </section>
@@ -128,10 +108,10 @@
             <section id="feedbackSection" class="feedback-section" style="display: none;">
                 <div class="feedback-card success">
                     <div class="feedback-icon">✓</div>
-                    <h3>Excellent!</h3>
-                    <p>You correctly identified the sign "Thank You"!</p>
-                    <p class="points-earned">+10 Points</p>
-                    <button class="btn-primary" onclick="nextActivity()">Next Activity</button>
+                    <h3>Quiz submitted!</h3>
+                    <p id="feedbackMessage">Great job completing this module's quiz.</p>
+                    <p class="points-earned" id="feedbackPoints"></p>
+                    <button class="btn-primary" onclick="nextActivity()">Back to Learning</button>
                 </div>
             </section>
         </div>
@@ -141,11 +121,10 @@
             <div class="sidebar-card">
                 <h3>📋 Instructions</h3>
                 <ol class="instructions-list">
-                    <li>Watch the video demonstration carefully</li>
-                    <li>Read the sign description and tips</li>
-                    <li>Practice the sign using your camera (optional)</li>
-                    <li>Answer the quiz question correctly</li>
-                    <li>Earn points and advance to next activity</li>
+                    <li>Watch the video demonstration, if available</li>
+                    <li>Review the module description</li>
+                    <li>Answer every quiz question</li>
+                    <li>Submit the quiz to save your progress</li>
                 </ol>
             </div>
 
@@ -164,16 +143,16 @@
                 <h3>📊 Activity Stats</h3>
                 <div class="stats-list">
                     <div class="stat-item">
-                        <span class="stat-label">Points Earned:</span>
-                        <span class="stat-value">25/50</span>
+                        <span class="stat-label">Quiz Score:</span>
+                        <span class="stat-value" id="statQuizScore">–</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Accuracy:</span>
-                        <span class="stat-value">85%</span>
+                        <span class="stat-label">Module Progress:</span>
+                        <span class="stat-value" id="statModuleProgress">0%</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Time Spent:</span>
-                        <span class="stat-value">8:45</span>
+                        <span class="stat-label">Total Points:</span>
+                        <span class="stat-value" id="statTotalPoints">0</span>
                     </div>
                 </div>
             </div>
@@ -544,112 +523,199 @@
     <script src="js/portal.js"></script>
     <script>
         const queryParams = new URLSearchParams(window.location.search);
-        const currentModuleId = queryParams.get('module') || 'lesson3';
-        const lessonTitleMap = {
-            lesson1: 'Lesson 1: Basic Finger Spelling',
-            lesson2: 'Lesson 2: Common Everyday Signs',
-            lesson3: 'Lesson 3: Greetings & Polite Expressions',
-            lesson4: 'Lesson 4: Family & Relationships',
-            lesson5: 'Lesson 5: Numbers & Counting',
-            lesson6: 'Lesson 6: Sign Language Grammar',
-            lesson7: 'Lesson 7: Emotions & Expressions',
-            lesson8: 'Lesson 8: Complex Conversations'
-        };
+        const currentModuleId = queryParams.get('module') || '';
 
-        let quizPassed = false;
-
-        function awardActivityProgress() {
-            if (!window.KumpasPortal || typeof window.KumpasPortal.recordProgress !== 'function') {
-                return;
-            }
-
-            window.KumpasPortal.recordProgress({
-                moduleId: currentModuleId,
-                points: 10,
-                progressDelta: 25,
-                completed: true,
-                practiceMinutes: 5,
-                activityName: 'Activity Quiz',
-                activityText: 'Completed activity quiz',
-                activityMeta: '+10 points',
-                icon: '✅'
-            });
+        function exitActivity() {
+            window.location.href = 'learning.html';
         }
 
-        function syncActivityHeader() {
-            const lessonTitle = document.querySelector('.lesson-title');
-            const title = lessonTitleMap[currentModuleId] || lessonTitleMap.lesson3;
-            if (lessonTitle) {
-                lessonTitle.textContent = `${title} - Activity 1 of 1`;
-            }
-
-            const progressFill = document.querySelector('.activity-progress .progress-fill');
-            if (progressFill) {
-                progressFill.style.width = '0%';
-            }
-
-            const questionText = document.getElementById('questionText');
-            const signTitle = document.querySelector('.sign-info h3');
-            const signDesc = document.querySelector('.sign-info p:nth-of-type(2)');
-            const signTips = document.querySelector('.sign-info p:nth-of-type(3)');
-
-            if (currentModuleId === 'lesson1') {
-                if (questionText) questionText.textContent = 'Which letter handshape is shown in the lesson?';
-                if (signTitle) signTitle.textContent = 'Sign: "Finger Spelling A"';
-                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Form the letter A with a closed fist and thumb resting at the side.';
-                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Keep your fingers neat and steady. Focus on the thumb position.';
-            } else if (currentModuleId === 'lesson2' || currentModuleId === 'lesson3') {
-                if (questionText) questionText.textContent = 'Which sign means "Thank You"?';
-                if (signTitle) signTitle.textContent = 'Sign: "Thank You"';
-                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Move your hand from the chin outward in a smooth motion.';
-                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Keep the movement clear and add a polite facial expression.';
-            } else {
-                if (questionText) questionText.textContent = 'Which sign best matches the lesson?';
-                if (signTitle) signTitle.textContent = 'Sign: "Hello"';
-                if (signDesc) signDesc.innerHTML = '<strong>Description:</strong> Use the sign shown in the current lesson and keep your movement deliberate.';
-                if (signTips) signTips.innerHTML = '<strong>Tips:</strong> Focus on handshape, movement, and expression.';
-            }
+        function nextActivity() {
+            window.location.href = 'learning.html';
         }
-
-        document.addEventListener('DOMContentLoaded', syncActivityHeader);
 
         function startCamera() {
             alert('Camera access would be enabled here. This is a demo interface.');
         }
 
-        function selectAnswer(element, isCorrect) {
-            const options = document.querySelectorAll('.quiz-option');
-            options.forEach(opt => {
-                opt.classList.remove('selected', 'correct', 'incorrect');
-            });
+        function renderModuleHeader(module) {
+            const lessonTitle = document.getElementById('activityLessonTitle');
+            if (lessonTitle) lessonTitle.textContent = module.title || 'Module';
 
-            element.classList.add('selected');
-            element.classList.add(isCorrect ? 'correct' : 'incorrect');
+            const moduleTitle = document.getElementById('activityModuleTitle');
+            if (moduleTitle) moduleTitle.textContent = module.title || 'Module';
 
-            if (isCorrect) {
-                if (!quizPassed) {
-                    quizPassed = true;
-                    awardActivityProgress();
+            const moduleDescription = document.getElementById('activityModuleDescription');
+            if (moduleDescription) {
+                moduleDescription.innerHTML = `<strong>Description:</strong> ${module.description ? String(module.description) : 'No description provided for this module yet.'}`;
+            }
+
+            const files = Array.isArray(module.files) ? module.files : [];
+            const filesNote = document.getElementById('activityFilesNote');
+            const filesCount = document.getElementById('activityFilesCount');
+            if (files.length && filesNote && filesCount) {
+                filesCount.textContent = String(files.length);
+                filesNote.style.display = 'block';
+            }
+
+            const videoFile = files.find(f => f.file_type === 'video' && f.file_url);
+            if (videoFile) {
+                const container = document.getElementById('activityVideoContainer');
+                if (container) {
+                    container.innerHTML = `<video controls style="width:100%; border-radius:16px;" src="${videoFile.file_url}"></video>`;
                 }
-                setTimeout(() => {
-                    document.getElementById('feedbackSection').style.display = 'block';
-                }, 500);
             }
         }
 
-        function nextActivity() {
-            if (!quizPassed) {
-                alert('Answer the quiz correctly first to save your progress.');
+        function renderModuleStats(module) {
+            if (!window.KumpasPortal) return;
+            const state = window.KumpasPortal.getState();
+            const progress = window.KumpasPortal.getModuleProgress(state, module.id);
+            const progressEl = document.getElementById('statModuleProgress');
+            if (progressEl) progressEl.textContent = `${progress}%`;
+            const pointsEl = document.getElementById('statTotalPoints');
+            if (pointsEl) pointsEl.textContent = Number(state.points || 0).toLocaleString();
+            const fill = document.getElementById('activityProgressFill');
+            if (fill) fill.style.width = `${progress}%`;
+        }
+
+        function renderQuiz(module) {
+            const container = document.getElementById('activityQuizContainer');
+            if (!container) return;
+
+            const questions = Array.isArray(module.quizzes) ? module.quizzes : [];
+            if (!questions.length) {
+                container.innerHTML = '<p style="color:#6b7280;">No quiz has been added for this module yet.</p>';
                 return;
             }
-            window.location.href = 'learning.html';
-        }
 
-        function exitActivity() {
-            if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
-                window.location.href = 'learning.html';
+            let html = '<form id="activityQuizForm">';
+            questions.forEach((q, i) => {
+                html += `<div class="quiz-question" data-question-index="${i}">`;
+                html += `<h3>${escapeHtml(q.question_text)}</h3>`;
+                const choices = Array.isArray(q.choices) ? q.choices : [];
+                if (choices.length) {
+                    html += '<div class="quiz-options">';
+                    choices.forEach((choice) => {
+                        html += `
+                            <label class="quiz-option">
+                                <input type="radio" name="q_${q.id}" value="${escapeHtml(choice)}" style="margin-right:8px;">
+                                <p style="display:inline;">${escapeHtml(choice)}</p>
+                            </label>`;
+                    });
+                    html += '</div>';
+                } else {
+                    html += `<input type="text" name="q_${q.id}" placeholder="Your answer" style="width:100%; padding:0.75rem; border-radius:12px; border:1px solid #e2e8f0;">`;
+                }
+                html += '</div>';
+            });
+            html += '<button type="button" class="btn-primary" id="activitySubmitQuizBtn" style="margin-top:1rem;">Submit Quiz</button>';
+            html += '</form>';
+            container.innerHTML = html;
+
+            const submitBtn = document.getElementById('activitySubmitQuizBtn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => submitActivityQuiz(module, questions));
             }
         }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        async function submitActivityQuiz(module, questions) {
+            const form = document.getElementById('activityQuizForm');
+            const submitBtn = document.getElementById('activitySubmitQuizBtn');
+            if (!form || !window.KumpasPortal) return;
+
+            const fd = new FormData(form);
+            const answers = [];
+            questions.forEach(q => {
+                const val = fd.get(`q_${q.id}`);
+                if (val !== null) answers.push({ question_id: Number(q.id), answer: String(val) });
+            });
+
+            if (!answers.length) {
+                alert('Answer at least one question before submitting.');
+                return;
+            }
+
+            const currentUser = window.KumpasPortal.getCurrentUser();
+            const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+            const quizModuleId = Number.isFinite(module.numericId) ? module.numericId : module.id;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting…';
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email: currentUser.email || '', answers })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err && err.error ? `Quiz submission failed: ${err.error}` : 'Quiz submission failed');
+                    return;
+                }
+
+                const result = await response.json();
+                const score = Number(result.score || 0);
+                const total = Number(result.total || 0);
+
+                const scoreEl = document.getElementById('statQuizScore');
+                if (scoreEl) scoreEl.textContent = `${score}/${total}`;
+
+                const feedbackMessage = document.getElementById('feedbackMessage');
+                if (feedbackMessage) feedbackMessage.textContent = `You scored ${score} out of ${total} on this module's quiz.`;
+
+                const feedbackPoints = document.getElementById('feedbackPoints');
+                if (feedbackPoints && result.state && typeof result.state.points === 'number') {
+                    feedbackPoints.textContent = `Total points: ${result.state.points}`;
+                }
+
+                document.getElementById('feedbackSection').style.display = 'block';
+                renderModuleStats(module);
+            } catch (err) {
+                alert('Quiz submission failed. Please try again.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Quiz';
+                }
+            }
+        }
+
+        async function initActivityPage() {
+            if (!window.KumpasPortal) return;
+
+            await window.KumpasPortal.ensureCurrentUser().catch(() => null);
+            await window.KumpasPortal.loadStudentContentFromBackend().catch(() => null);
+            await window.KumpasPortal.loadStateFromBackend().catch(() => null);
+
+            const module = window.KumpasPortal.getModuleById(currentModuleId);
+            if (!module) {
+                const lessonTitle = document.getElementById('activityLessonTitle');
+                if (lessonTitle) lessonTitle.textContent = 'Module not found';
+                const quizContainer = document.getElementById('activityQuizContainer');
+                if (quizContainer) quizContainer.innerHTML = '<p style="color:#991b1b;">This module could not be found. Go back to the Learning page and try again.</p>';
+                return;
+            }
+
+            renderModuleHeader(module);
+            renderModuleStats(module);
+            renderQuiz(module);
+        }
+
+        document.addEventListener('DOMContentLoaded', initActivityPage);
     </script>
     <script>
     (function() {

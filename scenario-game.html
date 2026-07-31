@@ -581,6 +581,7 @@
         const TOTAL_OPTIONS = { easy: 3, medium: 4, hard: 6 };
 
         let signVideoByKey = {};
+        let signVideoWords = [];
         let allSignClips = [];
         let fallbackScenarios = [];
 
@@ -595,6 +596,7 @@
                 map[String(item.key || '').toLowerCase()] = item.video_url;
             });
             signVideoByKey = map;
+            signVideoWords = items.map(item => item.word).filter(Boolean);
         }
 
         function clipByName(name, correct = false) {
@@ -610,94 +612,14 @@
                 .trim();
         }
 
+        // Scenario content lives in the database (GameLevel/GameLevelItem for
+        // game_key='scenario'), loaded below via KumpasGames.loadGameLevels
+        // ('scenario'). allSignClips still needs the full clip library (used
+        // to pad extra options); fallbackScenarios is populated from the
+        // "easy" bucket of that same DB response (see Promise.all below), so
+        // there is a single DB-backed source of content, not a hardcoded array.
         function buildFallbackScenarios() {
-            allSignClips = [
-                clipByName('Hello'),
-                clipByName('Goodbye'),
-                clipByName('How are you'),
-                clipByName('What is your name'),
-                clipByName('Nice to meet you'),
-                clipByName('Thank you'),
-                clipByName('Please'),
-                clipByName('Sorry'),
-                clipByName('Excuse me'),
-                clipByName('I need help')
-            ];
-
-            fallbackScenarios = [
-                {
-                    scenario: 'You bump into someone in the hallway and need to apologize.',
-                    question: 'Which sign response should you use?',
-                    options: [
-                        clipByName('Sorry', true),
-                        clipByName('Thank you'),
-                        clipByName('Hello')
-                    ]
-                },
-                {
-                    scenario: 'You start a conversation with someone new in class.',
-                    question: 'What is your best opening sign?',
-                    options: [
-                        clipByName('Hello', true),
-                        clipByName('Goodbye'),
-                        clipByName('Sorry')
-                    ]
-                },
-                {
-                    scenario: 'You want to ask someone how they are feeling today.',
-                    question: 'Pick the most appropriate sign question:',
-                    options: [
-                        clipByName('How are you', true),
-                        clipByName('What is your name'),
-                        clipByName('Please')
-                    ]
-                },
-                {
-                    scenario: 'You want to know the name of a new classmate.',
-                    question: 'Which sign should you use to ask?',
-                    options: [
-                        clipByName('What is your name', true),
-                        clipByName('How are you'),
-                        clipByName('Nice to meet you')
-                    ]
-                },
-                {
-                    scenario: 'Someone just told you their name and you want to respond politely.',
-                    question: 'Which sign fits best?',
-                    options: [
-                        clipByName('Nice to meet you', true),
-                        clipByName('Excuse me'),
-                        clipByName('Please')
-                    ]
-                },
-                {
-                    scenario: 'A classmate helped you understand a lesson and you want to show appreciation.',
-                    question: 'Which sign response should you use?',
-                    options: [
-                        clipByName('Thank you', true),
-                        clipByName('Sorry'),
-                        clipByName('Hello')
-                    ]
-                },
-                {
-                    scenario: 'You need to pass by someone blocking the hallway.',
-                    question: 'Which sign should you show first?',
-                    options: [
-                        clipByName('Excuse me', true),
-                        clipByName('Please'),
-                        clipByName('Sorry')
-                    ]
-                },
-                {
-                    scenario: 'It is the end of the school day and you are leaving.',
-                    question: 'Which sign fits this situation?',
-                    options: [
-                        clipByName('Goodbye', true),
-                        clipByName('Hello'),
-                        clipByName('Thank you')
-                    ]
-                }
-            ];
+            allSignClips = signVideoWords.map(word => clipByName(word));
         }
 
         // Difficulty controls the total number of sign-response options shown
@@ -885,18 +807,27 @@
             startLevel(false);
         }
 
+        function mapScenarioItem(item) {
+            const extra = item.extra_data || {};
+            if (!item.prompt || !Array.isArray(extra.options) || extra.options.length < 2 || !extra.options.some(opt => opt.correct)) return null;
+            return {
+                scenario: item.prompt,
+                question: extra.question || '',
+                options: extra.options,
+            };
+        }
+
         // Initialize game
         Promise.all([
             loadSignVideos().then(() => buildFallbackScenarios()),
             KumpasGames.loadGameLevels('scenario').then(levels => {
-                engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, item => {
-                    const extra = item.extra_data || {};
-                    if (!item.prompt || !Array.isArray(extra.options) || extra.options.length < 2 || !extra.options.some(opt => opt.correct)) return null;
-                    return {
-                        scenario: item.prompt,
-                        question: extra.question || '',
-                        options: extra.options,
-                    };
+                engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, mapScenarioItem);
+                (levels || []).forEach(level => {
+                    if (level.difficulty !== 'easy') return;
+                    (level.items || []).forEach(item => {
+                        const mapped = mapScenarioItem(item);
+                        if (mapped) fallbackScenarios.push(mapped);
+                    });
                 });
             }),
         ])

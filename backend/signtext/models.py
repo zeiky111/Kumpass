@@ -30,6 +30,9 @@ class UserProfile(models.Model):
     photo = models.ImageField(upload_to="profile_photos/%Y/%m/%d/", blank=True, null=True)
     # Preset mascot avatar id (e.g. "blue", "purple"); mutually exclusive with photo.
     avatar_id = models.CharField(max_length=32, blank=True, default="")
+    student_id = models.CharField(max_length=40, blank=True, default="")
+    contact_number = models.CharField(max_length=30, blank=True, default="")
+    hearing_status = models.CharField(max_length=30, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -321,3 +324,65 @@ class GameLevelItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.prompt} (level {self.level_id})"
+
+
+class QuizAttempt(models.Model):
+    """Records one graded quiz submission for a module, used to compute
+    per-module accuracy (skill breakdown) and quiz-based achievements."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
+    module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name="quiz_attempts")
+    score = models.PositiveIntegerField(default=0)
+    total = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.module.module_key} ({self.score}/{self.total})"
+
+
+class Achievement(models.Model):
+    """Achievement catalog entry. Unlock criteria are data-driven (criteria_type
+    + criteria_value) so new achievements can be added without code changes."""
+    CRITERIA_MODULES_COMPLETED = "modules_completed"
+    CRITERIA_STREAK_DAYS = "streak_days"
+    CRITERIA_QUIZ_PERFECT_SCORE = "quiz_perfect_score"
+    CRITERIA_QUIZ_COUNT = "quiz_count"
+    CRITERIA_POINTS_TOTAL = "points_total"
+    CRITERIA_CHOICES = [
+        (CRITERIA_MODULES_COMPLETED, "Modules completed"),
+        (CRITERIA_STREAK_DAYS, "Streak (days)"),
+        (CRITERIA_QUIZ_PERFECT_SCORE, "Perfect quiz scores"),
+        (CRITERIA_QUIZ_COUNT, "Quizzes taken"),
+        (CRITERIA_POINTS_TOTAL, "Points total"),
+    ]
+
+    key = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=120)
+    icon = models.CharField(max_length=60, default="fa-solid fa-award")
+    criteria_type = models.CharField(max_length=30, choices=CRITERIA_CHOICES)
+    criteria_value = models.PositiveIntegerField(default=1)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class UserAchievement(models.Model):
+    """Records that a user has unlocked a given achievement."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="unlocked_achievements")
+    achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE, related_name="unlocks")
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "achievement")
+        ordering = ["-unlocked_at"]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} unlocked {self.achievement.key}"

@@ -1053,34 +1053,9 @@
     </style>
 
     <script>
-        function getProfileExtrasKey() {
-            try {
-                const currentUser = (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function')
-                    ? window.KumpasSession.getCurrentUser()
-                    : {};
-                const email = String(currentUser.email || '').trim().toLowerCase();
-                return `kumpasProfileExtras:${email || 'guest'}`;
-            } catch (_) {
-                return 'kumpasProfileExtras:guest';
-            }
-        }
-
-        function getProfileExtras() {
-            try {
-                return JSON.parse(localStorage.getItem(getProfileExtrasKey()) || '{}');
-            } catch (_) {
-                return {};
-            }
-        }
-
-        function setProfileExtras(next) {
-            localStorage.setItem(getProfileExtrasKey(), JSON.stringify(next || {}));
-        }
-
         function bindProfileEditValues() {
             const fullNameView = document.getElementById('profileFullName');
             const emailView = document.getElementById('profileEmail');
-            const studentIdView = document.getElementById('profileStudentId');
             const yearLevelView = document.getElementById('profileYearText');
             const contactView = document.getElementById('profileContactNumber');
             const hearingView = document.getElementById('profileHearingStatus');
@@ -1092,23 +1067,28 @@
             const contactInput = document.getElementById('profileEditContact');
             const hearingInput = document.getElementById('profileEditHearingStatus');
 
-            const extras = getProfileExtras();
+            const currentUser = (window.KumpasPortal && typeof window.KumpasPortal.getCurrentUser === 'function')
+                ? window.KumpasPortal.getCurrentUser()
+                : {};
+
             const fullName = fullNameView ? fullNameView.textContent.trim() : '';
             const email = emailView ? emailView.textContent.trim() : '';
-            const studentId = studentIdView ? studentIdView.textContent.trim() : '';
             const yearLevel = yearLevelView ? yearLevelView.textContent.trim() : '';
-            const contact = extras.contactNumber || (contactView ? contactView.textContent.trim() : '');
-            const hearing = extras.hearingStatus || (hearingView ? hearingView.textContent.trim() : 'Hearing');
+            const studentId = currentUser.studentId || '';
+            const contact = currentUser.contactNumber || '';
+            const hearing = currentUser.hearingStatus || 'Hearing';
 
             if (fullNameInput) fullNameInput.value = fullName;
             if (emailInput) emailInput.value = email;
-            if (studentIdInput) studentIdInput.value = extras.studentId || studentId;
+            if (studentIdInput) studentIdInput.value = studentId;
             if (yearLevelInput) yearLevelInput.value = yearLevel;
-            if (contactInput) contactInput.value = contact === 'Not set' ? '' : contact;
-            if (hearingInput) hearingInput.value = hearing && hearing !== 'Not set' ? hearing : 'Hearing';
+            if (contactInput) contactInput.value = contact;
+            if (hearingInput) hearingInput.value = hearing;
 
-            if (contactView && extras.contactNumber) contactView.textContent = extras.contactNumber;
-            if (hearingView && extras.hearingStatus) hearingView.textContent = extras.hearingStatus;
+            if (contactView) contactView.textContent = contact || 'Not set';
+            if (hearingView) hearingView.textContent = hearing || 'Not set';
+            const studentIdView = document.getElementById('profileStudentId');
+            if (studentIdView && studentId) studentIdView.textContent = studentId;
         }
 
         function toggleEditProfile() {
@@ -1121,15 +1101,14 @@
             edit.style.display = edit.style.display === 'none' ? 'block' : 'none';
         }
 
-        function saveProfile() {
+        async function saveProfile() {
             const fullNameInput = document.getElementById('profileEditFullName');
-            const emailInput = document.getElementById('profileEditEmail');
             const studentIdInput = document.getElementById('profileEditStudentId');
             const contactInput = document.getElementById('profileEditContact');
             const hearingInput = document.getElementById('profileEditHearingStatus');
+            const saveButton = document.querySelector('#profileEdit button[onclick="saveProfile()"]');
 
             const fullName = fullNameInput ? fullNameInput.value.trim() : '';
-            const email = emailInput ? emailInput.value.trim() : '';
             const studentId = studentIdInput ? studentIdInput.value.trim() : '';
             const contact = contactInput ? contactInput.value.trim() : '';
             const hearing = hearingInput ? hearingInput.value : '';
@@ -1139,30 +1118,68 @@
                 return;
             }
 
-            const displayName = document.getElementById('profileDisplayName');
-            const fullNameView = document.getElementById('profileFullName');
-            const studentIdView = document.getElementById('profileStudentId');
-            if (displayName) displayName.textContent = fullName;
-            if (fullNameView) fullNameView.textContent = fullName;
-            if (studentIdView) studentIdView.textContent = studentId || 'Not set';
-
-            const contactView = document.getElementById('profileContactNumber');
-            const hearingView = document.getElementById('profileHearingStatus');
-            if (contactView) contactView.textContent = contact || 'Not set';
-            if (hearingView) hearingView.textContent = hearing || 'Not set';
-
-            setProfileExtras({
-                studentId: studentId,
-                contactNumber: contact,
-                hearingStatus: hearing
-            });
-
-            if (window.KumpasPortal && typeof window.KumpasPortal.renderProfile === 'function') {
-                window.KumpasPortal.renderProfile();
+            if (!window.KumpasPortal || typeof window.KumpasPortal.getCurrentUser !== 'function') {
+                alert('Unable to save profile right now. Please refresh and try again.');
+                return;
             }
 
-            alert('Profile updated successfully!');
-            toggleEditProfile();
+            const email = window.KumpasPortal.getCurrentUser().email || '';
+            if (!email) {
+                alert('Unable to save profile right now. Please refresh and try again.');
+                return;
+            }
+
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.textContent = 'Saving…';
+            }
+
+            try {
+                const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+                const response = await fetch(`${apiBase}/profile/update/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email,
+                        student_id: studentId,
+                        contact_number: contact,
+                        hearing_status: hearing
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Profile update failed');
+                }
+
+                const displayName = document.getElementById('profileDisplayName');
+                const fullNameView = document.getElementById('profileFullName');
+                const studentIdView = document.getElementById('profileStudentId');
+                const contactView = document.getElementById('profileContactNumber');
+                const hearingView = document.getElementById('profileHearingStatus');
+                if (displayName) displayName.textContent = fullName;
+                if (fullNameView) fullNameView.textContent = fullName;
+                if (studentIdView) studentIdView.textContent = studentId || 'Not set';
+                if (contactView) contactView.textContent = contact || 'Not set';
+                if (hearingView) hearingView.textContent = hearing || 'Not set';
+
+                if (window.KumpasPortal && window.KumpasPortal.getCurrentUser) {
+                    const cachedUser = window.KumpasPortal.getCurrentUser();
+                    cachedUser.studentId = studentId;
+                    cachedUser.contactNumber = contact;
+                    cachedUser.hearingStatus = hearing;
+                }
+
+                alert('Profile updated successfully!');
+                toggleEditProfile();
+            } catch (err) {
+                alert('Failed to save profile. Please try again.');
+            } finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                    saveButton.textContent = 'Save Changes';
+                }
+            }
         }
 
         function initThemeSwitcher() {

@@ -678,59 +678,6 @@
             return signVideoByKey[word.toLowerCase()] || '';
         }
 
-        function buildFallbackQuestions() {
-            fallbackQuestions = [
-                {
-                    signs: [
-                        { name: 'HELLO', video: videoFor('hello') },
-                        { name: 'HOW ARE YOU', video: videoFor('how are you') }
-                    ],
-                    words: ['hello', 'how', 'are', 'you'],
-                    correct: ['hello', 'how', 'are', 'you']
-                },
-                {
-                    signs: [
-                        { name: 'HELLO', video: videoFor('hello') },
-                        { name: 'WHAT IS YOUR NAME', video: videoFor('what is your name') }
-                    ],
-                    words: ['hello', 'what', 'is', 'your', 'name'],
-                    correct: ['hello', 'what', 'is', 'your', 'name']
-                },
-                {
-                    signs: [
-                        { name: 'MY NAME IS', video: videoFor('my name is') },
-                        { name: 'NICE TO MEET YOU', video: videoFor('nice to meet you') }
-                    ],
-                    words: ['my', 'name', 'is', 'nice', 'to', 'meet', 'you'],
-                    correct: ['my', 'name', 'is', 'nice', 'to', 'meet', 'you']
-                },
-                {
-                    signs: [
-                        { name: 'I NEED HELP', video: videoFor('i need help') },
-                        { name: 'THANK YOU', video: videoFor('thank you') }
-                    ],
-                    words: ['i', 'need', 'help', 'thank', 'you'],
-                    correct: ['i', 'need', 'help', 'thank', 'you']
-                },
-                {
-                    signs: [
-                        { name: 'EXCUSE ME', video: videoFor('excuse me') },
-                        { name: 'CAN YOU REPEAT THAT', video: videoFor('can you repeat that') }
-                    ],
-                    words: ['excuse', 'me', 'can', 'you', 'repeat', 'that'],
-                    correct: ['excuse', 'me', 'can', 'you', 'repeat', 'that']
-                },
-                {
-                    signs: [
-                        { name: 'THANK YOU', video: videoFor('thank you') },
-                        { name: 'GOODBYE', video: videoFor('goodbye') }
-                    ],
-                    words: ['thank', 'you', 'goodbye'],
-                    correct: ['thank', 'you', 'goodbye']
-                }
-            ];
-        }
-
         async function loadSignVideos() {
             const response = await fetch(SIGN_VIDEOS_API);
             if (!response.ok) {
@@ -1004,18 +951,32 @@
             startLevel(false);
         }
 
-        // Initialize game
+        // Initialize game. Sentence content lives in the database
+        // (GameLevel/GameLevelItem for game_key='sentence'), loaded via
+        // KumpasGames.loadGameLevels('sentence'). The "easy" bucket also
+        // serves as the fallback pool for any difficulty with no
+        // teacher-published levels, so there is a single DB-backed source
+        // of content instead of a hardcoded JS array.
+        function mapSentenceItem(item) {
+            const extra = item.extra_data || {};
+            if (!Array.isArray(extra.signs) || !extra.signs.length || !Array.isArray(extra.correct) || extra.correct.length < 2) return null;
+            return {
+                signs: extra.signs,
+                words: extra.correct,
+                correct: extra.correct,
+            };
+        }
+
         Promise.all([
-            loadSignVideos().then(() => buildFallbackQuestions()),
+            loadSignVideos(),
             KumpasGames.loadGameLevels('sentence').then(levels => {
-                engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, item => {
-                    const extra = item.extra_data || {};
-                    if (!Array.isArray(extra.signs) || !extra.signs.length || !Array.isArray(extra.correct) || extra.correct.length < 2) return null;
-                    return {
-                        signs: extra.signs,
-                        words: extra.correct,
-                        correct: extra.correct,
-                    };
+                engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, mapSentenceItem);
+                (levels || []).forEach(level => {
+                    if (level.difficulty !== 'easy') return;
+                    (level.items || []).forEach(item => {
+                        const mapped = mapSentenceItem(item);
+                        if (mapped) fallbackQuestions.push(mapped);
+                    });
                 });
             }),
         ])

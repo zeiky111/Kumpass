@@ -1,6 +1,18 @@
 from django.contrib import admin
 
-from .models import Announcement, GameLevel, GameLevelItem, LearningModule, QuizQuestion, SignPredictionLog, SignVideo, UserProfile
+from .models import (
+    Achievement,
+    Announcement,
+    GameLevel,
+    GameLevelItem,
+    LearningModule,
+    QuizAttempt,
+    QuizQuestion,
+    SignPredictionLog,
+    SignVideo,
+    UserAchievement,
+    UserProfile,
+)
 
 
 @admin.register(SignPredictionLog)
@@ -61,3 +73,27 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("full_name", "user", "role", "year_level", "active", "created_at")
     search_fields = ("full_name", "user__email", "role")
     list_filter = ("role", "year_level", "active")
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "module", "score", "total", "created_at")
+    search_fields = ("user__username", "module__title")
+    list_filter = ("module", "created_at")
+    ordering = ("-created_at",)
+
+
+@admin.register(Achievement)
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ("name", "key", "criteria_type", "criteria_value", "sort_order", "is_active")
+    search_fields = ("name", "key")
+    list_filter = ("criteria_type", "is_active")
+    ordering = ("sort_order", "id")
+
+
+@admin.register(UserAchievement)
+class UserAchievementAdmin(admin.ModelAdmin):
+    list_display = ("user", "achievement", "unlocked_at")
+    search_fields = ("user__username", "achievement__name")
+    list_filter = ("achievement",)
+    ordering = ("-unlocked_at",)

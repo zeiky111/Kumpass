@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.utils import timezone
 from typing import Any
 from django.db import DatabaseError, OperationalError
-from django.db.models import Q
+from django.db.models import F, Q, Sum
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -25,14 +25,17 @@ from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
 from .models import (
+    Achievement,
     Announcement,
     GameLevel,
     GameLevelItem,
     LearningModule,
     ModuleFile,
+    QuizAttempt,
     QuizQuestion,
     SignPredictionLog,
     SignVideo,
+    UserAchievement,
     UserLearningState,
     UserProfile,
     EmailOTP,
@@ -115,6 +118,44 @@ def profile_photo(request: Any) -> Response:
 
     payload = _profile_avatar_payload(profile, request)
     return Response({"message": "Photo updated", **payload})
+
+
+@csrf_exempt
+@api_view(["POST", "PATCH"])
+def profile_update(request: Any) -> Response:
+    """Update editable UserProfile fields (student ID, contact number, hearing
+    status) for the signed-in student. Mirrors profile_photo's email-based
+    lookup so it works the same way as the rest of the profile endpoints.
+    """
+    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    profile = getattr(user, "profile", None)
+    if not profile:
+        profile = UserProfile.objects.create(user=user, full_name=user.first_name or user.username)
+
+    editable_fields = ["student_id", "contact_number", "hearing_status"]
+    update_fields = []
+    for field in editable_fields:
+        if field in request.data:
+            setattr(profile, field, str(request.data.get(field) or "").strip())
+            update_fields.append(field)
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+
+    return Response({
+        "message": "Profile updated",
+        "studentId": profile.student_id,
+        "contactNumber": profile.contact_number,
+        "hearingStatus": profile.hearing_status,
+    })
 
 
 @api_view(["GET"])
@@ -393,6 +434,77 @@ def _safe_bool(value: Any, default: bool = False) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+def _skill_breakdown_for_user(user: User) -> list:
+    """Per-module quiz accuracy, derived from real QuizAttempt rows.
+
+    Sums score/total across all attempts per module (so retakes average
+    together), returned as [{label, value}] sorted strongest-first to match
+    how the dashboard/profile UI slices this list (first N = strengths,
+    last N = focus areas).
+    """
+    rows = (
+        QuizAttempt.objects.filter(user=user)
+        .values("module_id", "module__title")
+        .annotate(total_score=Sum("score"), total_total=Sum("total"))
+    )
+    breakdown = []
+    for row in rows:
+        total = row["total_total"] or 0
+        if total <= 0:
+            continue
+        pct = round((row["total_score"] or 0) / total * 100)
+        breakdown.append({"label": row["module__title"], "value": pct})
+    breakdown.sort(key=lambda item: item["value"], reverse=True)
+    return breakdown
+
+
+def _evaluate_achievements(user: User, state: dict) -> list:
+    """Unlocks any newly-qualified achievements for this user and returns
+    the full catalog as [{earned, icon, name}], matching the shape the
+    dashboard/profile rendering already expects.
+    """
+    module_progress = state.get("moduleProgress", {}) if isinstance(state.get("moduleProgress"), dict) else {}
+    modules_completed = sum(1 for value in module_progress.values() if _safe_int(value) >= 100)
+    points_total = _safe_int(state.get("points"))
+    streak_days = _safe_int(state.get("streak"))
+
+    quiz_attempts = QuizAttempt.objects.filter(user=user)
+    quiz_count = quiz_attempts.count()
+    has_perfect_quiz = quiz_attempts.filter(total__gt=0, score=F("total")).exists()
+
+    metric_by_criteria = {
+        Achievement.CRITERIA_MODULES_COMPLETED: modules_completed,
+        Achievement.CRITERIA_STREAK_DAYS: streak_days,
+        Achievement.CRITERIA_QUIZ_PERFECT_SCORE: 1 if has_perfect_quiz else 0,
+        Achievement.CRITERIA_QUIZ_COUNT: quiz_count,
+        Achievement.CRITERIA_POINTS_TOTAL: points_total,
+    }
+
+    achievements = list(Achievement.objects.filter(is_active=True))
+    unlocked_keys = set(
+        UserAchievement.objects.filter(user=user, achievement__in=achievements)
+        .values_list("achievement__key", flat=True)
+    )
+
+    newly_unlocked = [
+        achievement
+        for achievement in achievements
+        if achievement.key not in unlocked_keys
+        and metric_by_criteria.get(achievement.criteria_type, 0) >= achievement.criteria_value
+    ]
+    if newly_unlocked:
+        UserAchievement.objects.bulk_create(
+            [UserAchievement(user=user, achievement=achievement) for achievement in newly_unlocked],
+            ignore_conflicts=True,
+        )
+        unlocked_keys.update(achievement.key for achievement in newly_unlocked)
+
+    return [
+        {"earned": achievement.key in unlocked_keys, "icon": achievement.icon, "name": achievement.name}
+        for achievement in achievements
+    ]
 
 
 def _leaderboard_entry_for_state(learning_state: UserLearningState, request: Any = None) -> dict:
@@ -1019,8 +1131,12 @@ def learning_state(request: Any) -> Response:
     user_learning_state = _get_learning_state_for_user(user)
 
     if request.method == "GET":
-        serializer = LearningStateSerializer(user_learning_state)
-        return Response(serializer.data)
+        data = LearningStateSerializer(user_learning_state).data
+        presented_state = dict(user_learning_state.state or {})
+        presented_state["performance"] = _skill_breakdown_for_user(user)
+        presented_state["achievements"] = _evaluate_achievements(user, presented_state)
+        data["state"] = presented_state
+        return Response(data)
 
     state = request.data.get("state")
     if not isinstance(state, dict):
@@ -1735,6 +1851,8 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
 
         if user is not None:
             try:
+                QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
+
                 learning_state = _get_learning_state_for_user(user)
                 state = dict(learning_state.state or {})
                 module_progress = dict(state.get("moduleProgress") or {})
@@ -1751,6 +1869,9 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
                     "meta": f"{score}/{total} correct",
                 })
                 state["recentActivity"] = recent_activity[:10]
+
+                state["performance"] = _skill_breakdown_for_user(user)
+                state["achievements"] = _evaluate_achievements(user, state)
 
                 learning_state.state = state
                 learning_state.save(update_fields=["state", "updated_at"])
@@ -1819,6 +1940,9 @@ def check_session(request: Any) -> Response:
             "suffix": profile.suffix or "",
             "yearLevel": profile.year_level,
             "role": profile.role,
+            "studentId": profile.student_id or "",
+            "contactNumber": profile.contact_number or "",
+            "hearingStatus": profile.hearing_status or "",
         }
     })
 

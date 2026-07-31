@@ -42,6 +42,7 @@ from .views import (
     sign_videos,
     student_content,
     profile_photo,
+    profile_update,
     signup,
 )
 
@@ -62,6 +63,7 @@ urlpatterns = [
     path("learning/state/", learning_state, name="learning-state"),
     path("student/content/", student_content, name="student-content"),
     path("profile/photo/", profile_photo, name="profile-photo"),
+    path("profile/update/", profile_update, name="profile-update"),
     path("instructor/dashboard/", instructor_dashboard, name="instructor-dashboard"),
     path("instructor/modules/", instructor_modules, name="instructor-modules"),
     path("instructor/modules/<int:module_id>/", instructor_module_detail, name="instructor-module-detail"),

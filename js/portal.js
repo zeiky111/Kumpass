@@ -2160,7 +2160,10 @@
     renderProfile,
     uploadPhoto,
     chooseAvatar,
-    renderAvatarMarkup
+    renderAvatarMarkup,
+    getVisibleModules,
+    getModuleById,
+    getModuleProgress
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html
   window.uploadPhoto = function () {
