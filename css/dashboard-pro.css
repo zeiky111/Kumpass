@@ -94,8 +94,13 @@ body.pro-dashboard .dashboard-sidebar {
   background: linear-gradient(190deg, var(--pro-sidebar-from) 0%, var(--pro-sidebar-to) 100%);
   border-right: none;
   box-shadow: 18px 0 44px rgba(2, 6, 23, 0.18);
-  position: relative;
   z-index: 1;
+}
+
+@media (min-width: 901px) {
+  body.pro-dashboard .dashboard-sidebar {
+    position: relative;
+  }
 }
 
 body.pro-dashboard .dashboard-sidebar::after {
@@ -473,6 +478,9 @@ body.pro-dashboard .quiz-form select:focus {
 @media (max-width: 900px) {
   body.pro-dashboard .dashboard-sidebar {
     background: linear-gradient(120deg, var(--pro-sidebar-from), var(--pro-sidebar-to));
+    position: fixed;
+    left: 0;
+    z-index: 1200;
   }
 
   body.pro-dashboard .sidebar-toggle {
