@@ -146,14 +146,20 @@ REST_FRAMEWORK = {
 # Email configuration - uses environment variables (or console backend by default)
 # Render blocks outbound SMTP ports (25/465/587) on its network, so
 # django's SMTP backend fails with "Network is unreachable" there
-# regardless of credentials. Whenever RESEND_API_KEY is set, force the
-# Resend HTTP API backend (plain HTTPS, which Render allows) even if an
-# old EMAIL_BACKEND=...smtp.EmailBackend is still sitting in the
-# environment from a previous config -- that stale SMTP setting is exactly
-# what silently overrode this before. Falls back to SMTP if EMAIL_BACKEND
-# is set and no Resend key is present, or console output for local dev.
+# regardless of credentials. Whenever BREVO_API_KEY or RESEND_API_KEY is
+# set, force the matching HTTP API backend (plain HTTPS, which Render
+# allows) even if an old EMAIL_BACKEND=...smtp.EmailBackend is still
+# sitting in the environment from a previous config -- that stale SMTP
+# setting is exactly what silently overrode this before. Brevo is
+# preferred because its free tier can send to any recipient without a
+# verified domain; Resend's free tier only sends to the account owner
+# until a domain is verified. Falls back to SMTP if EMAIL_BACKEND is set
+# and no API key is present, or console output for local dev.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-if RESEND_API_KEY:
+if BREVO_API_KEY:
+    EMAIL_BACKEND = "signtext.email_backend.BrevoEmailBackend"
+elif RESEND_API_KEY:
     EMAIL_BACKEND = "signtext.email_backend.ResendEmailBackend"
 else:
     EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
