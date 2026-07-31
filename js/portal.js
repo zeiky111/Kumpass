@@ -940,10 +940,16 @@
     const target = document.getElementById('learningModulesGrid');
     if (!target) return;
 
+    const pagination = document.getElementById('learningModulesPagination');
+    const PAGE_SIZE = 5;
     let activeLevel = target.getAttribute('data-active-level') || 'all';
+    let currentPage = 1;
+
     const render = () => {
-      const modules = getFilteredModules(activeLevel);
-      if (!modules.length) {
+      const allModules = getFilteredModules(activeLevel);
+      if (pagination) pagination.innerHTML = '';
+
+      if (!allModules.length) {
         target.innerHTML = `
           <div class="table-container" style="padding:24px; text-align:center; color:#6b7280;">
             <div style="font-size:1.05rem; font-weight:700; margin-bottom:8px;">No modules available</div>
@@ -952,6 +958,11 @@
         `;
         return;
       }
+
+      const totalPages = Math.max(1, Math.ceil(allModules.length / PAGE_SIZE));
+      currentPage = Math.min(Math.max(1, currentPage), totalPages);
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const modules = allModules.slice(start, start + PAGE_SIZE);
 
       const rows = modules.map(module => {
         const progress = getModuleProgress(state, module.id);
@@ -1006,6 +1017,25 @@
           <tbody>${rows}</tbody>
         </table>
       `;
+
+      if (pagination) {
+        const total = allModules.length;
+        const rangeStart = start + 1;
+        const rangeEnd = Math.min(start + PAGE_SIZE, total);
+        pagination.innerHTML = `
+          <span style="color:#6b7280;">Showing ${rangeStart}-${rangeEnd} of ${total}</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" ${currentPage <= 1 ? 'disabled' : ''} id="learningModulesPrevBtn">Prev</button>
+            <span style="color:#6b7280;">Page ${currentPage} of ${totalPages}</span>
+            <button type="button" class="btn btn-secondary btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} id="learningModulesNextBtn">Next</button>
+          </div>
+        `;
+
+        const prevBtn = document.getElementById('learningModulesPrevBtn');
+        if (prevBtn) prevBtn.addEventListener('click', () => { currentPage -= 1; render(); });
+        const nextBtn = document.getElementById('learningModulesNextBtn');
+        if (nextBtn) nextBtn.addEventListener('click', () => { currentPage += 1; render(); });
+      }
     };
 
     render();
@@ -1021,6 +1051,7 @@
         this.classList.add('active');
         activeLevel = this.getAttribute('data-level') || 'all';
         target.setAttribute('data-active-level', activeLevel);
+        currentPage = 1;
         render();
       });
     });
