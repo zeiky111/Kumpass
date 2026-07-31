@@ -76,6 +76,29 @@ body.pro-dashboard .dashboard-layout {
     linear-gradient(180deg, #f6f8fc 0%, #eef1f8 100%);
 }
 
+@media (min-width: 901px) {
+  /* Bound the layout row to exactly the viewport (minus the navbar) so
+     the sidebar can stay pinned via position: sticky and .dashboard-main's
+     own overflow-y: auto (already set in dashboard.css) scrolls long tab
+     content -- like the Manage Modules table -- inside the content
+     column only, instead of the whole page scrolling past a sidebar
+     that never actually moves.
+
+     min-height alone doesn't cap anything (it's a floor, not a
+     ceiling) -- a flex row with no definite height just grows to fit
+     its tallest child's intrinsic content. .dashboard-main needs its
+     own explicit max-height matching the same viewport calc so it
+     actually clips and scrolls instead of growing the row (and the
+     whole page) past one viewport. */
+  body.pro-dashboard .dashboard-layout {
+    min-height: calc(100vh - 76px);
+  }
+
+  body.pro-dashboard .dashboard-main {
+    max-height: calc(100vh - 76px);
+  }
+}
+
 body.pro-dashboard .dashboard-layout::before {
   content: '';
   position: absolute;
@@ -106,24 +129,27 @@ body.pro-dashboard .dashboard-sidebar {
 
 @media (min-width: 901px) {
   body.pro-dashboard .dashboard-sidebar {
-    /* Let the sidebar stretch to the full column height instead of the
-       fixed max-height/overflow-y scroll box from dashboard.css, which
-       clipped the menu (cut off "Game Levels"/"Logout") and made the
-       sidebar shorter than the main content, detaching it from the
-       footer below.
-
-       position: sticky here left a stray unpainted gap at the bottom of
-       the sidebar's background on tabs taller than one viewport (e.g.
-       Manage Modules' table) -- the sticky box and the stretched flex
-       box didn't paint as the same rect on scroll. Plain static
-       positioning still stretches to the full column height via
-       align-self: stretch, it just scrolls away with the page instead
-       of staying pinned -- trading the "sticky menu" behavior for a
-       correctly painted background. */
-    position: static;
-    max-height: none;
-    overflow-y: visible;
+    /* .dashboard-layout is now bounded to one viewport tall (minus the
+       navbar), so the sidebar can safely stay pinned via position:
+       sticky and align-self: stretch without either clipping the menu
+       or leaving an unpainted gap below it -- long tab content (e.g.
+       Manage Modules' table) scrolls inside .dashboard-main's own
+       overflow-y: auto instead of growing the whole page past the
+       sidebar. */
+    position: sticky;
+    top: 76px;
+    max-height: calc(100vh - 76px);
+    overflow-y: auto;
     align-self: stretch;
+  }
+
+  /* Flexbox gotcha: a flex: 1 item's min-height defaults to auto, which
+     lets it grow past the row's bounded height instead of triggering its
+     own overflow-y: auto (from dashboard.css). min-height: 0 makes the
+     row height the real cap, so long tab content scrolls inside
+     .dashboard-main instead of growing the whole page. */
+  body.pro-dashboard .dashboard-main {
+    min-height: 0;
   }
 }
 
