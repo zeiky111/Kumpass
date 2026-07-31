@@ -112,13 +112,15 @@ body.pro-dashboard .dashboard-sidebar {
        sidebar shorter than the main content, detaching it from the
        footer below.
 
-       max-height: 100vh capped the sticky box at one viewport tall, so on
-       tabs with a column taller than the viewport (e.g. Manage Modules'
-       table), align-self: stretch couldn't stretch past that cap, leaving
-       a gap between the sidebar's end and the footer. Sticky positioning
-       alone (no max-height) keeps it pinned near the top on scroll while
-       letting it stretch to the actual content column height. */
-    position: sticky;
+       position: sticky here left a stray unpainted gap at the bottom of
+       the sidebar's background on tabs taller than one viewport (e.g.
+       Manage Modules' table) -- the sticky box and the stretched flex
+       box didn't paint as the same rect on scroll. Plain static
+       positioning still stretches to the full column height via
+       align-self: stretch, it just scrolls away with the page instead
+       of staying pinned -- trading the "sticky menu" behavior for a
+       correctly painted background. */
+    position: static;
     max-height: none;
     overflow-y: visible;
     align-self: stretch;
