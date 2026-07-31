@@ -111,6 +111,14 @@ body.pro-dashboard .dashboard-sidebar {
   }
 }
 
+/* The page <footer> sits outside .dashboard-layout as a plain sibling,
+   so style.css's generic margin-top:60px (meant for content pages) left
+   a large gap of page background between the sidebar/content and the
+   footer, making the footer look detached from the dashboard. */
+body.pro-dashboard .footer {
+  margin-top: 0;
+}
+
 body.pro-dashboard .dashboard-sidebar::after {
   content: '';
   position: absolute;
