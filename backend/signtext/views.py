@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
@@ -79,6 +79,7 @@ def _profile_avatar_payload(profile: "UserProfile", request: Any) -> dict:
 
 @csrf_exempt
 @api_view(["POST", "PATCH"])
+@authentication_classes([])
 def profile_photo(request: Any) -> Response:
     """Upload/update a user's profile photo, or set a preset avatar id.
 
@@ -126,6 +127,7 @@ def profile_photo(request: Any) -> Response:
 
 @csrf_exempt
 @api_view(["POST", "PATCH"])
+@authentication_classes([])
 def profile_update(request: Any) -> Response:
     """Update editable UserProfile fields (student ID, contact number, hearing
     status) for the signed-in student. Mirrors profile_photo's email-based
@@ -1159,6 +1161,7 @@ def reset_password(request: Any) -> Response:
 
 @csrf_exempt
 @api_view(["GET", "POST"])
+@authentication_classes([])
 def learning_state(request: Any) -> Response:
     email = str(request.query_params.get("email") or request.data.get("email") or "").strip().lower()
     if not email:
@@ -1191,6 +1194,7 @@ def learning_state(request: Any) -> Response:
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])
 def award_certificate(request: Any) -> Response:
     email = str(request.data.get("email") or "").strip().lower()
     game_key = str(request.data.get("game_key") or "").strip()
@@ -1923,6 +1927,7 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
     """Endpoint for students to submit quiz answers for grading.
 
@@ -2099,6 +2104,7 @@ def csrf_token(request: Any) -> Response:
 
 @csrf_exempt
 @api_view(["POST"])
+@authentication_classes([])
 def logout(request: Any) -> Response:
     """Log out the user by clearing the session."""
     from django.contrib.auth import logout as django_logout
