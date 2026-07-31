@@ -448,6 +448,7 @@ td {
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   color: #475569;
   font-size: 0.95rem;
+  vertical-align: top;
 }
 
 tbody tr:hover {
