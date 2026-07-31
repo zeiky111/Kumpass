@@ -509,32 +509,14 @@
             });
         }
 
-        // Sign videos are loaded from the database (SignVideo table), populated
-        // from the "Sign Language" media library. scope=games excludes videos
-        // uploaded via the Admin "Sign Language Videos" manager, which are
-        // meant for Text-to-Sign only.
-        const SIGN_VIDEOS_API = `${KumpasGames.API_BASE}/sign-videos/?scope=games`;
         const { videoMimeType } = KumpasGames;
         const HARD_TIME_LIMIT_SECONDS = 15;
-
-        let fallbackQuestions = [];
-
-        async function loadFallbackQuestions() {
-            const response = await fetch(SIGN_VIDEOS_API);
-            if (!response.ok) throw new Error(`Failed to load sign videos (${response.status})`);
-            const items = await response.json();
-            fallbackQuestions = items.map(item => ({
-                video: item.video_url,
-                answers: [String(item.word || '').toLowerCase()],
-            }));
-        }
 
         // Typing has no multiple-choice options, so choiceCounts isn't used for
         // rendering; kept for API symmetry with the other games' engine config.
         const engine = KumpasGames.createGameEngine({
             choiceCounts: { easy: 0, medium: 0, hard: 0 },
             pointBase: { easy: 8, medium: 10, hard: 12 },
-            fallbackQuestionCounts: { easy: 5, medium: 6, hard: 7 },
         });
 
         let activeQuestions = [];
@@ -751,23 +733,18 @@
         });
 
         // Initialize game
-        Promise.all([
-            loadFallbackQuestions(),
-            KumpasGames.loadGameLevels('typing').then(levels => {
+        KumpasGames.loadGameLevels('typing')
+            .then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
                     item => (item.media_url && item.prompt)
                         ? { video: item.media_url, answers: [String(item.prompt || '').toLowerCase()] }
                         : null
                 );
-            }),
-        ])
-            .then(() => {
-                engine.state.fallbackPool = fallbackQuestions;
                 const levelCounts = {
-                    easy: engine.totalLevelsForDifficulty('easy') || '1 (default set)',
-                    medium: engine.totalLevelsForDifficulty('medium') || '1 (default set)',
-                    hard: engine.totalLevelsForDifficulty('hard') || '1 (default set)',
+                    easy: engine.totalLevelsForDifficulty('easy') || 0,
+                    medium: engine.totalLevelsForDifficulty('medium') || 0,
+                    hard: engine.totalLevelsForDifficulty('hard') || 0,
                 };
                 KumpasGames.initInstructionsModal({
                     title: 'Sign-to-Word Typing Game',
@@ -787,8 +764,8 @@
                 });
             })
             .catch(err => {
-                console.error('Failed to load sign videos:', err);
-                document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load sign videos. Please refresh the page.</p>';
+                console.error('Failed to load game levels:', err);
+                document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load game levels. Please refresh the page.</p>';
             });
     </script>
 </body>

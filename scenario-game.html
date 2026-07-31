@@ -588,7 +588,6 @@
         let signVideoByKey = {};
         let signVideoWords = [];
         let allSignClips = [];
-        let fallbackScenarios = [];
 
         async function loadSignVideos() {
             const response = await fetch(SIGN_VIDEOS_API);
@@ -619,11 +618,9 @@
 
         // Scenario content lives in the database (GameLevel/GameLevelItem for
         // game_key='scenario'), loaded below via KumpasGames.loadGameLevels
-        // ('scenario'). allSignClips still needs the full clip library (used
-        // to pad extra options); fallbackScenarios is populated from the
-        // "easy" bucket of that same DB response (see Promise.all below), so
-        // there is a single DB-backed source of content, not a hardcoded array.
-        function buildFallbackScenarios() {
+        // ('scenario'). allSignClips needs the full clip library to pad extra
+        // decoy options for each authored scenario.
+        function buildSignClipLibrary() {
             allSignClips = signVideoWords.map(word => clipByName(word));
         }
 
@@ -633,10 +630,6 @@
         const engine = KumpasGames.createGameEngine({
             choiceCounts: TOTAL_OPTIONS,
             pointBase: { easy: 20, medium: 25, hard: 30 },
-            fallbackQuestionCounts: { easy: 4, medium: 5, hard: 6 },
-            // The fallback pool is built from Easy's own teacher content (see
-            // below), so Easy must not show it as a second, duplicate level.
-            fallbackAppliesTo: (difficulty) => difficulty !== 'easy',
         });
 
         let activeScenarios = [];
@@ -828,24 +821,16 @@
 
         // Initialize game
         Promise.all([
-            loadSignVideos().then(() => buildFallbackScenarios()),
+            loadSignVideos().then(() => buildSignClipLibrary()),
             KumpasGames.loadGameLevels('scenario').then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, mapScenarioItem);
-                (levels || []).forEach(level => {
-                    if (level.difficulty !== 'easy') return;
-                    (level.items || []).forEach(item => {
-                        const mapped = mapScenarioItem(item);
-                        if (mapped) fallbackScenarios.push(mapped);
-                    });
-                });
             }),
         ])
             .then(() => {
-                engine.state.fallbackPool = fallbackScenarios;
                 const levelCounts = {
-                    easy: engine.totalLevelsForDifficulty('easy') || '1 (default set)',
-                    medium: engine.totalLevelsForDifficulty('medium') || '1 (default set)',
-                    hard: engine.totalLevelsForDifficulty('hard') || '1 (default set)',
+                    easy: engine.totalLevelsForDifficulty('easy') || 0,
+                    medium: engine.totalLevelsForDifficulty('medium') || 0,
+                    hard: engine.totalLevelsForDifficulty('hard') || 0,
                 };
                 KumpasGames.initInstructionsModal({
                     title: 'Scenario-Based Game',

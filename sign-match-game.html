@@ -521,27 +521,12 @@
             });
         }
 
-        // Sign videos are loaded from the database (SignVideo table), populated
-        // from the "Sign Language" media library. scope=games excludes videos
-        // uploaded via the Admin "Sign Language Videos" manager, which are
-        // meant for Text-to-Sign only.
-        const SIGN_VIDEOS_API = `${KumpasGames.API_BASE}/sign-videos/?scope=games`;
         const { videoMimeType } = KumpasGames;
-
-        let fallbackQuestions = [];
-
-        async function loadFallbackQuestions() {
-            const response = await fetch(SIGN_VIDEOS_API);
-            if (!response.ok) throw new Error(`Failed to load sign videos (${response.status})`);
-            const items = await response.json();
-            fallbackQuestions = items.map(item => ({ label: item.word, video: item.video_url }));
-        }
 
         // Difficulty only changes the number of multiple-choice options shown.
         const engine = KumpasGames.createGameEngine({
             choiceCounts: { easy: 3, medium: 4, hard: 6 },
             pointBase: { easy: 10, medium: 14, hard: 18 },
-            fallbackQuestionCounts: { easy: 4, medium: 5, hard: 6 },
         });
 
         let activeQuestions = [];
@@ -718,21 +703,16 @@
         }
 
         // Initialize game
-        Promise.all([
-            loadFallbackQuestions(),
-            KumpasGames.loadGameLevels('sign_match').then(levels => {
+        KumpasGames.loadGameLevels('sign_match')
+            .then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
                     item => (item.prompt && item.media_url) ? { label: item.prompt, video: item.media_url } : null
                 );
-            }),
-        ])
-            .then(() => {
-                engine.state.fallbackPool = fallbackQuestions;
                 const levelCounts = {
-                    easy: engine.totalLevelsForDifficulty('easy') || '1 (default set)',
-                    medium: engine.totalLevelsForDifficulty('medium') || '1 (default set)',
-                    hard: engine.totalLevelsForDifficulty('hard') || '1 (default set)',
+                    easy: engine.totalLevelsForDifficulty('easy') || 0,
+                    medium: engine.totalLevelsForDifficulty('medium') || 0,
+                    hard: engine.totalLevelsForDifficulty('hard') || 0,
                 };
                 KumpasGames.initInstructionsModal({
                     title: 'Sign Match Game',
@@ -752,8 +732,8 @@
                 });
             })
             .catch(err => {
-                console.error('Failed to load sign videos:', err);
-                document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load sign videos. Please refresh the page.</p>';
+                console.error('Failed to load game levels:', err);
+                document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load game levels. Please refresh the page.</p>';
             });
     </script>
 </body>

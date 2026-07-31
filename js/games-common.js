@@ -312,42 +312,25 @@
   function createGameEngine(opts) {
     const state = {
       difficulty: 'easy',
-      levelIndex: 0, // index into activeLevelList(): [defaultPool?, ...teacherLevels]
+      levelIndex: 0, // index into levelsByDifficulty[difficulty] (a teacher level)
       questionIndex: 0, // index into the current level's question/item list
       score: 0,
       correct: 0,
       total: 0,
       completedDifficulties: { easy: false, medium: false, hard: false },
       levelsByDifficulty: { easy: [], medium: [], hard: [] },
-      fallbackPool: [],
     };
 
-    // The default/fallback pool is kept as the first playable level for a
-    // difficulty -- teacher-authored levels are additional levels on top of
-    // it, never a replacement. isFallback marks it so
-    // buildQuestionsForCurrentLevel() still caps it to a random subset
-    // (fallbackQuestionCounts) instead of playing all of it like a teacher
-    // level would.
-    //
-    // opts.fallbackAppliesTo(difficulty), if provided, can exclude a
-    // difficulty from getting the synthetic default level -- used by
-    // Sentence/Scenario, whose fallback pool is literally their own Easy
-    // content reused, so Easy itself must not show it twice.
-    function fallbackAppliesToDifficulty(difficulty) {
-      return typeof opts.fallbackAppliesTo === 'function' ? opts.fallbackAppliesTo(difficulty) : true;
-    }
-
+    // All playable content comes from teacher-authored GameLevel rows -- no
+    // default/fallback pool. A difficulty with zero published levels simply
+    // has nothing to play (see hasNextLevel/totalLevelsForDifficulty below).
     function activeLevelList() {
-      const teacherLevels = state.levelsByDifficulty[state.difficulty] || [];
-      const useFallback = state.fallbackPool.length && fallbackAppliesToDifficulty(state.difficulty);
-      const list = useFallback
-        ? [{ levelNumber: 1, title: '', items: state.fallbackPool, isFallback: true }, ...teacherLevels]
-        : teacherLevels;
+      const list = state.levelsByDifficulty[state.difficulty] || [];
       return list.length ? list : null;
     }
 
     // Returns the flat list of playable items for "right now": the current
-    // level's items (fallback level or a teacher level) within this difficulty.
+    // teacher level's items within this difficulty.
     function getActivePool() {
       const levels = activeLevelList();
       if (!levels) return [];
@@ -356,14 +339,17 @@
     }
 
     function currentLevelNumber() {
+      const levels = activeLevelList();
+      if (levels) {
+        const level = levels[Math.min(state.levelIndex, levels.length - 1)];
+        return level ? level.levelNumber : state.levelIndex + 1;
+      }
       return state.levelIndex + 1;
     }
 
     function totalLevelsForDifficulty(difficulty) {
-      const teacherLevels = state.levelsByDifficulty[difficulty] || [];
-      const hasFallback = state.fallbackPool.length && fallbackAppliesToDifficulty(difficulty);
-      const total = teacherLevels.length + (hasFallback ? 1 : 0);
-      return total || null; // null = nothing playable at all for this difficulty
+      const list = state.levelsByDifficulty[difficulty];
+      return (list && list.length) ? list.length : null; // null = nothing published for this difficulty
     }
 
     function getChoiceCount() {
@@ -402,16 +388,10 @@
 
     // Builds the question set for the CURRENT level within the active
     // difficulty (teacher-level content used in full, in the order authored;
-    // the default/fallback level is capped to a random subset per
-    // fallbackQuestionCounts, since it draws from the whole shared library).
+    // shuffled only if the level has more items than the difficulty needs).
     function buildQuestionsForCurrentLevel() {
-      const levels = activeLevelList();
-      const currentLevel = levels ? levels[Math.min(state.levelIndex, levels.length - 1)] : null;
       const pool = getActivePool().slice();
-      const limit = (currentLevel && currentLevel.isFallback)
-        ? (opts.fallbackQuestionCounts[state.difficulty] || pool.length)
-        : pool.length;
-      return shuffle(pool).slice(0, Math.max(1, Math.min(pool.length, limit)));
+      return shuffle(pool).slice(0, Math.max(1, pool.length));
     }
 
     function hasNextLevel() {

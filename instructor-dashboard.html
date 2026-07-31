@@ -1548,60 +1548,28 @@
             }
         }
 
-        // Whether the game engine keeps a default/fallback level as "Level 1"
-        // for this game+difficulty (see js/games-common.js activeLevelList()
-        // and each game page's fallbackAppliesTo). Sign Match/Typing always
-        // default to the shared sign-video library (if it has any videos);
-        // Sentence/Scenario default to the teacher's own Easy-difficulty
-        // content reused, except Easy itself (which has no separate default,
-        // since that would just duplicate its own content).
-        function hasDefaultLevelFor(gameKey, difficulty) {
-            if (gameKey === 'sign_match' || gameKey === 'typing') {
-                return (window.__signVideoLibrary || []).length > 0;
-            }
-            if (difficulty === 'easy') return false;
-            const easyHasContent = (window.__gameLevels || []).some(
-                l => l.game_key === gameKey && l.difficulty === 'easy' && Number(l.items_count || 0) > 0,
-            );
-            return easyHasContent;
-        }
-
-        function describeDefaultForDifficulty(gameKey, difficulty) {
-            if (!hasDefaultLevelFor(gameKey, difficulty)) {
-                if (gameKey === 'sign_match' || gameKey === 'typing') {
-                    return 'No default content available — the sign video library is empty.';
-                }
-                return '';
-            }
-            if (gameKey === 'sign_match' || gameKey === 'typing') {
-                const count = (window.__signVideoLibrary || []).length;
-                return `Default Level 1: a random mix of all ${count} sign videos in the library.`;
-            }
-            return 'Default Level 1: your Easy-difficulty content, reused here until you publish a level for this difficulty.';
-        }
-
+        // There is no default/fallback content anymore -- students only see
+        // what a teacher has actually published for that game+difficulty.
         function renderGameLevelsCoverage(activeGame, levelsForGame) {
             const target = document.getElementById('gameLevelsCoverage');
             if (!target) return;
 
             const rows = ['easy', 'medium', 'hard'].map(difficulty => {
                 const published = levelsForGame.filter(l => l.difficulty === difficulty && l.is_published && Number(l.items_count || 0) > 0);
-                const defaultText = describeDefaultForDifficulty(activeGame, difficulty);
-                const parts = [];
-                if (defaultText) parts.push(defaultText);
-                if (published.length) parts.push(`+ ${published.length} of your published level(s), added after the default.`);
-                if (!parts.length) parts.push('Nothing published yet for this difficulty.');
+                const text = published.length
+                    ? `${published.length} published level(s) with content`
+                    : 'Nothing published yet — students see no content for this difficulty.';
                 return `
                     <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:180px;">
                         <span class="${published.length ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
-                        <span style="color:#64748b; font-size:0.85rem;">${safeText(parts.join(' '))}</span>
+                        <span style="color:#64748b; font-size:0.85rem;">${safeText(text)}</span>
                     </div>
                 `;
             }).join('');
 
             target.innerHTML = `
                 <div style="background:#f9fafb; border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
-                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty (default + your levels)</div>
+                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty</div>
                     <div style="display:flex; gap:14px; flex-wrap:wrap;">${rows}</div>
                 </div>
             `;
