@@ -1,6 +1,7 @@
 import base64
 import os
 import random
+import threading
 from datetime import timedelta
 from django.utils import timezone
 from typing import Any
@@ -709,6 +710,40 @@ def _create_and_send_otp(user: User, request: Any, minutes_valid: int = 15, purp
         error_msg = f"Failed to send {purpose} email to {recipient_email}: {str(e)}"
         logger.exception(error_msg)
         return {"ok": False, "error": error_msg}
+
+
+def _active_student_emails() -> list[str]:
+    return list(
+        User.objects.filter(
+            is_active=True,
+            profile__role="student",
+            profile__active=0,
+        )
+        .exclude(email="")
+        .values_list("email", flat=True)
+    )
+
+
+def _send_bulk_notification(recipients: list[str], subject: str, message: str) -> None:
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    for recipient in recipients:
+        try:
+            send_mail(subject, message, from_email, [recipient], fail_silently=False)
+        except Exception:
+            logger.exception(f"Failed to send notification email to {recipient}")
+
+
+def _notify_students_async(recipients: list[str], subject: str, message: str) -> None:
+    """Fire-and-forget: the caller (an instructor upload request) should not
+    block waiting for every recipient's email to send one by one."""
+    if not recipients:
+        return
+    thread = threading.Thread(
+        target=_send_bulk_notification,
+        args=(recipients, subject, message),
+        daemon=True,
+    )
+    thread.start()
 
 
 def _normalize_name_part(name: str) -> str:
@@ -1715,6 +1750,14 @@ def instructor_modules(request: Any) -> Response:
         return Response({"error": serializer.errors}, status=400)
 
     module = serializer.save(created_by=actor, updated_by=actor)
+
+    if module.status == LearningModule.STATUS_PUBLISHED:
+        _notify_students_async(
+            _active_student_emails(),
+            f"New module available: {module.title}",
+            f"A new learning module, \"{module.title}\", is now available.\n\n— Kumpas",
+        )
+
     response_data = LearningModuleSerializer(module).data
     response_data["files"] = []
     response_data["studentCount"] = 0
@@ -1739,6 +1782,8 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
         module.delete()
         return Response({"message": "Module deleted"})
 
+    was_published = module.status == LearningModule.STATUS_PUBLISHED
+
     payload = request.data.copy()
     update_data = {
         "module_key": str(payload.get("module_key") or module.module_key).strip() or module.module_key,
@@ -1757,6 +1802,14 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
         return Response({"error": serializer.errors}, status=400)
 
     module = serializer.save(updated_by=actor)
+
+    if not was_published and module.status == LearningModule.STATUS_PUBLISHED:
+        _notify_students_async(
+            _active_student_emails(),
+            f"New module available: {module.title}",
+            f"A new learning module, \"{module.title}\", is now available.\n\n— Kumpas",
+        )
+
     data = LearningModuleSerializer(module).data
     data["studentCount"] = _module_student_counts([module]).get(module.module_key, 0)
     return Response(data)
@@ -1997,6 +2050,14 @@ def instructor_announcements(request: Any) -> Response:
         return Response({"error": serializer.errors}, status=400)
 
     announcement = serializer.save(created_by=actor, updated_by=actor)
+
+    if announcement.is_published:
+        _notify_students_async(
+            _active_student_emails(),
+            f"New announcement: {announcement.title}",
+            f"{announcement.message}\n\n— Kumpas",
+        )
+
     return Response(AnnouncementSerializer(announcement).data, status=201)
 
 
