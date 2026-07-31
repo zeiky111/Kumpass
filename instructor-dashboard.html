@@ -572,8 +572,8 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Level Number</label>
-                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required>
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Auto-filled with the next available number for this game and difficulty; change it if you want a different position.</small>
+                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required readonly style="background:#f3f4f6;cursor:not-allowed;">
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Automatic: the next open number for this game and difficulty. To edit a level's number, open it from the list instead.</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Title (optional)</label>
@@ -1548,21 +1548,35 @@
             }
         }
 
-        // What students always see as the FIRST level for a game/difficulty,
-        // on top of which any published teacher levels are added (the default
-        // pool is never replaced — see js/games-common.js activeLevelList()).
-        // Sign Match/Typing always default to the shared sign-video library;
+        // Whether the game engine keeps a default/fallback level as "Level 1"
+        // for this game+difficulty (see js/games-common.js activeLevelList()
+        // and each game page's fallbackAppliesTo). Sign Match/Typing always
+        // default to the shared sign-video library (if it has any videos);
         // Sentence/Scenario default to the teacher's own Easy-difficulty
-        // content reused (Easy itself has no separate default, since that
-        // would just duplicate its own content).
+        // content reused, except Easy itself (which has no separate default,
+        // since that would just duplicate its own content).
+        function hasDefaultLevelFor(gameKey, difficulty) {
+            if (gameKey === 'sign_match' || gameKey === 'typing') {
+                return (window.__signVideoLibrary || []).length > 0;
+            }
+            if (difficulty === 'easy') return false;
+            const easyHasContent = (window.__gameLevels || []).some(
+                l => l.game_key === gameKey && l.difficulty === 'easy' && Number(l.items_count || 0) > 0,
+            );
+            return easyHasContent;
+        }
+
         function describeDefaultForDifficulty(gameKey, difficulty) {
+            if (!hasDefaultLevelFor(gameKey, difficulty)) {
+                if (gameKey === 'sign_match' || gameKey === 'typing') {
+                    return 'No default content available — the sign video library is empty.';
+                }
+                return '';
+            }
             if (gameKey === 'sign_match' || gameKey === 'typing') {
                 const count = (window.__signVideoLibrary || []).length;
-                return count
-                    ? `Default Level 1: a random mix of all ${count} sign videos in the library.`
-                    : 'No default content available — the sign video library is empty.';
+                return `Default Level 1: a random mix of all ${count} sign videos in the library.`;
             }
-            if (difficulty === 'easy') return '';
             return 'Default Level 1: your Easy-difficulty content, reused here until you publish a level for this difficulty.';
         }
 
@@ -1666,20 +1680,11 @@
                     const picker = document.getElementById('levelPrimaryVideoPicker');
                     if (picker) picker.innerHTML = renderVideoPicker('level_primary', '', '');
                 }).catch(() => {});
-            } else if (gameKey === 'sentence') {
+            } else if (gameKey === 'sentence' || gameKey === 'scenario') {
+                const kind = gameKey === 'sentence' ? 'signs (with their videos)' : 'scenario options (with their videos)';
                 container.innerHTML = `
                     <div class="form-group">
-                        <label class="form-label">Preview Sentence (optional)</label>
-                        <input type="text" id="levelPreviewSentence" class="form-input" placeholder="e.g. I am fine">
-                        <small style="color:#6b7280; display:block; margin-top:6px;">This text helps create a primary sentence-level item automatically.</small>
-                    </div>
-                `;
-            } else if (gameKey === 'scenario') {
-                container.innerHTML = `
-                    <div class="form-group">
-                        <label class="form-label">Scenario Lead (optional)</label>
-                        <textarea id="levelScenarioLead" class="form-input" rows="2" placeholder="Short scenario description"></textarea>
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Add a starting prompt for the scenario if you want quick setup.</small>
+                        <small style="color:#6b7280; display:block;">After saving, you'll be taken straight to <strong>Manage Content</strong> to add the ${kind} for this level.</small>
                     </div>
                 `;
             } else {
@@ -1697,6 +1702,13 @@
             document.getElementById('levelNumber').value = level ? level.level_number : 1;
             document.getElementById('levelTitle').value = level ? (level.title || '') : '';
             document.getElementById('levelPublished').checked = level ? Boolean(level.is_published) : true;
+
+            // Level Number is auto-computed while adding (locked); editing an
+            // existing level still allows changing its number manually.
+            const levelNumberInput = document.getElementById('levelNumber');
+            levelNumberInput.readOnly = !level;
+            levelNumberInput.style.background = level ? '' : '#f3f4f6';
+            levelNumberInput.style.cursor = level ? '' : 'not-allowed';
 
             const title = document.getElementById('levelModalTitle');
             if (title) {
@@ -1750,61 +1762,35 @@
                 return;
             }
 
-            // Auto-create a primary level item when adding a new level with starter data.
-            if (!levelId && savedLevel && savedLevel.id) {
-                const gameKey = payload.game_key;
-                let itemPayload = null;
-
-                if (gameKey === 'sign_match' || gameKey === 'typing') {
-                    itemPayload = {
-                        actorEmail: await getInstructorActorIdentifier(),
-                        prompt: initialVideoName || 'Primary level item',
-                        answer: '',
-                        media_url: initialVideo,
-                        extra_data: {},
-                        order: 0,
-                    };
-                } else if (gameKey === 'sentence') {
-                    const sentence = sanitizeInstructorInput(document.getElementById('levelPreviewSentence')?.value || '');
-                    if (sentence) {
-                        const words = sentence.toLowerCase().split(/\s+/).filter(Boolean);
-                        itemPayload = {
+            // Sign Match/Typing: the single required video was already collected
+            // above, so create its one-item level content right away.
+            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sign_match' || payload.game_key === 'typing')) {
+                try {
+                    await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
+                        method: 'POST',
+                        body: JSON.stringify({
                             actorEmail: await getInstructorActorIdentifier(),
-                            prompt: sentence,
-                            answer: sentence,
-                            media_url: '',
-                            extra_data: { words, signs: [] },
-                            order: 0,
-                        };
-                    }
-                } else if (gameKey === 'scenario') {
-                    const lead = sanitizeInstructorInput(document.getElementById('levelScenarioLead')?.value || '');
-                    if (lead) {
-                        itemPayload = {
-                            actorEmail: await getInstructorActorIdentifier(),
-                            prompt: lead,
+                            prompt: initialVideoName || 'Primary level item',
                             answer: '',
-                            media_url: '',
+                            media_url: initialVideo,
                             extra_data: {},
                             order: 0,
-                        };
-                    }
-                }
-
-                if (itemPayload) {
-                    try {
-                        await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
-                            method: 'POST',
-                            body: JSON.stringify(itemPayload),
-                        });
-                    } catch (warnError) {
-                        alert(`Level was saved, but its content could not be added: ${warnError.message}\nOpen "Manage Content" to add it manually.`);
-                    }
+                        }),
+                    });
+                } catch (warnError) {
+                    alert(`Level was saved, but its content could not be added: ${warnError.message}\nOpen "Manage Content" to add it manually.`);
                 }
             }
 
             closeModal('levelModal');
             await loadGameLevels();
+
+            // Sentence/Scenario levels need multiple signs/options with their own
+            // videos, which can't be captured in this simple form -- go straight
+            // to Manage Content so the teacher can add real content right away.
+            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sentence' || payload.game_key === 'scenario')) {
+                await openLevelItemsModal(savedLevel.id);
+            }
         }
 
         async function deleteLevel(levelId) {
