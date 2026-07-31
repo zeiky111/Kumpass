@@ -20,20 +20,30 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
     // cross-site restrictions) drop the cross-site csrftoken cookie, so
     // document.cookie never sees it even though the request succeeded.
     // Fall back to the token returned in the response body in that case.
-    try {
-        const response = await fetch(`${base}/auth/csrf/`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-        const cookieToken = getCookie('csrftoken');
-        if (cookieToken) {
-            return cookieToken;
+    //
+    // Retry on network failure: Render's free tier spins the backend down
+    // after inactivity, so the very first request can take 30-50s to wake
+    // it up and may fail before the server responds.
+    const attempts = 4;
+    for (let i = 0; i < attempts; i++) {
+        try {
+            const response = await fetch(`${base}/auth/csrf/`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            const cookieToken = getCookie('csrftoken');
+            if (cookieToken) {
+                return cookieToken;
+            }
+            const data = await response.json().catch(() => ({}));
+            return data.csrfToken || '';
+        } catch (_) {
+            if (i < attempts - 1) {
+                await new Promise(resolve => setTimeout(resolve, 3000 * (i + 1)));
+            }
         }
-        const data = await response.json().catch(() => ({}));
-        return data.csrfToken || '';
-    } catch (_) {
-        return '';
     }
+    return '';
 }
 
 // Check if user is authenticated with the backend
@@ -95,11 +105,33 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${base.replace(/\/$/, '')}${path}`;
     }
 
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Render's free tier spins the backend down after inactivity, so the
+    // first request after a while can take 30-50s to wake it up. Retry a
+    // few times with backoff before giving up, instead of failing instantly.
+    async function fetchWithWakeupRetry(url, options, attempts = 4) {
+        let lastError;
+        for (let i = 0; i < attempts; i++) {
+            try {
+                return await fetch(url, options);
+            } catch (error) {
+                lastError = error;
+                if (i < attempts - 1) {
+                    await delay(3000 * (i + 1));
+                }
+            }
+        }
+        throw lastError;
+    }
+
     async function postJson(path, payload, base = API_BASE) {
         let response;
         try {
             const csrfToken = await ensureCsrfToken(base);
-            response = await fetch(getUrl(path, base), {
+            response = await fetchWithWakeupRetry(getUrl(path, base), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -109,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(payload)
             });
         } catch (error) {
-            throw new Error(`Cannot reach the backend at ${base}. Start the Django server and try again.`);
+            throw new Error(`Cannot reach the server at ${base}. It may be waking up from sleep — please wait a moment and try again.`);
         }
 
         let data = {};
