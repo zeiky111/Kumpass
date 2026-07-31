@@ -16,8 +16,7 @@ body {
 
 .dashboard-layout {
   display: flex;
-  align-items: flex-start;
-  min-height: calc(100vh - 72px);
+  align-items: stretch;
   background: transparent;
 }
 
