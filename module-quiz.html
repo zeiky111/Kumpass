@@ -457,7 +457,7 @@
 
         async function saveQuizQuestion(event) {
             event.preventDefault();
-            const actorEmail = getInstructorActorIdentifier();
+            const actorEmail = await getInstructorActorIdentifier();
             const questionText = sanitizeInstructorInput(document.getElementById('quizQuestionText').value);
             const questionType = document.getElementById('quizQuestionType').value;
             const rawChoices = document.getElementById('quizQuestionChoices').value;
@@ -524,7 +524,7 @@
             if (!confirm('Delete this question?')) {
                 return;
             }
-            const actorEmail = getInstructorActorIdentifier();
+            const actorEmail = await getInstructorActorIdentifier();
             try {
                 await requestJson(`/instructor/modules/${moduleId}/quiz/${questionId}/?actorEmail=${encodeURIComponent(actorEmail)}`, {
                     method: 'DELETE',
