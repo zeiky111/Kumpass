@@ -25,9 +25,11 @@ from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
+from .certificates import award_certificate_if_earned, send_certificate_email_async
 from .models import (
     Achievement,
     Announcement,
+    Certificate,
     GameLevel,
     GameLevelItem,
     LearningModule,
@@ -37,6 +39,7 @@ from .models import (
     SignPredictionLog,
     SignVideo,
     UserAchievement,
+    UserCertificate,
     UserLearningState,
     UserProfile,
     EmailOTP,
@@ -1183,6 +1186,79 @@ def learning_state(request: Any) -> Response:
     user_learning_state.save(update_fields=["state", "updated_at"])
     serializer = LearningStateSerializer(user_learning_state)
     return Response(serializer.data)
+
+
+@api_view(["POST"])
+def award_certificate(request: Any) -> Response:
+    email = str(request.data.get("email") or "").strip().lower()
+    game_key = str(request.data.get("game_key") or "").strip()
+    if not email or not game_key:
+        return Response({"error": "Missing email or game_key"}, status=400)
+
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    if not Certificate.objects.filter(game_key=game_key).exists():
+        return Response({"error": "Unknown game_key"}, status=400)
+
+    user_certificate = award_certificate_if_earned(user, game_key)
+    if user_certificate is None:
+        return Response({"certificate": None, "alreadyEarned": True})
+
+    send_certificate_email_async(user_certificate)
+
+    learning_state = _get_learning_state_for_user(user)
+    state = dict(learning_state.state or {})
+    recent_activity = list(state.get("recentActivity") or [])
+    recent_activity.insert(0, {
+        "icon": "🏆",
+        "text": f"Earned the {user_certificate.certificate.title} certificate",
+        "meta": "Certificate unlocked",
+    })
+    state["recentActivity"] = recent_activity[:10]
+    learning_state.state = state
+    learning_state.save(update_fields=["state", "updated_at"])
+
+    return Response({
+        "certificate": {
+            "gameKey": user_certificate.certificate.game_key,
+            "title": user_certificate.certificate.title,
+            "issuedAt": user_certificate.issued_at,
+            "downloadUrl": request.build_absolute_uri(user_certificate.file.url),
+        },
+        "alreadyEarned": False,
+    })
+
+
+@api_view(["GET"])
+def user_certificates(request: Any) -> Response:
+    email = str(request.query_params.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Missing email"}, status=400)
+
+    try:
+        user = User.objects.get(username=email)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    earned = (
+        UserCertificate.objects.filter(user=user)
+        .select_related("certificate")
+        .order_by("-issued_at")
+    )
+    return Response({
+        "certificates": [
+            {
+                "gameKey": item.certificate.game_key,
+                "title": item.certificate.title,
+                "issuedAt": item.issued_at,
+                "downloadUrl": request.build_absolute_uri(item.file.url),
+            }
+            for item in earned
+        ]
+    })
 
 
 @api_view(["GET"])

@@ -6,6 +6,7 @@ matter what credentials are used. Resend and Brevo's APIs are plain HTTPS
 (port 443), which Render does allow, so we call them directly with
 urllib instead of adding a new SDK dependency.
 """
+import base64
 import json
 import re
 import urllib.error
@@ -35,6 +36,18 @@ def _split_display_name(address: str) -> tuple:
     return "", address
 
 
+def _encode_attachments(message) -> list:
+    """Base64-encodes a Django EmailMessage's .attachments for HTTP APIs.
+    Each entry is (filename, content, mimetype); content may be str or bytes."""
+    encoded = []
+    for attachment in getattr(message, "attachments", []) or []:
+        filename, content, _mimetype = attachment
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+        encoded.append({"filename": filename, "content": base64.b64encode(content).decode("ascii")})
+    return encoded
+
+
 class ResendEmailBackend(BaseEmailBackend):
     def send_messages(self, email_messages):
         api_key = getattr(settings, "RESEND_API_KEY", "")
@@ -51,6 +64,9 @@ class ResendEmailBackend(BaseEmailBackend):
                 "subject": message.subject,
                 "text": message.body,
             }
+            attachments = _encode_attachments(message)
+            if attachments:
+                payload["attachments"] = attachments
             body = json.dumps(payload).encode("utf-8")
             request = urllib.request.Request(
                 RESEND_API_URL,
@@ -111,6 +127,11 @@ class BrevoEmailBackend(BaseEmailBackend):
                 "subject": message.subject,
                 "textContent": message.body,
             }
+            attachments = _encode_attachments(message)
+            if attachments:
+                payload["attachment"] = [
+                    {"name": item["filename"], "content": item["content"]} for item in attachments
+                ]
             body = json.dumps(payload).encode("utf-8")
             request = urllib.request.Request(
                 BREVO_API_URL,

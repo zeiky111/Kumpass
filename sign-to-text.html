@@ -685,6 +685,10 @@
             border-bottom-color: var(--surface-border);
         }
 
+        :root[data-theme="dark"] .camera-select-label {
+            color: var(--text-muted-2);
+        }
+
         :root[data-theme="dark"] .status-label {
             color: var(--text-muted-2);
         }
@@ -732,6 +736,15 @@
             console[type](`[${timestamp}] ${msg}`);
         }
 
+        function isMobileDevice() {
+            const uaDataMobile = navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'
+                ? navigator.userAgentData.mobile
+                : null;
+            if (uaDataMobile !== null) return uaDataMobile;
+            const ua = navigator.userAgent || '';
+            return /Android|iPhone|iPad|iPod|Mobi/i.test(ua) || (navigator.maxTouchPoints > 1 && /Mac/i.test(ua));
+        }
+
         let cameraActive = false;
         let sessionStartTime = null;
         let mediaStream = null;
@@ -748,6 +761,7 @@
         const handPredictionStates = new Map();
 
         let handsDetector = null;
+        let handsFrameInFlight = false;
         let overlayCanvas = null;
         let overlayCtx = null;
         let overlayLabel = '';
@@ -1420,9 +1434,15 @@
                     locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
                 });
 
+                // The full-complexity model (1) is too slow for most phone CPUs
+                // running MediaPipe over WASM -- frames queue up faster than they
+                // can be processed and onResults() effectively stops firing,
+                // which looks like "no hand detection" even though the camera and
+                // permissions are fine. The lite model (0) trades a little
+                // accuracy for enough speed to keep up on mobile.
                 handsDetector.setOptions({
                     maxNumHands: 2,
-                    modelComplexity: 1,
+                    modelComplexity: isMobileDevice() ? 0 : 1,
                     minDetectionConfidence: 0.55,
                     minTrackingConfidence: 0.55
                 });
@@ -1506,8 +1526,8 @@
 
             try {
                 const videoConstraints = selectedCameraId
-                    ? { deviceId: { exact: selectedCameraId } }
-                    : { facingMode: 'user' };
+                    ? { deviceId: { exact: selectedCameraId }, width: { ideal: 640 }, height: { ideal: 480 } }
+                    : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 } };
 
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     video: videoConstraints,
@@ -1542,6 +1562,7 @@
             video.id = 'cameraVideo';
             video.autoplay = true;
             video.playsInline = true;
+            video.setAttribute('webkit-playsinline', 'true');
             video.muted = true;
             video.style.width = '100%';
             video.style.height = '100%';
@@ -1549,6 +1570,22 @@
             applyVideoTransform(video);
             video.srcObject = mediaStream;
             container.appendChild(video);
+
+            // Some mobile browsers (iOS Safari, in-app WebViews) won't reliably
+            // autoplay a <video> created/attached after the async getUserMedia
+            // await -- the original tap gesture no longer "covers" it. Without an
+            // explicit play(), videoWidth/videoHeight stay 0 forever, readyState
+            // never reaches HAVE_CURRENT_DATA, and MediaPipe silently never runs.
+            try {
+                const playPromise = video.play();
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(error => {
+                        debugLog(`⚠️ video.play() blocked: ${error.message}`, 'warn');
+                    });
+                }
+            } catch (error) {
+                debugLog(`⚠️ video.play() error: ${error.message}`, 'warn');
+            }
 
             const canvas = document.createElement('canvas');
             canvas.id = 'captureCanvas';
@@ -1565,6 +1602,7 @@
 
         function stopCameraFeed() {
             cameraActive = false;
+            handsFrameInFlight = false;
 
             if (captureTimer) {
                 clearInterval(captureTimer);
@@ -1597,14 +1635,24 @@
 
         async function runFingerSpellingFrame() {
             if (!cameraActive || !handsDetector) return;
+            // Guard against overlapping send() calls. On slower mobile CPUs a
+            // single MediaPipe inference can take longer than the 200ms tick,
+            // and re-entering send() before the previous call resolves makes
+            // MediaPipe's WASM pipeline stall silently -- the camera keeps
+            // streaming but onResults() stops firing, which looks exactly like
+            // "hands are never detected" even though everything upstream works.
+            if (handsFrameInFlight) return;
 
             const video = document.getElementById('cameraVideo');
             if (!video || video.readyState < 2) return;
 
+            handsFrameInFlight = true;
             try {
                 await handsDetector.send({ image: video });
             } catch (error) {
                 console.error('Finger spelling detector error:', error);
+            } finally {
+                handsFrameInFlight = false;
             }
 
             for (const [handedness, state] of handPredictionStates.entries()) {

@@ -215,6 +215,27 @@
     }
   }
 
+  async function loadCertificatesForEmail(email) {
+    const normalizedEmail = String(email || '').trim();
+    if (!normalizedEmail) {
+      return [];
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/certificates/?email=${encodeURIComponent(normalizedEmail)}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        return [];
+      }
+
+      const payload = await response.json();
+      return Array.isArray(payload.certificates) ? payload.certificates : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   async function loadLeaderboardFromBackend(options) {
     const currentUser = getCurrentUser();
     const config = options && typeof options === 'object' ? options : {};
@@ -1347,6 +1368,30 @@
           <span class="achievement-name">${item.name}</span>
         </div>
       `).join('');
+    }
+
+    const certificatesList = document.getElementById('profileCertificatesList');
+    if (certificatesList) {
+      void (async () => {
+        const certificates = await loadCertificatesForEmail(profileUser.email);
+        if (!certificates.length) {
+          certificatesList.innerHTML = `
+            <div class="achievement" style="opacity: 0.55;">
+              <span class="achievement-icon">📜</span>
+              <span class="achievement-name">Complete a game's Hard difficulty to earn your first certificate!</span>
+            </div>
+          `;
+          return;
+        }
+
+        certificatesList.innerHTML = certificates.map(item => `
+          <div class="achievement">
+            <span class="achievement-icon">📜</span>
+            <span class="achievement-name">${safeText(item.title)}</span>
+            ${viewingSomeoneElse ? '' : `<a href="${safeText(item.downloadUrl)}" target="_blank" rel="noopener" class="btn-secondary" style="margin-left:auto; padding:4px 12px; font-size:0.85em; white-space:nowrap;">Download</a>`}
+          </div>
+        `).join('');
+      })();
     }
 
     const moduleProgressContainer = document.getElementById('profileModuleProgress');

@@ -21,6 +21,34 @@
     }
   })();
 
+  // ---- Certificates ----
+  // Called once a game's engine.advance() returns 'game-complete' (i.e. Hard
+  // difficulty's last level was just finished). The backend is idempotent
+  // (one UserCertificate per user+game), so this is safe to call every time
+  // a player finishes Hard, even on replays -- it only issues once and the
+  // rest are silent no-ops. Fire-and-forget: never blocks the completion UI.
+  async function awardCertificateIfEarned(gameKey) {
+    try {
+      const currentUser = window.KumpasPortal && typeof window.KumpasPortal.ensureCurrentUser === 'function'
+        ? await window.KumpasPortal.ensureCurrentUser()
+        : null;
+      const email = currentUser && currentUser.email;
+      if (!email) return null;
+
+      const response = await fetch(`${API_BASE}/certificates/award/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, game_key: gameKey }),
+      });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (_) {
+      return null;
+    }
+  }
+  window.KumpasGames.awardCertificateIfEarned = awardCertificateIfEarned;
+
   // ---- Navbar dropdown ----
   function wireNavbar() {
     const toggle = document.getElementById('navUserToggle');

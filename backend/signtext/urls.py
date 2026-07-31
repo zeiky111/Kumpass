@@ -6,6 +6,7 @@ from .views import (
     admin_user_details,
     admin_user_status,
     admin_users,
+    award_certificate,
     check_session,
     csrf_token,
     game_level_item_detail,
@@ -44,6 +45,7 @@ from .views import (
     profile_photo,
     profile_update,
     signup,
+    user_certificates,
 )
 
 urlpatterns = [
@@ -61,6 +63,8 @@ urlpatterns = [
     path("leaderboard/", leaderboard, name="leaderboard"),
     path("announcements/", public_announcements, name="public-announcements"),
     path("learning/state/", learning_state, name="learning-state"),
+    path("certificates/", user_certificates, name="user-certificates"),
+    path("certificates/award/", award_certificate, name="certificate-award"),
     path("student/content/", student_content, name="student-content"),
     path("profile/photo/", profile_photo, name="profile-photo"),
     path("profile/update/", profile_update, name="profile-update"),

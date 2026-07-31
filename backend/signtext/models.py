@@ -386,3 +386,31 @@ class UserAchievement(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} unlocked {self.achievement.key}"
+
+
+class Certificate(models.Model):
+    """Certificate catalog entry: one row per game, defining its template."""
+    game_key = models.CharField(max_length=20, choices=GameLevel.GAME_CHOICES, unique=True)
+    title = models.CharField(max_length=150)
+    template_path = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class UserCertificate(models.Model):
+    """Records that a user earned a given game's certificate and stores the
+    generated PDF, personalized with the student's name at issue time."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="certificates")
+    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE, related_name="unlocks")
+    file = models.FileField(upload_to="certificates/%Y/%m/")
+    student_name = models.CharField(max_length=150)
+    issued_at = models.DateTimeField(auto_now_add=True)
+    emailed = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user", "certificate")
+        ordering = ["-issued_at"]
+
+    def __str__(self) -> str:
+        return f"{self.user.username} earned {self.certificate.game_key}"
