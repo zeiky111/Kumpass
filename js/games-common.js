@@ -340,11 +340,17 @@
 
     function currentLevelNumber() {
       const levels = activeLevelList();
+      let result;
       if (levels) {
         const level = levels[Math.min(state.levelIndex, levels.length - 1)];
-        return level ? level.levelNumber : state.levelIndex + 1;
+        result = level ? level.levelNumber : state.levelIndex + 1;
+      } else {
+        result = state.levelIndex + 1;
       }
-      return state.levelIndex + 1;
+      if (window.__KUMPAS_DEBUG_LEVELS__) {
+        console.log('[KumpasGames.currentLevelNumber]', { difficulty: state.difficulty, levelIndex: state.levelIndex, result });
+      }
+      return result;
     }
 
     function totalLevelsForDifficulty(difficulty) {
@@ -403,6 +409,15 @@
     // Called when the player finishes all questions in the current level.
     // Returns 'next-level' | 'next-difficulty' | 'game-complete'.
     function advance() {
+      if (window.__KUMPAS_DEBUG_LEVELS__) {
+        console.log('[KumpasGames.advance]', {
+          difficulty: state.difficulty,
+          levelIndexBefore: state.levelIndex,
+          activeLevelListLength: (activeLevelList() || []).length,
+          hasNextLevel: hasNextLevel(),
+          levelsByDifficulty: JSON.parse(JSON.stringify(state.levelsByDifficulty)),
+        });
+      }
       if (hasNextLevel()) {
         state.levelIndex += 1;
         return 'next-level';
