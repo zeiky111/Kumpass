@@ -22,7 +22,7 @@
         // Check authentication with backend (session cookie)
         (async function() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                const response = await fetch('https://kumpass.onrender.com/api/auth/me/', {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -969,7 +969,7 @@
         // Sign videos are loaded from the database (SignVideo table), which is
         // populated from the "Sign Language" media library. Both the Games and
         // Text-to-Sign modules read from this same API endpoint.
-        const SIGN_VIDEOS_API = 'http://127.0.0.1:8000/api/sign-videos/';
+        const SIGN_VIDEOS_API = 'https://kumpass.onrender.com/api/sign-videos/';
 
         const BACKEND_TO_UI_CATEGORY = {
             alphabet: 'school',

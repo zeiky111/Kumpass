@@ -1,6 +1,6 @@
 (function () {
   const STORAGE_KEY_PREFIX = 'kumpasLearningState';
-  const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
+  const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
   const DEFAULT_USER_NAME = 'Learner';
   const DEFAULT_USER_EMAIL = '';
   let hydratedState = null;
