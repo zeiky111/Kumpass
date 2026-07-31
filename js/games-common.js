@@ -358,10 +358,12 @@
       return (list && list.length) ? list.length : null; // null = nothing published for this difficulty
     }
 
+    // Total number of on-screen choices/options for the current difficulty.
+    // Each level holds a single correct item, so this is just the configured
+    // count -- distractors to fill the rest come from each game's own wider
+    // word/clip pool, not from the level itself.
     function getChoiceCount() {
-      const base = opts.choiceCounts[state.difficulty] || 4;
-      const pool = getActivePool();
-      return Math.max(2, Math.min(pool.length, base));
+      return Math.max(2, opts.choiceCounts[state.difficulty] || 4);
     }
 
     function getPointValue() {

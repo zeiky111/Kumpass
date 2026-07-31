@@ -502,7 +502,7 @@
     </div>
 
     <script src="js/portal.js?v=20260801"></script>
-    <script src="js/games-common.js?v=20260801b"></script>
+    <script src="js/games-common.js?v=20260801c"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -521,7 +521,21 @@
             });
         }
 
+        // Sign videos are loaded from the database (SignVideo table) purely to
+        // pad multiple-choice distractors -- each level itself now holds a
+        // single word, so wrong-answer options must come from the wider
+        // library, not from the level's own (empty-after-filtering) pool.
+        const SIGN_VIDEOS_API = `${KumpasGames.API_BASE}/sign-videos/?scope=games`;
         const { videoMimeType } = KumpasGames;
+
+        let allWordLabels = [];
+
+        async function loadDistractorWords() {
+            const response = await fetch(SIGN_VIDEOS_API);
+            if (!response.ok) throw new Error(`Failed to load sign videos (${response.status})`);
+            const items = await response.json();
+            allWordLabels = items.map(item => item.word).filter(Boolean);
+        }
 
         // Difficulty only changes the number of multiple-choice options shown.
         const engine = KumpasGames.createGameEngine({
@@ -546,9 +560,8 @@
 
         function buildOptions(question) {
             const count = engine.getChoiceCount();
-            const otherLabels = engine.getActivePool()
-                .map(item => item.label)
-                .filter(label => label !== question.label);
+            const otherLabels = allWordLabels
+                .filter(label => engine.normalizeText(label) !== engine.normalizeText(question.label));
 
             const distractors = engine.shuffle(otherLabels).slice(0, Math.max(1, count - 1));
             const base = [question.label, ...distractors];
@@ -703,12 +716,16 @@
         }
 
         // Initialize game
-        KumpasGames.loadGameLevels('sign_match')
-            .then(levels => {
+        Promise.all([
+            loadDistractorWords(),
+            KumpasGames.loadGameLevels('sign_match').then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
                     item => (item.prompt && item.media_url) ? { label: item.prompt, video: item.media_url } : null
                 );
+            }),
+        ])
+            .then(() => {
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
                     medium: engine.totalLevelsForDifficulty('medium') || 0,
