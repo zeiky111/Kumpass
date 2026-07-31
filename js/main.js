@@ -63,7 +63,10 @@ document.addEventListener('DOMContentLoaded', function() {
   var hamburger = document.getElementById('hamburger');
   var navMenu = document.getElementById('navMenu');
 
-  if (hamburger && navMenu) {
+  // Guard shared with js/portal.js's initHamburgerMenu() -- some pages load
+  // both scripts, and only one should bind the click listener.
+  if (hamburger && navMenu && !hamburger.dataset.bound) {
+    hamburger.dataset.bound = 'true';
     hamburger.addEventListener('click', function() {
       navMenu.classList.toggle('active');
       hamburger.classList.toggle('active');

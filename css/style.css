@@ -1636,13 +1636,9 @@ tr:hover {
   flex-wrap: wrap;
 }
 
-/* FOOTER */
-.footer {
-  background: var(--dark-blue);
-  color: var(--white);
-  padding: 60px 0 20px;
-}
-
+/* FOOTER (landing page) -- box model (background/padding/etc.) comes from
+   the shared ".footer" rule above ("INNER PAGE FOOTER"); this block only
+   adds the multi-column grid layout used on index.html. */
 .footer-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

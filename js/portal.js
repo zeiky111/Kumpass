@@ -2135,8 +2135,31 @@
     }
   }
 
+  // Mirrors the hamburger toggle in js/main.js -- duplicated here (not
+  // imported) because this is a no-build-step static site, and not every
+  // page that needs it also loads main.js.
+  function initHamburgerMenu() {
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('navMenu');
+    if (!hamburger || !navMenu || hamburger.dataset.bound) return;
+    hamburger.dataset.bound = 'true';
+
+    hamburger.addEventListener('click', function () {
+      navMenu.classList.toggle('active');
+      hamburger.classList.toggle('active');
+    });
+
+    navMenu.querySelectorAll('.nav-link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        navMenu.classList.remove('active');
+        hamburger.classList.remove('active');
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initNavbarUserMenu();
+    initHamburgerMenu();
     applyYearAccessRules();
     hydrateAndRender();
   });
