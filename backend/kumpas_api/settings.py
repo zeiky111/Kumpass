@@ -146,16 +146,17 @@ REST_FRAMEWORK = {
 # Email configuration - uses environment variables (or console backend by default)
 # Render blocks outbound SMTP ports (25/465/587) on its network, so
 # django's SMTP backend fails with "Network is unreachable" there
-# regardless of credentials. Use the Resend HTTP API (plain HTTPS) instead
-# by setting RESEND_API_KEY; falls back to SMTP if EMAIL_BACKEND is set
-# explicitly, or console output for local dev.
+# regardless of credentials. Whenever RESEND_API_KEY is set, force the
+# Resend HTTP API backend (plain HTTPS, which Render allows) even if an
+# old EMAIL_BACKEND=...smtp.EmailBackend is still sitting in the
+# environment from a previous config -- that stale SMTP setting is exactly
+# what silently overrode this before. Falls back to SMTP if EMAIL_BACKEND
+# is set and no Resend key is present, or console output for local dev.
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-_default_email_backend = (
-    "signtext.email_backend.ResendEmailBackend"
-    if RESEND_API_KEY
-    else "django.core.mail.backends.console.EmailBackend"
-)
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", _default_email_backend)
+if RESEND_API_KEY:
+    EMAIL_BACKEND = "signtext.email_backend.ResendEmailBackend"
+else:
+    EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Kumpas <no-reply@kumpas.local>")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
