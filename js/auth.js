@@ -16,16 +16,24 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
         return existingToken;
     }
 
+    // Browsers that block third-party cookies (Safari ITP, Chrome/Firefox
+    // cross-site restrictions) drop the cross-site csrftoken cookie, so
+    // document.cookie never sees it even though the request succeeded.
+    // Fall back to the token returned in the response body in that case.
     try {
-        await fetch(`${base}/auth/csrf/`, {
+        const response = await fetch(`${base}/auth/csrf/`, {
             method: 'GET',
             credentials: 'include'
         });
+        const cookieToken = getCookie('csrftoken');
+        if (cookieToken) {
+            return cookieToken;
+        }
+        const data = await response.json().catch(() => ({}));
+        return data.csrfToken || '';
     } catch (_) {
         return '';
     }
-
-    return getCookie('csrftoken');
 }
 
 // Check if user is authenticated with the backend

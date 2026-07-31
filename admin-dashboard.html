@@ -379,16 +379,22 @@
                 return existingToken;
             }
 
+            // Browsers that block third-party cookies drop the cross-site
+            // csrftoken cookie, so fall back to the token in the response body.
             try {
-                await fetch(`${API_BASE}/auth/csrf/`, {
+                const response = await fetch(`${API_BASE}/auth/csrf/`, {
                     method: 'GET',
                     credentials: 'include',
                 });
+                const cookieToken = getCookie('csrftoken');
+                if (cookieToken) {
+                    return cookieToken;
+                }
+                const data = await response.json().catch(() => ({}));
+                return data.csrfToken || '';
             } catch (_) {
                 return '';
             }
-
-            return getCookie('csrftoken');
         }
 
         async function requestJson(path, options = {}) {

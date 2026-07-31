@@ -1950,8 +1950,17 @@ def check_session(request: Any) -> Response:
 @ensure_csrf_cookie
 @api_view(["GET"])
 def csrf_token(request: Any) -> Response:
-    """Set the CSRF cookie for browser clients that submit session-backed POST requests."""
-    return Response({"csrfToken": "set"})
+    """Set the CSRF cookie for browser clients that submit session-backed POST requests.
+
+    Also returns the real token in the response body: browsers that block
+    third-party cookies (Safari ITP, Chrome/Firefox cross-site restrictions)
+    silently drop the cross-site csrftoken cookie set here, so the frontend
+    cannot read it back via document.cookie. Returning the token in the JSON
+    body lets the frontend send it as the X-CSRFToken header even when the
+    cookie itself never lands in the browser's cookie jar.
+    """
+    from django.middleware.csrf import get_token
+    return Response({"csrfToken": get_token(request)})
 
 
 @csrf_exempt
