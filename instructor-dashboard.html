@@ -1047,9 +1047,9 @@
                 const modulePage = getInstructorModulePage();
                 const moduleYearFilter = getInstructorModuleYearFilter();
                 const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5`);
-                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}`);
+                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=3&yearLevel=${encodeURIComponent(moduleYearFilter)}`);
                 window.__instructorModules = Array.isArray(modulesResponse.modules) ? modulesResponse.modules : [];
-                window.__modulePagination = modulesResponse || { page: modulePage, limit: 8, total: Array.isArray(modulesResponse.modules) ? modulesResponse.modules.length : 0 };
+                window.__modulePagination = modulesResponse || { page: modulePage, limit: 3, total: Array.isArray(modulesResponse.modules) ? modulesResponse.modules.length : 0 };
                 window.__instructorAnnouncements = Array.isArray(response.announcements) ? response.announcements : [];
                 window.__studentPagination = response.pagination || { page: studentPage, pageSize: 5, total: Array.isArray(response.students) ? response.students.length : 0 };
                 const welcomeTitle = document.getElementById('instructorWelcomeTitle');
