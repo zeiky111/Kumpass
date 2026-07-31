@@ -404,6 +404,7 @@
                         </div>
                         <div class="card-body">
                             <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
+                            <div id="gameLevelsCoverage"></div>
                             <div id="instructorGameLevelsList"></div>
                         </div>
                     </div>
@@ -1466,6 +1467,8 @@
                     return diffOrder !== 0 ? diffOrder : Number(a.level_number) - Number(b.level_number);
                 });
 
+            renderGameLevelsCoverage(activeGame, levels);
+
             if (!levels.length) {
                 target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
                 return;
@@ -1514,6 +1517,7 @@
                 const actorId = await getInstructorActorIdentifier();
                 const response = await requestJson(`/instructor/game-levels/?actorEmail=${encodeURIComponent(actorId)}`);
                 window.__gameLevels = Array.isArray(response) ? response : [];
+                await ensureSignVideoLibrary();
                 renderGameLevelTabs();
                 renderGameLevels();
                 if (document.getElementById('levelModal')?.classList.contains('active')) {
@@ -1522,6 +1526,50 @@
             } catch (error) {
                 console.error('Game levels error:', error);
             }
+        }
+
+        // What students actually see for a given game/difficulty when no
+        // teacher level is published for it. Sign Match/Typing always fall
+        // back to the shared sign-video library; Sentence/Scenario fall back
+        // to the teacher's own Easy-difficulty content (or nothing at all).
+        function describeFallbackForDifficulty(gameKey, difficulty, levelsForGame) {
+            if (gameKey === 'sign_match' || gameKey === 'typing') {
+                const count = (window.__signVideoLibrary || []).length;
+                return count
+                    ? `Students see a random mix of all ${count} sign videos in the library (not a level you created).`
+                    : 'Students see nothing yet — the sign video library is empty.';
+            }
+            const easyHasContent = levelsForGame.some(l => l.difficulty === 'easy' && Number(l.items_count || 0) > 0);
+            return easyHasContent
+                ? `Students see your Easy-difficulty content reused for this difficulty (no ${DIFFICULTY_LABELS[difficulty] || difficulty}-specific level yet).`
+                : 'Students see nothing yet — add at least one Easy-difficulty level with content first.';
+        }
+
+        function renderGameLevelsCoverage(activeGame, levelsForGame) {
+            const target = document.getElementById('gameLevelsCoverage');
+            if (!target) return;
+
+            const rows = ['easy', 'medium', 'hard'].map(difficulty => {
+                const published = levelsForGame.filter(l => l.difficulty === difficulty && l.is_published && Number(l.items_count || 0) > 0);
+                const covered = published.length > 0;
+                return `
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:180px;">
+                        <span class="${covered ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
+                        <span style="color:#64748b; font-size:0.85rem;">
+                            ${covered
+                                ? `${published.length} published level(s) with content`
+                                : safeText(describeFallbackForDifficulty(activeGame, difficulty, levelsForGame))}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            target.innerHTML = `
+                <div style="background:#f9fafb; border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
+                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty</div>
+                    <div style="display:flex; gap:14px; flex-wrap:wrap;">${rows}</div>
+                </div>
+            `;
         }
 
         function renderLevelReference(gameKey) {
