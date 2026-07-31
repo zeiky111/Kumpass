@@ -1153,3 +1153,129 @@ td {
     padding: 18px;
   }
 }
+
+/* GAME LEVELS MANAGEMENT */
+.game-level-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.game-level-card {
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.game-level-card:last-child {
+  margin-bottom: 0;
+}
+
+.game-level-card h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.game-level-card p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.game-level-card .badge-draft {
+  color: #b45309;
+  background: rgba(180, 83, 9, 0.12);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.game-level-card .badge-published {
+  color: #047857;
+  background: rgba(4, 120, 87, 0.12);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.game-level-card .badge-no-content {
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.1);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.game-level-reference-panel {
+  background: #f9fafb;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.game-level-reference-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.game-level-reference-panel .reference-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.game-level-reference-count {
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.video-picker {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.video-picker select {
+  margin-bottom: 0;
+}
+
+.video-picker .video-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.video-picker .video-picker-upload {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(241, 245, 249, 0.9);
+  border-radius: 10px;
+}
+
+.learning-file-row {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+}
+
+.learning-file-name {
+  font-weight: 600;
+  color: #0f172a;
+}

@@ -5,7 +5,7 @@ import threading
 from datetime import timedelta
 from django.utils import timezone
 from typing import Any
-from django.db import DatabaseError, OperationalError
+from django.db import DatabaseError, IntegrityError, OperationalError
 from django.db.models import F, Q, Sum
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
@@ -2181,17 +2181,33 @@ def instructor_game_levels(request: Any) -> Response:
             levels = levels.filter(game_key=game_key)
         return Response(GameLevelSerializer(levels, many=True).data)
 
+    game_key = str(request.data.get("game_key") or "").strip()
+    difficulty = str(request.data.get("difficulty") or GameLevel.DIFFICULTY_EASY).strip()
+    level_number = int(request.data.get("level_number") or 1)
+
+    if GameLevel.objects.filter(game_key=game_key, difficulty=difficulty, level_number=level_number).exists():
+        return Response(
+            {"error": f"Level {level_number} ({difficulty}) already exists for this game. Choose a different level number or difficulty."},
+            status=400,
+        )
+
     serializer = GameLevelSerializer(data={
-        "game_key": str(request.data.get("game_key") or "").strip(),
-        "difficulty": str(request.data.get("difficulty") or GameLevel.DIFFICULTY_EASY).strip(),
-        "level_number": int(request.data.get("level_number") or 1),
+        "game_key": game_key,
+        "difficulty": difficulty,
+        "level_number": level_number,
         "title": str(request.data.get("title") or "").strip(),
         "is_published": _safe_bool(request.data.get("is_published", True), True),
     })
     if not serializer.is_valid():
         return Response({"error": serializer.errors}, status=400)
 
-    level = serializer.save(created_by=actor, updated_by=actor)
+    try:
+        level = serializer.save(created_by=actor, updated_by=actor)
+    except IntegrityError:
+        return Response(
+            {"error": f"Level {level_number} ({difficulty}) already exists for this game. Choose a different level number or difficulty."},
+            status=400,
+        )
     return Response(GameLevelSerializer(level).data, status=201)
 
 
@@ -2210,12 +2226,25 @@ def instructor_game_level_detail(request: Any, level_id: int) -> Response:
         level.delete()
         return Response({"message": "Level deleted"})
 
+    new_game_key = str(request.data.get("game_key") or level.game_key).strip()
+    new_difficulty = str(request.data.get("difficulty") or level.difficulty).strip()
+    new_level_number = int(request.data.get("level_number") or level.level_number)
+
+    duplicate_exists = GameLevel.objects.filter(
+        game_key=new_game_key, difficulty=new_difficulty, level_number=new_level_number,
+    ).exclude(pk=level.pk).exists()
+    if duplicate_exists:
+        return Response(
+            {"error": f"Level {new_level_number} ({new_difficulty}) already exists for this game. Choose a different level number or difficulty."},
+            status=400,
+        )
+
     serializer = GameLevelSerializer(
         level,
         data={
-            "game_key": str(request.data.get("game_key") or level.game_key).strip(),
-            "difficulty": str(request.data.get("difficulty") or level.difficulty).strip(),
-            "level_number": int(request.data.get("level_number") or level.level_number),
+            "game_key": new_game_key,
+            "difficulty": new_difficulty,
+            "level_number": new_level_number,
             "title": str(request.data.get("title") if request.data.get("title") is not None else level.title).strip(),
             "is_published": _safe_bool(request.data.get("is_published", level.is_published), level.is_published),
         },
@@ -2224,7 +2253,13 @@ def instructor_game_level_detail(request: Any, level_id: int) -> Response:
     if not serializer.is_valid():
         return Response({"error": serializer.errors}, status=400)
 
-    level = serializer.save(updated_by=actor)
+    try:
+        level = serializer.save(updated_by=actor)
+    except IntegrityError:
+        return Response(
+            {"error": f"Level {new_level_number} ({new_difficulty}) already exists for this game. Choose a different level number or difficulty."},
+            status=400,
+        )
     return Response(GameLevelSerializer(level).data)
 
 
