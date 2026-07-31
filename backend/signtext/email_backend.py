@@ -46,6 +46,10 @@ class ResendEmailBackend(BaseEmailBackend):
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
+                    # Resend's API is fronted by Cloudflare, which blocks
+                    # requests using Python's default "Python-urllib/x.y"
+                    # User-Agent as a bot signature (Cloudflare error 1010).
+                    "User-Agent": "kumpas-backend/1.0 (+https://kumpass.onrender.com)",
                 },
             )
             try:
