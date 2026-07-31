@@ -2263,6 +2263,25 @@
             _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
             document.addEventListener('click', function() { _d.classList.remove('open'); });
         }
+
+        function doLogout(e) {
+            e.preventDefault();
+            fetch('https://kumpass.onrender.com/api/auth/logout/', {
+                method: 'POST',
+                credentials: 'include'
+            }).catch(function () {
+                // Continue even if logout request fails
+            }).finally(function () {
+                if (window.KumpasSession && typeof window.KumpasSession.clearCurrentUser === 'function') {
+                    window.KumpasSession.clearCurrentUser();
+                }
+                window.location.replace('index.html');
+            });
+        }
+
+        document.querySelectorAll('a.logout, a[href="index.html"]').forEach(function (link) {
+            link.addEventListener('click', doLogout);
+        });
     })();
     </script>
 </body>
