@@ -634,6 +634,9 @@
             choiceCounts: TOTAL_OPTIONS,
             pointBase: { easy: 20, medium: 25, hard: 30 },
             fallbackQuestionCounts: { easy: 4, medium: 5, hard: 6 },
+            // The fallback pool is built from Easy's own teacher content (see
+            // below), so Easy must not show it as a second, duplicate level.
+            fallbackAppliesTo: (difficulty) => difficulty !== 'easy',
         });
 
         let activeScenarios = [];

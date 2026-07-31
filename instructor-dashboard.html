@@ -1528,21 +1528,22 @@
             }
         }
 
-        // What students actually see for a given game/difficulty when no
-        // teacher level is published for it. Sign Match/Typing always fall
-        // back to the shared sign-video library; Sentence/Scenario fall back
-        // to the teacher's own Easy-difficulty content (or nothing at all).
-        function describeFallbackForDifficulty(gameKey, difficulty, levelsForGame) {
+        // What students always see as the FIRST level for a game/difficulty,
+        // on top of which any published teacher levels are added (the default
+        // pool is never replaced — see js/games-common.js activeLevelList()).
+        // Sign Match/Typing always default to the shared sign-video library;
+        // Sentence/Scenario default to the teacher's own Easy-difficulty
+        // content reused (Easy itself has no separate default, since that
+        // would just duplicate its own content).
+        function describeDefaultForDifficulty(gameKey, difficulty) {
             if (gameKey === 'sign_match' || gameKey === 'typing') {
                 const count = (window.__signVideoLibrary || []).length;
                 return count
-                    ? `Students see a random mix of all ${count} sign videos in the library (not a level you created).`
-                    : 'Students see nothing yet — the sign video library is empty.';
+                    ? `Default Level 1: a random mix of all ${count} sign videos in the library.`
+                    : 'No default content available — the sign video library is empty.';
             }
-            const easyHasContent = levelsForGame.some(l => l.difficulty === 'easy' && Number(l.items_count || 0) > 0);
-            return easyHasContent
-                ? `Students see your Easy-difficulty content reused for this difficulty (no ${DIFFICULTY_LABELS[difficulty] || difficulty}-specific level yet).`
-                : 'Students see nothing yet — add at least one Easy-difficulty level with content first.';
+            if (difficulty === 'easy') return '';
+            return 'Default Level 1: your Easy-difficulty content, reused here until you publish a level for this difficulty.';
         }
 
         function renderGameLevelsCoverage(activeGame, levelsForGame) {
@@ -1551,22 +1552,22 @@
 
             const rows = ['easy', 'medium', 'hard'].map(difficulty => {
                 const published = levelsForGame.filter(l => l.difficulty === difficulty && l.is_published && Number(l.items_count || 0) > 0);
-                const covered = published.length > 0;
+                const defaultText = describeDefaultForDifficulty(activeGame, difficulty);
+                const parts = [];
+                if (defaultText) parts.push(defaultText);
+                if (published.length) parts.push(`+ ${published.length} of your published level(s), added after the default.`);
+                if (!parts.length) parts.push('Nothing published yet for this difficulty.');
                 return `
                     <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:180px;">
-                        <span class="${covered ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
-                        <span style="color:#64748b; font-size:0.85rem;">
-                            ${covered
-                                ? `${published.length} published level(s) with content`
-                                : safeText(describeFallbackForDifficulty(activeGame, difficulty, levelsForGame))}
-                        </span>
+                        <span class="${published.length ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
+                        <span style="color:#64748b; font-size:0.85rem;">${safeText(parts.join(' '))}</span>
                     </div>
                 `;
             }).join('');
 
             target.innerHTML = `
                 <div style="background:#f9fafb; border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
-                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty</div>
+                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty (default + your levels)</div>
                     <div style="display:flex; gap:14px; flex-wrap:wrap;">${rows}</div>
                 </div>
             `;

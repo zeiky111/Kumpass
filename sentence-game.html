@@ -703,6 +703,9 @@
             choiceCounts: EXTRA_WORD_COUNTS,
             pointBase: { easy: 15, medium: 20, hard: 25 },
             fallbackQuestionCounts: { easy: 3, medium: 4, hard: 5 },
+            // The fallback pool is built from Easy's own teacher content (see
+            // below), so Easy must not show it as a second, duplicate level.
+            fallbackAppliesTo: (difficulty) => difficulty !== 'easy',
         });
 
         let activeQuestions = [];
