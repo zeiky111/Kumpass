@@ -158,6 +158,10 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+# Without this, smtplib has no socket timeout and can hang indefinitely if
+# the SMTP host is unreachable/blocked, taking the whole request (and the
+# gunicorn worker) down with it until Render's gateway kills it at 30s.
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
 
 # Note: For Gmail you'll typically need to create an App Password and set
 # EMAIL_HOST_USER and EMAIL_HOST_PASSWORD. Alternatively keep the default
