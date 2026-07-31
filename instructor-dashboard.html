@@ -908,7 +908,9 @@
                                     <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
                                     <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
                                     <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
+                                    ${module.status === 'archived'
+                                        ? `<button class="btn btn-sm btn-secondary" onclick="unarchiveModule(${module.id})">Unarchive</button>`
+                                        : `<button class="btn btn-sm btn-danger" onclick="archiveModule(${module.id})">Archive</button>`}
                                 </div>
                             </td>
                         </tr>
@@ -1318,14 +1320,22 @@
             await refreshInstructorDashboard();
         }
 
-        async function deleteModule(moduleId) {
-            if (!confirm('Delete this module? This will remove it from the database.')) {
+        async function archiveModule(moduleId) {
+            if (!confirm('Archive this module? Students will no longer see it, but it stays in the database and can be restored later.')) {
                 return;
             }
 
             await requestJson(`/instructor/modules/${moduleId}/`, {
-                method: 'DELETE',
-                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+                method: 'PATCH',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'archived' }),
+            });
+            await refreshInstructorDashboard();
+        }
+
+        async function unarchiveModule(moduleId) {
+            await requestJson(`/instructor/modules/${moduleId}/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'draft' }),
             });
             await refreshInstructorDashboard();
         }
