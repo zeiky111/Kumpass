@@ -95,6 +95,13 @@ body.pro-dashboard .dashboard-sidebar {
   border-right: none;
   box-shadow: 18px 0 44px rgba(2, 6, 23, 0.18);
   z-index: 1;
+  /* The sidebar's background is fully opaque, so style.css's shared
+     backdrop-filter: blur(18px) (meant for translucent glass-style cards)
+     has nothing to blur here -- it only adds GPU compositing cost and,
+     combined with position: sticky, has been seen to produce a stray
+     dark ghost box while scrolling on some Chromium builds. Disable it. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @media (min-width: 901px) {
