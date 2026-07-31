@@ -1015,13 +1015,15 @@ def resend_verification(request: Any) -> Response:
 
     result = _create_and_send_otp(user, request)
     if not result.get("ok"):
-        # In development include error details so frontend can surface them.
+        # Email delivery failing is not the client's fault and the OTP row
+        # already exists, so surface it as a normal response rather than a
+        # 500 (which browsers can misreport as a CORS failure).
         details = result.get("error")
         return Response({
-            "message": "Failed to send verification code.",
+            "message": "We couldn't send the verification email right now. Please try again in a moment.",
             "error": "email_delivery_failed",
             "details": details,
-        }, status=500)
+        }, status=502)
 
     return Response({"message": "Verification code sent."})
 
@@ -1040,10 +1042,10 @@ def request_password_reset(request: Any) -> Response:
     if not result.get("ok"):
         details = result.get("error")
         return Response({
-            "message": "Failed to send password reset code.",
+            "message": "We couldn't send the password reset email right now. Please try again in a moment.",
             "error": "email_delivery_failed",
             "details": details,
-        }, status=500)
+        }, status=502)
 
     return Response({
         "message": "Password reset code sent to your email.",
@@ -1074,10 +1076,10 @@ def resend_password_reset_code(request: Any) -> Response:
     if not result.get("ok"):
         details = result.get("error")
         return Response({
-            "message": "Failed to send password reset code.",
+            "message": "We couldn't send the password reset email right now. Please try again in a moment.",
             "error": "email_delivery_failed",
             "details": details,
-        }, status=500)
+        }, status=502)
 
     return Response({"message": "Password reset code sent."})
 

@@ -144,12 +144,18 @@ REST_FRAMEWORK = {
 }
 
 # Email configuration - uses environment variables (or console backend by default)
-# To send real emails via Gmail set EMAIL_BACKEND to
-# 'django.core.mail.backends.smtp.EmailBackend' and provide credentials below
-EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
+# Render blocks outbound SMTP ports (25/465/587) on its network, so
+# django's SMTP backend fails with "Network is unreachable" there
+# regardless of credentials. Use the Resend HTTP API (plain HTTPS) instead
+# by setting RESEND_API_KEY; falls back to SMTP if EMAIL_BACKEND is set
+# explicitly, or console output for local dev.
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+_default_email_backend = (
+    "signtext.email_backend.ResendEmailBackend"
+    if RESEND_API_KEY
+    else "django.core.mail.backends.console.EmailBackend"
 )
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", _default_email_backend)
 
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Kumpas <no-reply@kumpas.local>")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
