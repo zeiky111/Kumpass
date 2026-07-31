@@ -470,11 +470,19 @@ body.pro-dashboard .quiz-form select:focus {
 }
 
 /* ---------- RESPONSIVE ---------- */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   body.pro-dashboard .dashboard-sidebar {
     background: linear-gradient(120deg, var(--pro-sidebar-from), var(--pro-sidebar-to));
   }
 
+  body.pro-dashboard .sidebar-toggle {
+    background: var(--pro-sidebar-from);
+    color: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+}
+
+@media (max-width: 768px) {
   body.pro-dashboard .dashboard-welcome::after {
     display: none;
   }

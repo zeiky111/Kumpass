@@ -45,6 +45,8 @@
   background: rgba(255, 255, 255, 0.12);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(10px);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .register-page .auth-brand {
@@ -65,6 +67,7 @@
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.05;
+  min-width: 0;
 }
 
 .auth-brand-text span {
@@ -80,6 +83,8 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.82);
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .auth-sidebar .logo-icon {
@@ -427,6 +432,9 @@
   z-index: 1000;
   justify-content: center;
   align-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .modal.active {
@@ -439,6 +447,9 @@
   border-radius: 6px;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 

@@ -74,6 +74,21 @@
   padding: 24px 20px;
   font-size: 0.9rem;
   margin-top: 60px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.footer p {
+  margin: 0;
+  word-wrap: break-word;
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 18px 16px;
+    font-size: 0.8rem;
+    margin-top: 32px;
+  }
 }
 
 /* NAVBAR USER DROPDOWN SCRIPT HELPER */
@@ -87,6 +102,11 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {

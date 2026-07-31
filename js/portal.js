@@ -2135,6 +2135,69 @@
     }
   }
 
+  // Admin/instructor dashboards (.dashboard-layout + .dashboard-sidebar) have
+  // no mobile drawer behavior on their own -- below the sidebar breakpoint the
+  // sidebar just stacks in normal flow. This injects a toggle button and a
+  // backdrop so the sidebar can slide in/out as an overlay on small screens
+  // without shifting the rest of the layout.
+  function initDashboardSidebar() {
+    const layout = document.querySelector('.dashboard-layout');
+    const sidebar = document.querySelector('.dashboard-sidebar');
+    if (!layout || !sidebar || sidebar.dataset.drawerBound) return;
+    sidebar.dataset.drawerBound = 'true';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'sidebar-toggle';
+    toggle.setAttribute('aria-label', 'Toggle menu');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+
+    layout.insertBefore(toggle, sidebar);
+    layout.appendChild(backdrop);
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('sidebar-open-lock');
+    }
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('sidebar-open-lock');
+    }
+
+    toggle.addEventListener('click', function () {
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    backdrop.addEventListener('click', closeSidebar);
+
+    sidebar.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 900px)').matches) {
+          closeSidebar();
+        }
+      });
+    });
+
+    window.addEventListener('resize', function () {
+      if (!window.matchMedia('(max-width: 900px)').matches) {
+        closeSidebar();
+      }
+    });
+  }
+
   // Mirrors the hamburger toggle in js/main.js -- duplicated here (not
   // imported) because this is a no-build-step static site, and not every
   // page that needs it also loads main.js.
@@ -2160,6 +2223,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initNavbarUserMenu();
     initHamburgerMenu();
+    initDashboardSidebar();
     applyYearAccessRules();
     hydrateAndRender();
   });
