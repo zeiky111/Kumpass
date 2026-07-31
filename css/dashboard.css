@@ -306,6 +306,10 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
+.tab-content .card:last-child {
+  margin-bottom: 0;
+}
+
 .card h2 {
   font-size: 1.15rem;
   color: #0f172a;
