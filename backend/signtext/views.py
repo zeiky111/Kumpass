@@ -1157,6 +1157,7 @@ def reset_password(request: Any) -> Response:
     return Response({"message": "Password reset successfully. You can now log in."})
 
 
+@csrf_exempt
 @api_view(["GET", "POST"])
 def learning_state(request: Any) -> Response:
     email = str(request.query_params.get("email") or request.data.get("email") or "").strip().lower()
@@ -1188,6 +1189,7 @@ def learning_state(request: Any) -> Response:
     return Response(serializer.data)
 
 
+@csrf_exempt
 @api_view(["POST"])
 def award_certificate(request: Any) -> Response:
     email = str(request.data.get("email") or "").strip().lower()
@@ -1919,6 +1921,7 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
     return Response(QuizQuestionSerializer(question).data, status=201)
 
 
+@csrf_exempt
 @api_view(["POST"])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
     """Endpoint for students to submit quiz answers for grading.
