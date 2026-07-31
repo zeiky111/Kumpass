@@ -564,7 +564,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Difficulty</label>
-                        <select id="levelDifficulty" class="form-input" required>
+                        <select id="levelDifficulty" class="form-input" required onchange="applySuggestedLevelNumber()">
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
                             <option value="hard">Hard</option>
@@ -573,6 +573,7 @@
                     <div class="form-group">
                         <label class="form-label">Level Number</label>
                         <input type="number" id="levelNumber" class="form-input" min="1" value="1" required>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Auto-filled with the next available number for this game and difficulty; change it if you want a different position.</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Title (optional)</label>
@@ -1446,6 +1447,25 @@
             return '';
         }
 
+        // Suggests the next free level number for a game+difficulty (existing
+        // max + 1), so a new level doesn't default to 1 and collide with one
+        // that's already there.
+        function getNextLevelNumber(gameKey, difficulty) {
+            const existing = (window.__gameLevels || []).filter(l => l.game_key === gameKey && l.difficulty === difficulty);
+            if (!existing.length) return 1;
+            return Math.max(...existing.map(l => Number(l.level_number) || 0)) + 1;
+        }
+
+        // Auto-fills Level Number with the next free one for the currently
+        // selected game+difficulty. Only applies while adding a new level --
+        // editing an existing level must keep showing its actual number.
+        function applySuggestedLevelNumber() {
+            if (document.getElementById('levelId').value) return;
+            const gameKey = document.getElementById('levelGameKey').value;
+            const difficulty = document.getElementById('levelDifficulty').value;
+            document.getElementById('levelNumber').value = getNextLevelNumber(gameKey, difficulty);
+        }
+
         function renderGameLevelTabs() {
             const target = document.getElementById('gameLevelGameTabs');
             if (!target) return;
@@ -1620,6 +1640,7 @@
             const container = document.getElementById('levelDynamicFields');
             if (!container) return;
             renderLevelReference(gameKey);
+            if (!isEdit) applySuggestedLevelNumber();
 
             if (isEdit) {
                 // These starter-content fields only apply when creating a new level;
