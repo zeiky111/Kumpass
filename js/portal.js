@@ -345,10 +345,9 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE}/learning/state/`, {
+      const response = await window.fetchWithAuth(`${API_BASE}/learning/state/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email, state }),
       });
 
@@ -669,10 +668,9 @@
         submitButton.textContent = 'Submitting…';
 
         try {
-          const resp = await fetch(`${API_BASE}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
+          const resp = await window.fetchWithAuth(`${API_BASE}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(payload),
           });
           if (!resp.ok) {
@@ -1535,9 +1533,8 @@
     form.append('avatar_id', avatarId || '');
 
     try {
-      const response = await fetch(`${API_BASE}/profile/photo/`, {
+      const response = await window.fetchWithAuth(`${API_BASE}/profile/photo/`, {
         method: 'POST',
-        credentials: 'include',
         body: form,
       });
       if (!response.ok) return null;
@@ -1975,9 +1972,8 @@
       }
 
       try {
-        const response = await fetch(`${API_BASE}/profile/photo/`, {
+        const response = await window.fetchWithAuth(`${API_BASE}/profile/photo/`, {
           method: 'POST',
-          credentials: 'include',
           body: form,
         });
 

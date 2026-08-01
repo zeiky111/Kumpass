@@ -18,21 +18,9 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/auth.js"></script>
     <script>
-        // Check authentication with backend (session cookie)
-        (async function() {
-            try {
-                const response = await fetch('https://kumpass.onrender.com/api/auth/me/', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    window.location.replace('login.html');
-                }
-            } catch (_) {
-                window.location.replace('login.html');
-            }
-        })();
+        requireAuth();
     </script>
     <!-- Navbar -->
     <nav class="navbar">
@@ -1146,10 +1134,9 @@
 
             try {
                 const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
-                const response = await fetch(`${apiBase}/profile/update/`, {
+                const response = await fetchWithAuth(`${apiBase}/profile/update/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
                     body: JSON.stringify({
                         email,
                         student_id: studentId,

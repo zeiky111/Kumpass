@@ -519,21 +519,9 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/auth.js"></script>
     <script>
-        // Check authentication with backend (session cookie)
-        (async function() {
-            try {
-                const response = await fetch('https://kumpass.onrender.com/api/auth/me/', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    window.location.replace('login.html');
-                }
-            } catch (_) {
-                window.location.replace('login.html');
-            }
-        })();
+        requireAuth();
     </script>
     <!-- Navbar -->
     <nav class="navbar">

@@ -11,15 +11,8 @@
   window.KumpasGames = window.KumpasGames || {};
   window.KumpasGames.API_BASE = API_BASE;
 
-  // ---- Auth check (session cookie) ----
-  (async function () {
-    try {
-      const response = await fetch(`${API_BASE}/auth/me/`, { method: 'GET', credentials: 'include' });
-      if (!response.ok) window.location.replace('login.html');
-    } catch (_) {
-      window.location.replace('login.html');
-    }
-  })();
+  // Auth is checked by js/auth.js's requireAuth() near the top of <body> on
+  // every game page, before this file loads -- not repeated here.
 
   // ---- Certificates ----
   // Called once a game's engine.advance() returns 'game-complete' (i.e. Hard
@@ -35,10 +28,9 @@
       const email = currentUser && currentUser.email;
       if (!email) return null;
 
-      const response = await fetch(`${API_BASE}/certificates/award/`, {
+      const response = await window.fetchWithAuth(`${API_BASE}/certificates/award/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ email, game_key: gameKey }),
       });
       if (!response.ok) return null;

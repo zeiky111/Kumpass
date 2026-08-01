@@ -1,8 +1,10 @@
+import re
+
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve as serve_static
 
 
 def root_home(request):
@@ -27,6 +29,15 @@ urlpatterns = [
     path("api/", include("signtext.urls")),
 ]
 
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve user-uploaded media files. django.conf.urls.static.static() no-ops
+# whenever DEBUG=False, and this deployment has no separate web server (nginx/
+# S3/CDN) in front of it, so without an explicit route here the /media/...
+# URLs handed out by ModuleFileSerializer 404 for everyone in production,
+# including students trying to open files teachers uploaded.
+urlpatterns += [
+    re_path(
+        r"^%s(?P<path>.*)$" % re.escape(settings.MEDIA_URL.lstrip("/")),
+        serve_static,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
+]

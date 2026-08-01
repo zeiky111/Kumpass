@@ -11,21 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="pro-dashboard admin-theme">
+    <script src="js/auth.js"></script>
     <script>
-        // Check authentication with backend (session cookie)
-        (async function() {
-            try {
-                const response = await fetch('https://kumpass.onrender.com/api/auth/me/', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                if (!response.ok) {
-                    window.location.replace('login.html');
-                }
-            } catch (_) {
-                window.location.replace('login.html');
-            }
-        })();
+        requireAuth(['admin']);
     </script>
     <nav class="navbar">
         <div class="container navbar-container">
@@ -351,12 +339,16 @@
                 return sessionUser;
             }
 
-            return { name: 'Admin', email: '', username: '', role: 'admin' };
+            // Fail closed: the page-load requireAuth(['admin']) guard should have
+            // already redirected away if there's no valid admin session, so
+            // reaching here with no session means something's wrong -- don't
+            // paper over it with a fake admin identity.
+            return null;
         }
 
         async function getAdminActorIdentifier() {
             const currentUser = await getCurrentUser();
-            return currentUser.email || currentUser.username || '';
+            return (currentUser && (currentUser.email || currentUser.username)) || '';
         }
 
         function getCookie(name) {

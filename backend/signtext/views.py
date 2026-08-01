@@ -13,7 +13,8 @@ from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
@@ -26,6 +27,7 @@ from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
 from .certificates import award_certificate_if_earned, send_certificate_email_async
+from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
     Achievement,
     Announcement,
@@ -77,9 +79,8 @@ def _profile_avatar_payload(profile: "UserProfile", request: Any) -> dict:
     }
 
 
-@csrf_exempt
 @api_view(["POST", "PATCH"])
-@authentication_classes([])
+@permission_classes([IsAuthenticated])
 def profile_photo(request: Any) -> Response:
     """Upload/update a user's profile photo, or set a preset avatar id.
 
@@ -87,15 +88,7 @@ def profile_photo(request: Any) -> Response:
     field naming one of AVATAR_PRESET_IDS. The two are mutually exclusive:
     setting one clears the other.
     """
-    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
-    if not email:
-        return Response({"error": "Missing email"}, status=400)
-
-    try:
-        user = User.objects.get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
+    user = request.user
     profile = getattr(user, "profile", None)
     if not profile:
         profile = UserProfile.objects.create(user=user, full_name=user.first_name or user.username)
@@ -125,23 +118,13 @@ def profile_photo(request: Any) -> Response:
     return Response({"message": "Photo updated", **payload})
 
 
-@csrf_exempt
 @api_view(["POST", "PATCH"])
-@authentication_classes([])
+@permission_classes([IsAuthenticated])
 def profile_update(request: Any) -> Response:
     """Update editable UserProfile fields (student ID, contact number, hearing
-    status) for the signed-in student. Mirrors profile_photo's email-based
-    lookup so it works the same way as the rest of the profile endpoints.
+    status) for the signed-in student, identified by the session.
     """
-    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
-    if not email:
-        return Response({"error": "Missing email"}, status=400)
-
-    try:
-        user = User.objects.get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
+    user = request.user
     profile = getattr(user, "profile", None)
     if not profile:
         profile = UserProfile.objects.create(user=user, full_name=user.first_name or user.username)
@@ -1159,19 +1142,10 @@ def reset_password(request: Any) -> Response:
     return Response({"message": "Password reset successfully. You can now log in."})
 
 
-@csrf_exempt
 @api_view(["GET", "POST"])
-@authentication_classes([])
+@permission_classes([IsAuthenticated])
 def learning_state(request: Any) -> Response:
-    email = str(request.query_params.get("email") or request.data.get("email") or "").strip().lower()
-    if not email:
-        return Response({"error": "Missing email"}, status=400)
-
-    try:
-        user = User.objects.get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
+    user = request.user
     user_learning_state = _get_learning_state_for_user(user)
 
     if request.method == "GET":
@@ -1192,19 +1166,13 @@ def learning_state(request: Any) -> Response:
     return Response(serializer.data)
 
 
-@csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
+@permission_classes([IsAuthenticated])
 def award_certificate(request: Any) -> Response:
-    email = str(request.data.get("email") or "").strip().lower()
+    user = request.user
     game_key = str(request.data.get("game_key") or "").strip()
-    if not email or not game_key:
-        return Response({"error": "Missing email or game_key"}, status=400)
-
-    try:
-        user = User.objects.get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
+    if not game_key:
+        return Response({"error": "Missing game_key"}, status=400)
 
     if not Certificate.objects.filter(game_key=game_key).exists():
         return Response({"error": "Unknown game_key"}, status=400)
@@ -1239,16 +1207,9 @@ def award_certificate(request: Any) -> Response:
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def user_certificates(request: Any) -> Response:
-    email = str(request.query_params.get("email") or "").strip().lower()
-    if not email:
-        return Response({"error": "Missing email"}, status=400)
-
-    try:
-        user = User.objects.get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
+    user = request.user
     earned = (
         UserCertificate.objects.filter(user=user)
         .select_related("certificate")
@@ -1268,16 +1229,9 @@ def user_certificates(request: Any) -> Response:
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def student_content(request: Any) -> Response:
-    email = str(request.query_params.get("email") or "").strip().lower()
-    if not email:
-        return Response({"error": "Missing email"}, status=400)
-
-    try:
-        user = User.objects.select_related("profile").get(username=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=404)
-
+    user = User.objects.select_related("profile").get(pk=request.user.pk)
     profile = getattr(user, "profile", None)
     own_year_level = str(getattr(profile, "year_level", "1") or "1").strip()
     year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
@@ -1328,40 +1282,18 @@ def student_content(request: Any) -> Response:
     })
 
 
-def _request_email(request: Any) -> str:
-    query_email = (
-        request.query_params.get("actorEmail")
-        or request.query_params.get("adminEmail")
-        or request.query_params.get("instructorEmail")
-        or request.query_params.get("email")
-        or ""
-    )
-    body_email = (
-        request.data.get("actorEmail")
-        or request.data.get("adminEmail")
-        or request.data.get("instructorEmail")
-        or request.data.get("email")
-        or ""
-    )
-    return str(query_email or body_email).strip().lower()
-
-
 def _get_instructor_actor(request: Any):
-    email = _request_email(request)
-    logger.info(f"[DEBUG] _get_instructor_actor: request.method={request.method}, request.data={request.data}, query_params={request.query_params}, extracted_email={email}")
-    if not email:
-        logger.error(f"[DEBUG] No email found in request data: {request.data} or query_params: {request.query_params}")
-        return None, Response({"error": "Missing instructor email"}, status=400)
+    """Resolve the acting instructor/admin from the authenticated session.
 
-    try:
-        # Try to find by email first, then by username
-        user = User.objects.select_related("profile").get(email=email)
-    except User.DoesNotExist:
-        try:
-            user = User.objects.select_related("profile").get(username=email)
-        except User.DoesNotExist:
-            return None, Response({"error": "User not found"}, status=404)
+    Identity comes from request.user (set by DRF SessionAuthentication from
+    the sessionid cookie), never from a client-supplied email param --
+    trusting an email in the request body/query let any caller impersonate
+    an instructor or admin just by naming their address.
+    """
+    if not request.user or not request.user.is_authenticated:
+        return None, Response({"error": "Authentication required"}, status=401)
 
+    user = User.objects.select_related("profile").get(pk=request.user.pk)
     profile = getattr(user, "profile", None)
     if not profile or profile.role not in {"instructor", "admin"}:
         return None, Response({"error": "Instructor access required"}, status=403)
@@ -1925,16 +1857,16 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
     return Response(QuizQuestionSerializer(question).data, status=201)
 
 
-@csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
+@permission_classes([IsAuthenticated])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
-    """Endpoint for students to submit quiz answers for grading.
+    """Endpoint for students to submit quiz answers for grading, identified
+    by the session (not a client-supplied email).
 
-    Expects JSON: { "email": "student@example.com", "answers": [{"question_id": 1, "answer": "A"}, ...] }
+    Expects JSON: { "answers": [{"question_id": 1, "answer": "A"}, ...] }
     Returns: { score: int, total: int, details: [{question_id, correct, expected, given}] }
     """
-    email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
+    user = request.user
     answers = request.data.get("answers") or []
 
     try:
@@ -1982,41 +1914,34 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     # the student's progress/recent-activity state authoritatively here so
     # completion is guaranteed correct even if the client never re-syncs.
     updated_state = None
-    if email:
-        try:
-            user = User.objects.get(username=email)
-        except User.DoesNotExist:
-            user = None
+    try:
+        QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
 
-        if user is not None:
-            try:
-                QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
+        learning_state = _get_learning_state_for_user(user)
+        state = dict(learning_state.state or {})
+        module_progress = dict(state.get("moduleProgress") or {})
+        module_progress[module.module_key] = 100
+        state["moduleProgress"] = module_progress
 
-                learning_state = _get_learning_state_for_user(user)
-                state = dict(learning_state.state or {})
-                module_progress = dict(state.get("moduleProgress") or {})
-                module_progress[module.module_key] = 100
-                state["moduleProgress"] = module_progress
+        state["points"] = int(state.get("points") or 0) + 50
+        state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
 
-                state["points"] = int(state.get("points") or 0) + 50
-                state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
+        recent_activity = list(state.get("recentActivity") or [])
+        recent_activity.insert(0, {
+            "icon": "📝",
+            "text": f"Completed quiz: {module.title}",
+            "meta": f"{score}/{total} correct",
+        })
+        state["recentActivity"] = recent_activity[:10]
 
-                recent_activity = list(state.get("recentActivity") or [])
-                recent_activity.insert(0, {
-                    "icon": "📝",
-                    "text": f"Completed quiz: {module.title}",
-                    "meta": f"{score}/{total} correct",
-                })
-                state["recentActivity"] = recent_activity[:10]
+        state["performance"] = _skill_breakdown_for_user(user)
+        state["achievements"] = _evaluate_achievements(user, state)
 
-                state["performance"] = _skill_breakdown_for_user(user)
-                state["achievements"] = _evaluate_achievements(user, state)
-
-                learning_state.state = state
-                learning_state.save(update_fields=["state", "updated_at"])
-                updated_state = state
-            except Exception:
-                logger.exception("Failed to persist quiz completion state for %s / module %s", email, module_id)
+        learning_state.state = state
+        learning_state.save(update_fields=["state", "updated_at"])
+        updated_state = state
+    except Exception:
+        logger.exception("Failed to persist quiz completion state for %s / module %s", user.username, module_id)
 
     return Response({"score": score, "total": total, "details": details, "state": updated_state})
 
@@ -2102,9 +2027,7 @@ def csrf_token(request: Any) -> Response:
     return Response({"csrfToken": get_token(request)})
 
 
-@csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
 def logout(request: Any) -> Response:
     """Log out the user by clearing the session."""
     from django.contrib.auth import logout as django_logout

@@ -74,14 +74,60 @@ async function getCurrentUser() {
     }
 }
 
-// Require authentication on protected pages
-async function requireAuth() {
-    const isAuth = await isUserAuthenticated();
-    if (!isAuth) {
+// Map a role to the dashboard page it belongs on (mirrors the backend's
+// _redirect_for_role in backend/signtext/views.py).
+function dashboardForRole(role) {
+    if (role === 'instructor') return 'instructor-dashboard.html';
+    if (role === 'admin') return 'admin-dashboard.html';
+    return 'dashboard.html';
+}
+
+// Require authentication on protected pages. Pass an array of allowed roles
+// (e.g. ['admin'] or ['instructor', 'admin']) to also enforce that the
+// signed-in user's role may access this page; omit it to just require any
+// authenticated session. Logged-out users are sent to login.html; logged-in
+// users on the wrong page are sent to their own dashboard rather than
+// login.html, since they don't need to log in again.
+async function requireAuth(allowedRoles) {
+    const user = await getCurrentUser();
+    if (!user) {
         window.location.replace('login.html');
         return false;
     }
+    if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(user.role)) {
+        window.location.replace(dashboardForRole(user.role));
+        return false;
+    }
     return true;
+}
+
+// Wrapper around fetch() for authenticated in-page API calls. Attaches the
+// CSRF token to state-changing requests and treats a 401 response as an
+// expired/invalid session, redirecting to login immediately instead of
+// letting the caller silently fail (page-load guards only run once, so a
+// session that dies mid-page needs this to react right away).
+async function fetchWithAuth(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const needsCsrf = method !== 'GET' && method !== 'HEAD';
+    const headers = Object.assign({}, options.headers || {});
+
+    if (needsCsrf && !headers['X-CSRFToken']) {
+        const csrfToken = await ensureCsrfToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+    }
+
+    const response = await fetch(url, Object.assign({}, options, {
+        credentials: 'include',
+        headers
+    }));
+
+    if (response.status === 401) {
+        window.location.replace('login.html');
+    }
+
+    return response;
 }
 
 // Logout user

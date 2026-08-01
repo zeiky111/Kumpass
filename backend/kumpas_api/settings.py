@@ -126,9 +126,13 @@ SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "604800"))  # 7 days in
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = os.getenv("SESSION_COOKIE_HTTPONLY", "True").lower() == "true"  # Prevent JavaScript access to session cookies
 SESSION_COOKIE_SAMESITE = "None"  # Required for cross-site cookie sharing between Render frontend and backend
-SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv("SESSION_EXPIRE_AT_BROWSER_CLOSE", "True").lower() == "true"  # Clear session when browser closes
+# Default False so SESSION_COOKIE_AGE (7 days) is the actual effective expiry --
+# browser-close expiry previously defaulted True and silently overrode the 7-day age.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = os.getenv("SESSION_EXPIRE_AT_BROWSER_CLOSE", "False").lower() == "true"
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "sessionid")  # Name of the session cookie
-SESSION_SAVE_EVERY_REQUEST = os.getenv("SESSION_SAVE_EVERY_REQUEST", "False").lower() == "true"  # Save session on every request
+# Default True so active use extends the session (rolling expiry) instead of a
+# hard cutoff from login time.
+SESSION_SAVE_EVERY_REQUEST = os.getenv("SESSION_SAVE_EVERY_REQUEST", "True").lower() == "true"
 
 # Must match the session cookie settings above -- without these, browsers
 # silently drop the csrftoken cookie on cross-site requests between the
@@ -141,6 +145,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "EXCEPTION_HANDLER": "signtext.permissions.session_exception_handler",
 }
 
 # Email configuration - uses environment variables (or console backend by default)
