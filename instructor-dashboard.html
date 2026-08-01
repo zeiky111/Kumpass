@@ -715,9 +715,18 @@
             const existing = getCookie('csrftoken');
             if (existing) return existing;
             try {
-                await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
-            } catch (_) {}
-            return getCookie('csrftoken');
+                // Browsers that block third-party/cross-site cookies (Safari ITP,
+                // Chrome/Firefox cross-site restrictions) drop the csrftoken cookie
+                // even though this request succeeds, so document.cookie never sees
+                // it. Fall back to the token the backend returns in the JSON body.
+                const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+                const cookieToken = getCookie('csrftoken');
+                if (cookieToken) return cookieToken;
+                const data = await response.json().catch(() => ({}));
+                return data.csrfToken || '';
+            } catch (_) {
+                return getCookie('csrftoken');
+            }
         }
 
         async function requestJson(path, options = {}) {
@@ -1219,8 +1228,11 @@
                 formData.append('description', descriptionPrefix || file.name);
 
                 try {
+                    const csrfToken = await ensureCsrfToken();
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
+                        credentials: 'include',
+                        headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
                         body: formData,
                     });
 
@@ -1863,7 +1875,13 @@
             formData.append('video', fileInput.files[0]);
 
             try {
-                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', body: formData });
+                const csrfToken = await ensureCsrfToken();
+                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+                    body: formData,
+                });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${response.status})`);
