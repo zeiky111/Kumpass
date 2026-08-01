@@ -970,7 +970,13 @@
             const method = videoId ? 'PATCH' : 'POST';
 
             try {
-                const response = await fetch(path, { method, body: formData });
+                const csrfToken = await ensureCsrfToken();
+                const response = await fetch(path, {
+                    method,
+                    credentials: 'include',
+                    headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+                    body: formData,
+                });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(data.error || `Request failed (${response.status})`);
