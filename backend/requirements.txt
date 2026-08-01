@@ -9,3 +9,5 @@ scikit-learn==1.5.2
 joblib==1.5.3
 Pillow==11.0.0
 gunicorn
+django-cloudinary-storage==0.3.0
+cloudinary==1.41.0

@@ -12,6 +12,8 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
 
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -23,6 +25,14 @@ INSTALLED_APPS = [
     "corsheaders",
     "signtext",
 ]
+
+# Render's filesystem is ephemeral -- anything written to MEDIA_ROOT is wiped
+# on every deploy/restart, which silently 404s files students/teachers
+# already uploaded. When CLOUDINARY_URL is configured, store uploads there
+# instead so they persist. Falls back to local disk for local development.
+if CLOUDINARY_URL:
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
