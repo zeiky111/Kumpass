@@ -537,8 +537,14 @@ body.pro-dashboard .quiz-form select:focus {
   body.pro-dashboard .dashboard-sidebar {
     background: linear-gradient(120deg, var(--pro-sidebar-from), var(--pro-sidebar-to));
     position: fixed;
+    top: 0;
     left: 0;
     z-index: 1200;
+    transform: translateX(-100%);
+  }
+
+  body.pro-dashboard .dashboard-sidebar.open {
+    transform: translateX(0);
   }
 
   body.pro-dashboard .sidebar-toggle {
