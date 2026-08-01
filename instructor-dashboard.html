@@ -336,7 +336,21 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="instructorModulesGrid" class="module-grid"></div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Module Title</th>
+                                            <th>Year Level</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Date Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="instructorModulesGrid"></tbody>
+                                </table>
+                            </div>
                             <div id="modulePagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
@@ -869,49 +883,34 @@
                 ? modules.map(module => {
                     const files = Array.isArray(module.files) ? module.files : [];
                     const filesCount = files.length;
-                    const previewFiles = files.slice(0, 3);
                     return `
-                        <article class="module-card" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0">
-                            <div class="module-card-header">
-                                <div>
-                                    <div class="module-card-meta" style="margin-bottom: 10px;">
-                                        <span class="module-chip">${safeText(formatYearLabel(module.year_level))}</span>
-                                        ${getStatusBadge(module.status)}
-                                    </div>
-                                    <h4 class="module-card-title">${safeText(module.title)}</h4>
+                        <tr onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0" style="cursor:pointer;">
+                            <td>
+                                <div style="font-weight:600;color:#111827;">${safeText(module.title)}</div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                                    <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
+                                    <span class="module-chip">📎 ${filesCount} materials</span>
+                                    <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
                                 </div>
-                                <span class="module-chip" style="background:#ecfeff;color:#0f766e;">${Number(module.studentCount || 0)} students</span>
-                            </div>
-                            <p class="module-card-description">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</p>
-                            <div class="module-card-meta">
-                                <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
-                                <span class="module-chip">📎 ${filesCount} materials</span>
-                                <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
-                            </div>
-                            <div class="module-card-files">
-                                <h4>Recent materials</h4>
-                                ${filesCount
-                                    ? previewFiles.map(file => `
-                                        <div class="module-file-item">
-                                            <div>
-                                                <div style="font-weight:600;color:#111827;">${safeText(file.file_name)}</div>
-                                                <small>${safeText(file.file_type || 'file')} • ${safeText(file.description || 'No description')}</small>
-                                            </div>
-                                            <span style="color:#2563eb;font-size:0.85rem;font-weight:600;">Open</span>
-                                        </div>
-                                    `).join('')
-                                    : '<div style="color:#6b7280;font-size:0.9rem;">No materials uploaded yet.</div>'}
-                            </div>
-                            <div class="module-card-actions" onclick="event.stopPropagation();">
-                                <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
-                                <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
-                                <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
-                            </div>
-                        </article>
+                            </td>
+                            <td>${safeText(formatYearLabel(module.year_level))}</td>
+                            <td style="max-width:320px;color:#6b7280;">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</td>
+                            <td>${getStatusBadge(module.status)}</td>
+                            <td>${safeText(formatDateTime(module.created_at)) || '—'}</td>
+                            <td onclick="event.stopPropagation();">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
+                                    <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
+                                    ${module.status === 'archived'
+                                        ? `<button class="btn btn-sm btn-secondary" onclick="unarchiveModule(${module.id})">Unarchive</button>`
+                                        : `<button class="btn btn-sm btn-danger" onclick="archiveModule(${module.id})">Archive</button>`}
+                                </div>
+                            </td>
+                        </tr>
                     `;
                 }).join('')
-                : '<div style="padding: 18px; color: #6b7280;">No modules found in the database.</div>';
+                : '<tr><td colspan="6" style="padding: 18px; color: #6b7280;">No modules found in the database.</td></tr>';
 
             if (pagination) {
                 const pageInfo = window.__modulePagination || {};
@@ -1326,19 +1325,31 @@
             }
         }
 
-        async function deleteModule(moduleId) {
-            if (!confirm('Delete this module? This will remove it from the database.')) {
+        async function archiveModule(moduleId) {
+            if (!confirm('Archive this module? Students will no longer see it, but it stays in the database and can be restored later.')) {
                 return;
             }
 
             try {
                 await requestJson(`/instructor/modules/${moduleId}/`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+                    method: 'PATCH',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'archived' }),
                 });
                 await refreshInstructorDashboard();
             } catch (error) {
-                alert(`Failed to delete module: ${error.message}`);
+                alert(`Failed to archive module: ${error.message}`);
+            }
+        }
+
+        async function unarchiveModule(moduleId) {
+            try {
+                await requestJson(`/instructor/modules/${moduleId}/`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'draft' }),
+                });
+                await refreshInstructorDashboard();
+            } catch (error) {
+                alert(`Failed to unarchive module: ${error.message}`);
             }
         }
 
