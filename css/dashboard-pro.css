@@ -20,12 +20,12 @@ body.pro-dashboard {
 }
 
 body.pro-dashboard.instructor-theme {
-  --pro-accent: #0d9488;
-  --pro-accent-dark: #0f766e;
-  --pro-accent-soft: rgba(13, 148, 136, 0.12);
-  --pro-accent-glow: rgba(13, 148, 136, 0.28);
-  --pro-sidebar-from: #081615;
-  --pro-sidebar-to: #10241f;
+  --pro-accent: #1e5a96;
+  --pro-accent-dark: #163f6b;
+  --pro-accent-soft: rgba(30, 90, 150, 0.12);
+  --pro-accent-glow: rgba(30, 90, 150, 0.28);
+  --pro-sidebar-from: #10243d;
+  --pro-sidebar-to: #1c3f66;
 }
 
 body.pro-dashboard h1,
@@ -42,6 +42,11 @@ body.pro-dashboard .navbar {
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
   position: relative;
+}
+
+body.pro-dashboard.instructor-theme .navbar {
+  background: linear-gradient(135deg, var(--pro-sidebar-from) 0%, var(--pro-sidebar-to) 60%, #2c5a8c 100%) !important;
+  box-shadow: 0 10px 28px var(--pro-accent-glow) !important;
 }
 
 body.pro-dashboard .navbar::after {
