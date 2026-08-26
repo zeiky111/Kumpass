@@ -227,6 +227,63 @@ body.pro-dashboard .sidebar-menu a[style*="ef4444"]:hover {
   color: #fecaca !important;
 }
 
+/* ---------- SIDEBAR (admin & instructor -- light, matches the student sidebar) ---------- */
+body.pro-dashboard.admin-theme .dashboard-sidebar,
+body.pro-dashboard.instructor-theme .dashboard-sidebar {
+  background: #ffffff;
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.05);
+}
+
+body.pro-dashboard.admin-theme .dashboard-sidebar::after,
+body.pro-dashboard.instructor-theme .dashboard-sidebar::after {
+  display: none;
+}
+
+body.pro-dashboard.admin-theme .sidebar-header h3,
+body.pro-dashboard.instructor-theme .sidebar-header h3 {
+  color: #6b7280;
+}
+
+body.pro-dashboard.admin-theme .sidebar-header,
+body.pro-dashboard.instructor-theme .sidebar-header {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+body.pro-dashboard.admin-theme .sidebar-menu a,
+body.pro-dashboard.instructor-theme .sidebar-menu a {
+  color: #334155;
+  font-weight: 700;
+}
+
+body.pro-dashboard.admin-theme .sidebar-menu a:hover,
+body.pro-dashboard.admin-theme .sidebar-menu a:focus,
+body.pro-dashboard.instructor-theme .sidebar-menu a:hover,
+body.pro-dashboard.instructor-theme .sidebar-menu a:focus {
+  background: #eff6ff;
+  color: #1f2937;
+}
+
+body.pro-dashboard.admin-theme .sidebar-menu a.active,
+body.pro-dashboard.instructor-theme .sidebar-menu a.active {
+  background: #bfdbfe;
+  color: #0f172a;
+  box-shadow: none;
+}
+
+body.pro-dashboard.admin-theme .sidebar-menu i,
+body.pro-dashboard.instructor-theme .sidebar-menu i {
+  color: #60a5fa;
+}
+
+body.pro-dashboard.admin-theme .sidebar-menu a.active i,
+body.pro-dashboard.admin-theme .sidebar-menu a:hover i,
+body.pro-dashboard.instructor-theme .sidebar-menu a.active i,
+body.pro-dashboard.instructor-theme .sidebar-menu a:hover i {
+  color: #2563eb;
+}
+
 /* ---------- WELCOME BANNER (executive panel) ---------- */
 body.pro-dashboard .dashboard-welcome {
   background: linear-gradient(120deg, var(--pro-sidebar-from) 0%, var(--pro-sidebar-to) 60%, var(--pro-accent-dark) 130%);
