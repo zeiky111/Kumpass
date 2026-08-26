@@ -6,6 +6,7 @@
     <title>Translator Tools - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/bg-orbs.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="js/theme.js"></script>
@@ -26,21 +27,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
-                <span>Kumpas</span>
+                <span>Translator Tools</span>
             </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="learning.html" class="nav-link">Learn</a></li>
-                <li><a href="activities.html" class="nav-link">Activities</a></li>
-                <li><a href="translator.html" class="nav-link active">Translators</a></li>
-                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
             <div class="nav-user-menu" id="navUserMenu">
                 <button class="nav-user-toggle" id="navUserToggle">
                     <i class="fas fa-user-circle"></i>
@@ -53,6 +41,23 @@
         </div>
     </nav>
 
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-badge">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="sidebar-link"><i class="fas fa-gauge"></i> Dashboard</a></li>
+                <li><a href="learning.html" class="sidebar-link"><i class="fas fa-book-open"></i> Learn</a></li>
+                <li><a href="activities.html" class="sidebar-link"><i class="fas fa-list-check"></i> Activities</a></li>
+                <li><a href="translator.html" class="sidebar-link active"><i class="fas fa-language"></i> Translators</a></li>
+                <li><a href="leaderboard.html" class="sidebar-link"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
+
     <!-- Page Header -->
     <section class="page-header">
         <div class="header-content">
@@ -62,13 +67,17 @@
     </section>
 
     <!-- Main Content -->
-    <main class="translator-hub-container">
+    <div class="translator-hub-container">
         <!-- Quick Access Tools -->
         <section class="tools-section">
-            <h2>Translation Tools</h2>
-            <div class="tools-grid">
+            <!-- <h2>Translation Tools</h2> -->
+            <!-- <div class="tools-search-row">
+                <i class="fas fa-search tools-search-icon"></i>
+                <input type="text" id="toolsSearchInput" class="tools-search-input" placeholder="Search translator tools…" autocomplete="off">
+            </div> -->
+            <div class="tools-grid" id="toolsGrid">
                 <!-- Text to Sign -->
-                <div class="tool-card kd-fade-in" style="animation-delay:.05s;">
+                <div class="tool-card kd-fade-in" data-tool-name="Text-to-Sign Translator" data-tool-desc="Convert written text into sign language video demonstrations. Perfect for learning specific words and phrases. Real-time translation, adjustable playback speed, category filtering, word-by-word breakdown." style="animation-delay:.05s;">
                     <div class="tool-icon">📝 → 🤟</div>
                     <h3>Text-to-Sign Translator</h3>
                     <p>Convert written text into sign language video demonstrations. Perfect for learning specific words and phrases.</p>
@@ -84,7 +93,7 @@
                 </div>
 
                 <!-- Sign to Text -->
-                <div class="tool-card kd-fade-in" style="animation-delay:.12s;">
+                <div class="tool-card kd-fade-in" data-tool-name="Sign-to-Text Translator" data-tool-desc="Use your camera to recognize sign language and convert it to text. Excellent for sign recognition practice. Camera-based recognition, real-time detection, confidence scoring, alternative suggestions." style="animation-delay:.12s;">
                     <div class="tool-icon">🤟 → 📝</div>
                     <h3>Sign-to-Text Translator</h3>
                     <p>Use your camera to recognize sign language and convert it to text. Excellent for sign recognition practice.</p>
@@ -99,12 +108,15 @@
                     <button class="btn-primary" onclick="navigateTo('sign-to-text.html')">Open Translator</button>
                 </div>
             </div>
+            <p id="toolsEmptyState" class="tools-empty-state" style="display:none;">No translator tools match your search.</p>
         </section>
-    </main>
+    </div>
+        </main>
+    </div>
 
     <style>
         .translator-hub-container {
-            max-width: 1200px;
+            max-width: 1440px;
             margin: 0 auto;
             padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem) clamp(2rem, 5vw, 3.5rem);
         }
@@ -117,6 +129,45 @@
             margin-bottom: 2rem;
             color: #0f172a;
             letter-spacing: -0.02em;
+        }
+
+        .tools-search-row {
+            position: relative;
+            max-width: 420px;
+            margin: 0 auto 2rem;
+        }
+
+        .tools-search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .tools-search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid #e2e8f0;
+            border-radius: 999px;
+            font-size: 14px;
+            font-family: inherit;
+            background: rgba(255,255,255,0.95);
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .tools-search-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+        }
+
+        .tools-empty-state {
+            text-align: center;
+            color: #64748b;
+            padding: 2rem 0;
         }
 
         .tools-grid {
@@ -248,11 +299,73 @@
         :root[data-theme="dark"] .tool-features li {
             color: var(--text-muted-2);
         }
+
+        :root[data-theme="dark"] .tools-search-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .tools-empty-state {
+            color: var(--text-muted-2);
+        }
+
+        /* ============ COMPACT NAVBAR ============ */
+        .navbar {
+            padding: 8px 22px !important;
+            min-height: 52px !important;
+        }
+
+        /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
+        }
     </style>
 
     <script src="js/main.js"></script>
     <script>
         function navigateTo(page) { window.location.href = page; }
+
+        const toolsSearchInput = document.getElementById('toolsSearchInput');
+        const toolCards = Array.from(document.querySelectorAll('#toolsGrid .tool-card'));
+        const toolsEmptyState = document.getElementById('toolsEmptyState');
+
+        function filterTools() {
+            const query = toolsSearchInput.value.trim().toLowerCase();
+            let visibleCount = 0;
+            toolCards.forEach(card => {
+                const haystack = `${card.dataset.toolName || ''} ${card.dataset.toolDesc || ''}`.toLowerCase();
+                const matches = !query || haystack.includes(query);
+                card.style.display = matches ? '' : 'none';
+                if (matches) visibleCount += 1;
+            });
+            if (toolsEmptyState) toolsEmptyState.style.display = visibleCount ? 'none' : 'block';
+        }
+
+        if (toolsSearchInput) {
+            toolsSearchInput.addEventListener('input', filterTools);
+        }
 
         // Navbar dropdown
         const _navToggle = document.getElementById('navUserToggle');

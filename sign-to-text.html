@@ -6,6 +6,7 @@
     <title>Sign-to-Text Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/bg-orbs.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="js/theme.js"></script>
@@ -42,21 +43,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
-                <span>Kumpas</span>
+                <span>Sign-to-Text Translator</span>
             </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="learning.html" class="nav-link">Learn</a></li>
-                <li><a href="activities.html" class="nav-link">Activities</a></li>
-                <li><a href="translator.html" class="nav-link active">Translators</a></li>
-                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
             <div class="nav-user-menu" id="navUserMenu">
                 <button class="nav-user-toggle" id="navUserToggle">
                     <i class="fas fa-user-circle"></i>
@@ -69,6 +57,23 @@
         </div>
     </nav>
 
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-badge">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="sidebar-link"><i class="fas fa-gauge"></i> Dashboard</a></li>
+                <li><a href="learning.html" class="sidebar-link"><i class="fas fa-book-open"></i> Learn</a></li>
+                <li><a href="activities.html" class="sidebar-link"><i class="fas fa-list-check"></i> Activities</a></li>
+                <li><a href="translator.html" class="sidebar-link active"><i class="fas fa-language"></i> Translators</a></li>
+                <li><a href="leaderboard.html" class="sidebar-link"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
+
     <!-- Page Header -->
     <section class="page-header">
         <div class="header-content">
@@ -78,7 +83,7 @@
     </section>
 
     <!-- Main Content -->
-    <main class="sign-to-text-container">
+    <div class="sign-to-text-container">
         <div class="translator-grid">
             <!-- Camera Section -->
             <section class="camera-section">
@@ -114,43 +119,9 @@
 
         </div>
 
-        <!-- Tips Section -->
-        <section class="tips-section">
-            <h2>💡 Tips for Best Recognition</h2>
-            <div class="tips-grid">
-                <div class="tip-card">
-                    <div class="tip-icon">💡</div>
-                    <h3>Good Lighting</h3>
-                    <p>Ensure adequate lighting so the camera can clearly see your hand movements</p>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">📐</div>
-                    <h3>Clear View</h3>
-                    <p>Keep your hands visible and within the camera frame throughout signing</p>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">⚡</div>
-                    <h3>Deliberate Movements</h3>
-                    <p>Make clear, intentional hand movements at a moderate pace</p>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">📍</div>
-                    <h3>Hand Position</h3>
-                    <p>Keep hands at chest level, about 1-2 feet away from the camera</p>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">🔄</div>
-                    <h3>Repeat Practice</h3>
-                    <p>Practice the same signs multiple times to improve recognition accuracy</p>
-                </div>
-                <div class="tip-card">
-                    <div class="tip-icon">🎯</div>
-                    <h3>One Sign at a Time</h3>
-                    <p>Perform signs one at a time with clear pauses between them</p>
-                </div>
-            </div>
-        </section>
-    </main>
+    </div>
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -161,7 +132,7 @@
 
     <style>
         .sign-to-text-container {
-            max-width: 1200px;
+            max-width: 1440px;
             margin: 0 auto;
             padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem);
             font-family: 'Inter', -apple-system, sans-serif;
@@ -534,67 +505,6 @@
             margin: 0 0 0.5rem 0;
         }
 
-        .tips-section {
-            background: rgba(255,255,255,0.95);
-            border-radius: 22px;
-            padding: 2rem;
-            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
-            border: 1px solid rgba(148,163,184,0.14);
-            animation: kdRiseIn 0.55s ease both;
-            animation-delay: .15s;
-        }
-
-        .tips-section h2 {
-            text-align: center;
-            margin-bottom: 2rem;
-            color: #0f172a;
-            font-weight: 800;
-        }
-
-        .tips-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .tip-card {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid rgba(148,163,184,0.14);
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-
-        .tip-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(15,23,42,0.1);
-        }
-
-        .tip-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            box-shadow: 0 8px 18px rgba(37,99,235,0.22);
-        }
-
-        .tip-card h3 {
-            margin: 0 0 0.5rem 0;
-            color: var(--dark);
-        }
-
-        .tip-card p {
-            margin: 0;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
         @media (max-width: 1024px) {
             .camera-controls,
             .output-controls {
@@ -623,8 +533,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .practice-modes,
-            .tips-grid {
+            .practice-modes {
                 grid-template-columns: 1fr;
             }
         }
@@ -637,15 +546,13 @@
 
         /* ---- Dark theme overrides ---- */
         :root[data-theme="dark"] .camera-panel h2,
-        :root[data-theme="dark"] .results-panel h2,
-        :root[data-theme="dark"] .tips-section h2 {
+        :root[data-theme="dark"] .results-panel h2 {
             color: var(--text-body);
         }
 
         :root[data-theme="dark"] .camera-panel,
         :root[data-theme="dark"] .results-panel,
-        :root[data-theme="dark"] .practice-card,
-        :root[data-theme="dark"] .tips-section {
+        :root[data-theme="dark"] .practice-card {
             background: var(--surface-card);
             border-color: var(--surface-border);
         }
@@ -654,8 +561,7 @@
         :root[data-theme="dark"] .camera-settings,
         :root[data-theme="dark"] .recognized-signs,
         :root[data-theme="dark"] .alternatives-section,
-        :root[data-theme="dark"] .stats-section,
-        :root[data-theme="dark"] .tip-card {
+        :root[data-theme="dark"] .stats-section {
             background: var(--surface-card-alt);
             border-color: var(--surface-border);
         }
@@ -664,8 +570,7 @@
         :root[data-theme="dark"] .camera-settings h3,
         :root[data-theme="dark"] .recognized-signs h3,
         :root[data-theme="dark"] .alternatives-section h3,
-        :root[data-theme="dark"] .stats-section h3,
-        :root[data-theme="dark"] .tip-card h3 {
+        :root[data-theme="dark"] .stats-section h3 {
             color: var(--text-body);
         }
 
@@ -710,8 +615,36 @@
             color: var(--text-muted-2);
         }
 
-        :root[data-theme="dark"] .tip-card p {
-            color: var(--text-muted-2);
+        /* ============ COMPACT NAVBAR ============ */
+        .navbar {
+            padding: 8px 22px !important;
+            min-height: 52px !important;
+        }
+
+        /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
         }
     </style>
 

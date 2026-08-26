@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scenario-Based Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260801">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260801">
     <link rel="stylesheet" href="css/bg-orbs.css?v=20260801">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="js/theme.js?v=20260801"></script>
@@ -15,10 +16,17 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #eff6ff;
             color: #1f2937;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         h1, h2, h3 {
@@ -28,80 +36,82 @@
 
         /* Container */
         .container {
-            max-width: 900px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.25rem) clamp(2rem, 5vw, 3.5rem);
+            width: 100%;
+            padding: clamp(0.75rem, 2vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
         }
 
-        /* Page Header */
-        .page-header {
-            margin-bottom: 28px;
-            text-align: center;
+        /* Fills the remaining viewport height below the navbar */
+        .game-shell {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            gap: 14px;
         }
 
-        .page-header h1 {
-            font-size: clamp(1.35rem, 2.2vw + 1rem, 2rem);
+        /* Top Bar: title, level, difficulty, score */
+        .game-topbar {
+            flex: 0 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 10px 24px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 18px;
+            padding: 12px 20px;
+            box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+            border: 1px solid rgba(148,163,184,0.14);
+        }
+
+        .topbar-title-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .game-topbar h1 {
+            font-size: clamp(1.05rem, 1.6vw + 0.7rem, 1.4rem);
             font-weight: 800;
-            margin-bottom: 10px;
-            color: #ffffff;
+            color: #0f172a;
             letter-spacing: -0.02em;
         }
 
-        .page-header p {
-            color: rgba(255,255,255,0.88);
-            font-size: 16px;
-        }
-
-        /* Game Card */
-        .game-card {
-            background: rgba(255,255,255,0.95);
-            border-radius: 22px;
-            padding: 40px;
-            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
-            border: 1px solid rgba(148,163,184,0.14);
-            animation: kdRiseIn 0.55s ease both;
-        }
-
-        .game-card h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #0f172a;
+        .level-badge {
+            font-size: 12px;
             font-weight: 700;
+            color: #2563eb;
+            background: #eef2ff;
+            padding: 5px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
         }
 
-        .game-info {
-            color: #64748b;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8fafc;
-            border-radius: 12px;
+        .topbar-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 20px;
         }
-        
+
         /* Difficulty Selector */
-        .difficulty-section {
-            margin-bottom: 25px;
-        }
-        
-        .difficulty-section label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        
         .difficulty-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .difficulty-btn {
-            padding: 9px 18px;
+            padding: 8px 14px;
             border: 2px solid #e2e8f0;
             background: white;
             border-radius: 999px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
             transition: all 0.25s;
         }
 
@@ -129,49 +139,77 @@
         /* Score Section */
         .score-section {
             display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            justify-content: center;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
         .score-box {
             background: #f8fafc;
             border: 1px solid rgba(148,163,184,0.14);
-            padding: 15px 25px;
-            border-radius: 16px;
+            padding: 8px 12px;
+            border-radius: 12px;
             text-align: center;
             transition: transform 0.2s ease;
         }
 
         .score-box:hover {
-            transform: translateY(-3px);
+            transform: translateY(-2px);
         }
 
         .score-box .label {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
             font-weight: 600;
             text-transform: uppercase;
         }
 
         .score-box .value {
-            font-size: 24px;
+            font-size: 21px;
             font-weight: bold;
             color: #2563eb;
         }
-        
-        /* Game Play Area */
-        .game-play {
-            margin-top: 30px;
+
+        /* Game Columns: scenario + actions on the left, sign-response videos on the right */
+        .game-columns {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            min-height: 0;
         }
-        
+
+        /* Left Panel: scenario, question, feedback, actions */
+        .choices-panel {
+            flex: 0 1 460px;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            padding: 20px 22px;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+        }
+
+        /* Scrolls internally as a fallback only; keeps Submit/Exit pinned below */
+        .choices-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding-right: 2px;
+        }
+
         .scenario-box {
+            flex: 0 0 auto;
             background: linear-gradient(135deg, #eff6ff 0%, #ede9fe 100%);
             border-left: 4px solid #2563eb;
-            padding: 20px;
-            margin-bottom: 25px;
+            padding: 16px 18px;
             border-radius: 14px;
+            text-align: center;
         }
 
         .scenario-box strong {
@@ -179,92 +217,30 @@
             margin-bottom: 5px;
             color: #2563eb;
         }
-        
+
         .scenario-text {
-            font-size: 18px;
+            font-size: 17px;
             color: #333;
             font-weight: 600;
         }
-        
+
         .question {
-            font-size: 16px;
+            flex: 0 0 auto;
+            font-size: 15px;
             font-weight: 600;
-            margin-bottom: 20px;
             color: #333;
-        }
-        
-        /* Options */
-        .options-section {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .options-section strong {
-            display: block;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
-        
-        .option-btn {
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            background: white;
-            border-radius: 16px;
-            cursor: pointer;
-            transition: all 0.25s;
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
         }
 
-        .sign-video {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 8px;
-            background: #000;
-            display: block;
-            object-fit: contain;
-            object-position: center center;
-        }
-        
-        .option-btn:hover {
-            border-color: #2563eb;
-            background: #f0f7ff;
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
-        }
-
-        .option-btn.selected {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 12px 24px rgba(37,99,235,0.28);
-        }
-        
-        .option-btn.selected div {
-            color: white;
-        }
-        
         /* Feedback */
         .feedback {
-            padding: 15px;
+            flex: 0 0 auto;
+            padding: 10px 14px;
             border-radius: 14px;
-            margin-bottom: 20px;
             font-weight: 600;
             text-align: center;
             display: none;
-            font-size: 16px;
+            font-size: 15px;
         }
 
         .feedback.show {
@@ -280,6 +256,111 @@
         .feedback.incorrect {
             background: #fee2e2;
             color: #991b1b;
+        }
+
+        /* Submit / Exit, pinned to the bottom of the left panel */
+        .panel-actions {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 14px;
+        }
+
+        .panel-actions .btn {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 15px;
+        }
+
+        /* Right Panel: sign-response video options, large and centered */
+        .video-panel {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Options */
+        .options-section {
+            width: 100%;
+            height: 100%;
+            padding: 8px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            display: flex;
+            flex-direction: column;
+            animation: kdRiseIn 0.55s ease both;
+            animation-delay: .06s;
+        }
+
+        .options-section strong {
+            flex: 0 0 auto;
+            display: block;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .options {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            justify-content: center;
+            gap: 16px;
+            padding: 4px;
+        }
+
+        .option-btn {
+            padding: 6px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 1 1 280px;
+            max-width: 420px;
+        }
+
+        .sign-video {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 10px;
+            background: #000;
+            display: block;
+            object-fit: contain;
+            object-position: center center;
+        }
+
+        .option-btn:hover {
+            border-color: #2563eb;
+            background: #f0f7ff;
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+        }
+
+        .option-btn.selected {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 12px 24px rgba(37,99,235,0.28);
+        }
+
+        .option-btn.selected div {
+            color: white;
         }
 
         /* Buttons */
@@ -327,19 +408,85 @@
             color: white;
             text-decoration: none;
             display: inline-block;
+            text-align: center;
         }
 
         .btn-back:hover {
             background: #334155;
         }
-        
-        @media (max-width: 768px) {
-            .game-card {
-                padding: 20px;
+
+        @media (max-width: 1024px) {
+            .choices-panel {
+                flex-basis: 380px;
+                padding: 16px 18px;
             }
-            
+
+            .game-columns {
+                gap: 14px;
+            }
+
+            .options-section {
+                padding: 8px;
+            }
+
+            .game-topbar {
+                padding: 10px 16px;
+            }
+
+            .option-btn {
+                flex-basis: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            html, body {
+                height: auto;
+            }
+
+            body {
+                overflow: visible;
+            }
+
+            .game-columns {
+                flex-direction: column;
+            }
+
+            .video-panel {
+                flex: 0 0 auto;
+                min-height: 300px;
+            }
+
+            .choices-panel {
+                flex-basis: auto;
+                min-width: 0;
+            }
+
+            .choices-scroll {
+                overflow-y: visible;
+            }
+
             .options {
-                grid-template-columns: 1fr;
+                overflow-y: visible;
+            }
+
+            .topbar-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .score-section {
+                gap: 6px;
+            }
+
+            .score-box {
+                min-width: 0;
+                padding: 6px 10px;
+            }
+
+            .option-btn {
+                flex-basis: 100%;
             }
         }
 
@@ -349,22 +496,20 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .game-card {
+        :root[data-theme="dark"] .game-topbar,
+        :root[data-theme="dark"] .choices-panel,
+        :root[data-theme="dark"] .options-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
         }
 
-        :root[data-theme="dark"] .game-card h2 {
+        :root[data-theme="dark"] .game-topbar h1 {
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .game-info {
-            background: var(--surface-card-alt);
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .difficulty-section label {
-            color: var(--text-body);
+        :root[data-theme="dark"] .level-badge {
+            background: rgba(37,99,235,0.18);
+            color: #93c5fd;
         }
 
         :root[data-theme="dark"] .difficulty-btn {
@@ -399,16 +544,12 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .options-section {
-            background: var(--surface-card-alt);
-        }
-
         :root[data-theme="dark"] .options-section strong {
             color: var(--text-body);
         }
 
         :root[data-theme="dark"] .option-btn {
-            background: var(--input-bg);
+            background: var(--surface-card-alt);
             border-color: var(--input-border);
             color: var(--text-body);
         }
@@ -426,6 +567,58 @@
         :root[data-theme="dark"] .feedback.incorrect {
             background: rgba(239, 68, 68, 0.16);
             color: #fca5a5;
+        }
+
+        /* ============ SIDEBAR NAV (fits into the no-scroll game shell) ============ */
+        .dashboard-layout {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .dashboard-main {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-main {
+                overflow: visible;
+            }
+        }
+
+        /* ============ COMPACT NAVBAR ============ */
+        .navbar {
+            padding: 8px 22px !important;
+            min-height: 52px !important;
+        }
+
+        /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
         }
     </style>
 </head>
@@ -445,21 +638,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
-                <span>Kumpas</span>
+                <span>🎭 Scenario-Based Game</span>
             </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="learning.html" class="nav-link">Learn</a></li>
-                <li><a href="activities.html" class="nav-link">Activities</a></li>
-                <li><a href="translator.html" class="nav-link">Translators</a></li>
-                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
             <div class="nav-user-menu" id="navUserMenu">
                 <button class="nav-user-toggle" id="navUserToggle">
                     <i class="fas fa-user-circle"></i>
@@ -472,73 +652,83 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1>🎭 Scenario-Based Game</h1>
-            <p>4th Year - Navigate real-life situations with FSL</p>
-        </div>
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-badge">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="sidebar-link"><i class="fas fa-gauge"></i> Dashboard</a></li>
+                <li><a href="learning.html" class="sidebar-link"><i class="fas fa-book-open"></i> Learn</a></li>
+                <li><a href="activities.html" class="sidebar-link"><i class="fas fa-list-check"></i> Activities</a></li>
+                <li><a href="translator.html" class="sidebar-link"><i class="fas fa-language"></i> Translators</a></li>
+                <li><a href="leaderboard.html" class="sidebar-link"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
 
-        <!-- Game Card -->
-        <div class="game-card">
-            <h2>🎭 Scenario-Based Sign Game</h2>
-            <p class="game-info">You will be presented with real-life scenarios. Choose the correct sign response for each situation. Test your practical communication skills.</p>
-            
-            <!-- Difficulty Selector -->
-            <div class="difficulty-section">
-                <label>Difficulty Level:</label>
+    <!-- Main Content -->
+    <div class="container game-shell">
+        <!-- Title, Level, Difficulty, Score -->
+        <div class="game-topbar">
+            <div class="topbar-title-row">
+                <span class="level-badge"><strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></span>
+            </div>
+            <div class="topbar-controls">
                 <div class="difficulty-buttons">
                     <button class="difficulty-btn selected" data-level="easy" onclick="setDifficulty('easy', this)">Easy (Guided, fewer choices)</button>
                     <button class="difficulty-btn" data-level="medium" onclick="setDifficulty('medium', this)">Medium (More choices)</button>
                     <button class="difficulty-btn" data-level="hard" onclick="setDifficulty('hard', this)">Hard (Most choices + No hints)</button>
                 </div>
-                <div style="margin-top: 10px; color: #555; font-size: 13px;">Level: <strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></div>
-            </div>
-
-            <!-- Score Section -->
-            <div class="score-section">
-                <div class="score-box">
-                    <div class="label">Score</div>
-                    <div class="value" id="score">0</div>
-                </div>
-                <div class="score-box">
-                    <div class="label">Completed</div>
-                    <div class="value" id="correct">0</div>
-                </div>
-                <div class="score-box">
-                    <div class="label">Total</div>
-                    <div class="value" id="total">0</div>
+                <div class="score-section">
+                    <div class="score-box">
+                        <div class="label">Score</div>
+                        <div class="value" id="score">0</div>
+                    </div>
+                    <div class="score-box">
+                        <div class="label">Completed</div>
+                        <div class="value" id="correct">0</div>
+                    </div>
+                    <div class="score-box">
+                        <div class="label">Total</div>
+                        <div class="value" id="total">0</div>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Game Play -->
-            <div class="game-play">
-                <!-- Scenario -->
-                <div class="scenario-box">
-                    <strong>Scenario:</strong>
-                    <div class="scenario-text" id="scenario-text">You are at a restaurant...</div>
-                </div>
-                
-                <!-- Question -->
-                <div class="question" id="scenario-question">Choose the correct sign response:</div>
-                
+        <!-- Game Play: sign-response videos on the left, scenario + actions on the right -->
+        <div class="game-columns">
+            <div class="video-panel">
                 <!-- Sign Options -->
                 <div class="options-section">
                     <strong>Available Sign Responses:</strong>
                     <div class="options" id="options"></div>
                 </div>
-                
-                <div class="feedback" id="feedback"></div>
-                <div class="button-group">
-                    <button class="btn btn-primary" onclick="submitAnswer()">Check Response</button>
+            </div>
+            <div class="choices-panel">
+                <div class="choices-scroll">
+                    <!-- Scenario -->
+                    <div class="scenario-box">
+                        <strong>Scenario:</strong>
+                        <div class="scenario-text" id="scenario-text">You are at a restaurant...</div>
+                    </div>
+
+                    <!-- Question -->
+                    <div class="question" id="scenario-question">Choose the correct sign response:</div>
+
+                    <div class="feedback" id="feedback"></div>
                 </div>
-                <br><br>
-                <div class="button-group">
-                    <a href="games.html" class="btn btn-back">← Back to Games</a>
+                <div class="panel-actions">
+                    <button class="btn btn-primary" onclick="submitAnswer()">Check Response</button>
+                    <a href="games.html" class="btn btn-back">Exit Game</a>
                 </div>
             </div>
         </div>
+    </div>
+        </main>
     </div>
 
     <script src="js/portal.js?v=20260801"></script>

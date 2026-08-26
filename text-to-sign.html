@@ -6,6 +6,7 @@
     <title>Text-to-Sign Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/bg-orbs.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="js/theme.js"></script>
@@ -26,21 +27,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
-                <span>Kumpas</span>
+                <span>Text-to-Sign Translator</span>
             </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="learning.html" class="nav-link">Learn</a></li>
-                <li><a href="activities.html" class="nav-link">Activities</a></li>
-                <li><a href="translator.html" class="nav-link active">Translators</a></li>
-                <li><a href="leaderboard.html" class="nav-link">Leaderboard</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
             <div class="nav-user-menu" id="navUserMenu">
                 <button class="nav-user-toggle" id="navUserToggle">
                     <i class="fas fa-user-circle"></i>
@@ -53,6 +41,23 @@
         </div>
     </nav>
 
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-badge">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="sidebar-link"><i class="fas fa-gauge"></i> Dashboard</a></li>
+                <li><a href="learning.html" class="sidebar-link"><i class="fas fa-book-open"></i> Learn</a></li>
+                <li><a href="activities.html" class="sidebar-link"><i class="fas fa-list-check"></i> Activities</a></li>
+                <li><a href="translator.html" class="sidebar-link active"><i class="fas fa-language"></i> Translators</a></li>
+                <li><a href="leaderboard.html" class="sidebar-link"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
+
     <!-- Page Header -->
     <section class="page-header">
         <div class="header-content">
@@ -62,7 +67,7 @@
     </section>
 
     <!-- Main Content -->
-    <main class="translator-container" id="translatorMain">
+    <div class="translator-container" id="translatorMain">
         <div class="translator-grid">
             <!-- Input Section -->
             <section class="translator-panel input-panel">
@@ -79,8 +84,8 @@
                 </div>
 
                 <div class="translator-options">
-<div class="option-group">
-                        <label for="categorySelect">Category:</label>
+                    <div class="option-group">
+                        <label for="categorySelect"><i class="fas fa-tags"></i> Category</label>
                         <select id="categorySelect" class="select-input">
                             <option value="all">All Categories</option>
                             <option value="greetings">Greetings</option>
@@ -90,6 +95,7 @@
                             <option value="emotions">Emotions</option>
                             <option value="school">School</option>
                         </select>
+                    </div>
                 </div>
 
                 <div class="button-group">
@@ -99,8 +105,10 @@
                     <button class="btn-secondary" onclick="clearInput()">Clear</button>
                 </div>
 
+                <div class="panel-divider"><span>or try a quick example</span></div>
+
                 <div class="quick-examples">
-                    <h3>Quick Examples</h3>
+                    <h3><i class="fas fa-bolt"></i> Quick Examples <span id="exampleCategoryLabel" class="example-category-label"></span></h3>
                     <div class="example-chips" id="exampleChips"></div>
                 </div>
             </section>
@@ -148,33 +156,22 @@
             </section>
         </div>
 
-        <!-- Help Section -->
-        <section class="help-section">
-            <h2>ℹ️ How to Use</h2>
-            <div class="help-cards">
-                <div class="help-card">
-                    <div class="help-number">1</div>
-                    <h3>Enter Text</h3>
-                    <p>Type or paste the text you want to translate into sign language (up to 200 characters)</p>
-                </div>
-                <div class="help-card">
-                    <div class="help-number">2</div>
-                    <h3>Adjust Settings</h3>
-                    <p>Customize the category to match your learning needs</p>
-                </div>
-                <div class="help-card">
-                    <div class="help-number">3</div>
-                    <h3>Click Translate</h3>
-                    <p>Press "Translate to Sign" to see the sign language demonstration</p>
-                </div>
-                <div class="help-card">
-                    <div class="help-number">4</div>
-                    <h3>Learn & Practice</h3>
-                    <p>Watch the demonstration, repeat the signs, and master the movements</p>
+        <!-- Browse All Signs -->
+        <section class="browse-section">
+            <div class="browse-header">
+                <h2><i class="fas fa-list"></i> Browse All Signs</h2>
+                <div class="browse-search-row">
+                    <i class="fas fa-search browse-search-icon"></i>
+                    <input type="text" id="wordBrowseSearch" class="browse-search-input" placeholder="Search sign words…" autocomplete="off">
                 </div>
             </div>
+            <div class="word-browse-grid" id="wordBrowseGrid"></div>
+            <div class="word-browse-pagination" id="wordBrowsePagination"></div>
         </section>
-    </main>
+
+    </div>
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -185,7 +182,7 @@
 
     <style>
         .translator-container {
-            max-width: 1200px;
+            max-width: 1440px;
             margin: 0 auto;
             padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem) clamp(2rem, 4vw, 3.5rem);
             font-family: 'Inter', -apple-system, sans-serif;
@@ -356,8 +353,24 @@
         .translator-options {
             background: #f8fafc;
             border-radius: 14px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 0.9rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .translator-options .option-group {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        .translator-options .option-group label {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+
+        .translator-options .select-input {
+            flex: 1;
         }
 
         .option-group {
@@ -369,7 +382,9 @@
         }
 
         .option-group label {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
             margin-bottom: 0.5rem;
             font-weight: 600;
             color: var(--dark);
@@ -445,6 +460,26 @@
             gap: 0.5rem;
         }
 
+        .panel-divider {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0 0 1.25rem;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .panel-divider::before,
+        .panel-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
         .quick-examples {
             background: #fff8f0;
             border-radius: 14px;
@@ -455,6 +490,23 @@
             margin-top: 0;
             font-size: 0.9rem;
             color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .quick-examples h3 i {
+            color: #f59e0b;
+        }
+
+        .example-category-label {
+            font-weight: 500;
+            color: #999;
+            text-transform: none;
+        }
+
+        .option-group label i {
+            color: #2563eb;
         }
 
         .example-chips {
@@ -707,67 +759,6 @@
             color: #999;
         }
 
-        .help-section {
-            background: rgba(255,255,255,0.95);
-            border-radius: 22px;
-            padding: 2rem;
-            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
-            border: 1px solid rgba(148,163,184,0.14);
-            animation: kdRiseIn 0.55s ease both;
-            animation-delay: .15s;
-        }
-
-        .help-section h2 {
-            text-align: center;
-            margin-bottom: 2rem;
-            color: #0f172a;
-            font-weight: 800;
-        }
-
-        .help-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .help-card {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid rgba(148,163,184,0.14);
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-
-        .help-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(15,23,42,0.1);
-        }
-
-        .help-number {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            margin: 0 auto 1rem;
-            box-shadow: 0 8px 18px rgba(37,99,235,0.24);
-        }
-
-        .help-card h3 {
-            margin: 0 0 0.5rem 0;
-        }
-
-        .help-card p {
-            margin: 0;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
         @media (max-width: 1024px) {
             .translator-grid {
                 gap: 1.25rem;
@@ -798,16 +789,192 @@
             .button-group {
                 grid-template-columns: 1fr;
             }
+
+            .translator-options .option-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .browse-search-row {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+
+        /* ---- Browse All Signs ---- */
+        .browse-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            padding: 2rem;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            margin-bottom: 3rem;
+            animation: kdRiseIn 0.55s ease both;
+        }
+
+        .browse-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .browse-section h2 {
+            margin: 0;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .browse-search-row {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+            max-width: 340px;
+        }
+
+        .browse-search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .browse-search-input {
+            width: 100%;
+            padding: 10px 14px 10px 40px;
+            border: 2px solid #e0e0e0;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .browse-search-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+
+        .word-browse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.6rem;
+            min-height: 60px;
+        }
+
+        .word-browse-chip {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 0.55rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f2937;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .word-browse-chip:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-color: transparent;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .word-browse-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #999;
+            padding: 1.5rem 0;
+        }
+
+        .word-browse-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1.25rem;
+        }
+
+        .browse-page-info {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .browse-page-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: #1f2937;
+            padding: 8px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .browse-page-btn:hover:not(:disabled) {
+            background: #eff6ff;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .browse-page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* ---- Dark theme overrides ---- */
-        :root[data-theme="dark"] .translator-panel h2,
-        :root[data-theme="dark"] .help-section h2 {
+        :root[data-theme="dark"] .translator-panel h2 {
             color: var(--text-body);
         }
 
+        :root[data-theme="dark"] .browse-section {
+            background: var(--surface-card);
+            border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .browse-section h2 {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .browse-search-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .word-browse-chip {
+            background: var(--surface-card-alt);
+            border-color: var(--surface-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .browse-page-info {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .browse-page-btn {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .browse-page-btn:hover:not(:disabled) {
+            background: rgba(37,99,235,0.14);
+            border-color: var(--primary);
+            color: #93c5fd;
+        }
+
         :root[data-theme="dark"] .translator-panel,
-        :root[data-theme="dark"] .help-section,
         :root[data-theme="dark"] .history-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
@@ -870,12 +1037,25 @@
             color: var(--text-muted-2);
         }
 
+        :root[data-theme="dark"] .panel-divider {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .panel-divider::before,
+        :root[data-theme="dark"] .panel-divider::after {
+            background: var(--surface-border);
+        }
+
         :root[data-theme="dark"] .quick-examples {
             background: rgba(124, 58, 237, 0.1);
         }
 
         :root[data-theme="dark"] .quick-examples h3 {
             color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .example-category-label {
+            color: var(--text-muted-2);
         }
 
         :root[data-theme="dark"] .chip {
@@ -941,13 +1121,36 @@
             color: var(--text-muted-2);
         }
 
-        :root[data-theme="dark"] .help-card {
-            background: var(--surface-card-alt);
-            border-color: var(--surface-border);
+        /* ============ COMPACT NAVBAR ============ */
+        .navbar {
+            padding: 8px 22px !important;
+            min-height: 52px !important;
         }
 
-        :root[data-theme="dark"] .help-card p {
-            color: var(--text-muted-2);
+        /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
         }
     </style>
 
@@ -958,6 +1161,8 @@
         const speedControl = document.getElementById('speedControl');
         const speedValue = document.getElementById('speedValue');
         const exampleChips = document.getElementById('exampleChips');
+        const categorySelect = document.getElementById('categorySelect');
+        const exampleCategoryLabel = document.getElementById('exampleCategoryLabel');
 
         // Sign videos are loaded from the database (SignVideo table), which is
         // populated from the "Sign Language" media library. Both the Games and
@@ -1004,7 +1209,13 @@
         }
 
         const geExamples = {
-            all: { label: 'All', examples: ['Hello', 'How are you', 'What is your name', 'Thank you', 'Sorry'] }
+            all: { label: 'All', examples: ['Hello', 'How are you', 'What is your name', 'Thank you', 'Sorry'] },
+            greetings: { label: 'Greetings', examples: ['Hello', 'Good morning', 'How are you', 'Nice to meet you', 'Goodbye'] },
+            everyday: { label: 'Everyday Words', examples: ['Thank you', 'Please', 'Yes', 'No', 'Sorry'] },
+            family: { label: 'Family', examples: ['Mother', 'Father', 'Sister', 'Brother', 'Family'] },
+            numbers: { label: 'Numbers', examples: ['One', 'Two', 'Three', 'Ten', 'Twenty'] },
+            emotions: { label: 'Emotions', examples: ['Happy', 'Sad', 'Angry', 'Excited', 'Scared'] },
+            school: { label: 'School', examples: ['Teacher', 'Student', 'Book', 'Learn', 'School'] }
         };
 
         let lastTranslation = [];
@@ -1042,6 +1253,15 @@
                 button.addEventListener('click', () => setExample(text));
                 exampleChips.appendChild(button);
             });
+        }
+
+        function updateExamplesForCategory() {
+            const category = categorySelect.value || 'all';
+            const entry = geExamples[category] || geExamples.all;
+            renderExampleChips(entry.examples);
+            if (exampleCategoryLabel) {
+                exampleCategoryLabel.textContent = category === 'all' ? '' : `— ${entry.label}`;
+            }
         }
 
         function normalizeWord(word) {
@@ -1111,6 +1331,74 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#39;');
+        }
+
+        const wordBrowseSearch = document.getElementById('wordBrowseSearch');
+        const wordBrowseGrid = document.getElementById('wordBrowseGrid');
+        const wordBrowsePagination = document.getElementById('wordBrowsePagination');
+        const WORDS_PER_PAGE = 24;
+        let wordBrowsePage = 1;
+
+        function addWordToInput(word) {
+            const current = textInput.value.trim();
+            const next = current ? `${current} ${word}` : word;
+            textInput.value = next.slice(0, 200);
+            charCount.textContent = textInput.value.length;
+        }
+
+        function renderWordBrowse() {
+            if (!wordBrowseGrid || !wordBrowsePagination) return;
+
+            if (!signLibraryReady) {
+                wordBrowseGrid.innerHTML = '<div class="word-browse-empty">Loading sign words…</div>';
+                wordBrowsePagination.innerHTML = '';
+                return;
+            }
+
+            const query = wordBrowseSearch ? wordBrowseSearch.value.trim().toLowerCase() : '';
+            const allWords = Object.values(signLibrary)
+                .filter(sign => !query || sign.label.toLowerCase().includes(query))
+                .sort((a, b) => a.label.localeCompare(b.label));
+
+            if (!allWords.length) {
+                wordBrowseGrid.innerHTML = `<div class="word-browse-empty">${query ? 'No signs match your search.' : 'No sign words available yet.'}</div>`;
+                wordBrowsePagination.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(allWords.length / WORDS_PER_PAGE));
+            wordBrowsePage = Math.min(Math.max(1, wordBrowsePage), totalPages);
+            const start = (wordBrowsePage - 1) * WORDS_PER_PAGE;
+            const pageWords = allWords.slice(start, start + WORDS_PER_PAGE);
+
+            wordBrowseGrid.innerHTML = pageWords.map(sign =>
+                `<button type="button" class="word-browse-chip" data-word="${escapeHtml(sign.label)}">${escapeHtml(sign.label)}</button>`
+            ).join('');
+
+            wordBrowseGrid.querySelectorAll('.word-browse-chip').forEach(chip => {
+                chip.addEventListener('click', () => addWordToInput(chip.dataset.word));
+            });
+
+            wordBrowsePagination.innerHTML = `
+                <span class="browse-page-info">Showing ${start + 1}-${Math.min(start + WORDS_PER_PAGE, allWords.length)} of ${allWords.length} signs</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button type="button" class="browse-page-btn" ${wordBrowsePage <= 1 ? 'disabled' : ''} id="wordBrowsePrev">Prev</button>
+                    <span class="browse-page-info">Page ${wordBrowsePage} of ${totalPages}</span>
+                    <button type="button" class="browse-page-btn" ${wordBrowsePage >= totalPages ? 'disabled' : ''} id="wordBrowseNext">Next</button>
+                </div>
+            `;
+
+            const prevBtn = document.getElementById('wordBrowsePrev');
+            if (prevBtn) prevBtn.addEventListener('click', () => { wordBrowsePage -= 1; renderWordBrowse(); });
+            const nextBtn = document.getElementById('wordBrowseNext');
+            if (nextBtn) nextBtn.addEventListener('click', () => { wordBrowsePage += 1; renderWordBrowse(); });
+        }
+
+        if (wordBrowseSearch) {
+            wordBrowseSearch.addEventListener('input', () => {
+                wordBrowsePage = 1;
+                renderWordBrowse();
+            });
         }
 
         function renderSignCard(word, sign, index) {
@@ -1288,12 +1576,16 @@
             URL.revokeObjectURL(url);
         }
 
-        renderExampleChips(geExamples.all.examples);
+        updateExamplesForCategory();
         setSpeedLabel(speedControl.value);
+        renderWordBrowse();
 
-        loadSignLibrary().catch(err => {
-            console.error('Failed to load sign videos:', err);
-        });
+        loadSignLibrary()
+            .then(() => renderWordBrowse())
+            .catch(err => {
+                console.error('Failed to load sign videos:', err);
+                renderWordBrowse();
+            });
 
         textInput.addEventListener('input', function() {
             charCount.textContent = this.value.length;
@@ -1304,6 +1596,8 @@
             setSpeedLabel(this.value);
             if (lastTranslation.length) applyPlaybackSpeed();
         });
+
+        categorySelect.addEventListener('change', updateExamplesForCategory);
 
         // Navbar dropdown
         (function() {

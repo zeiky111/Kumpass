@@ -6,6 +6,7 @@
     <title>Leaderboard - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/bg-orbs.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="js/theme.js"></script>
@@ -26,21 +27,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
-                <span>Kumpas</span>
+                <span>Leaderboard</span>
             </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
-                <li><a href="learning.html" class="nav-link">Learn</a></li>
-                <li><a href="activities.html" class="nav-link">Activities</a></li>
-                <li><a href="translator.html" class="nav-link">Translators</a></li>
-                <li><a href="leaderboard.html" class="nav-link active">Leaderboard</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
             <div class="nav-user-menu" id="navUserMenu">
                 <button class="nav-user-toggle" id="navUserToggle">
                     <i class="fas fa-user-circle"></i>
@@ -53,16 +41,33 @@
         </div>
     </nav>
 
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-badge">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="sidebar-link"><i class="fas fa-gauge"></i> Dashboard</a></li>
+                <li><a href="learning.html" class="sidebar-link"><i class="fas fa-book-open"></i> Learn</a></li>
+                <li><a href="activities.html" class="sidebar-link"><i class="fas fa-list-check"></i> Activities</a></li>
+                <li><a href="translator.html" class="sidebar-link"><i class="fas fa-language"></i> Translators</a></li>
+                <li><a href="leaderboard.html" class="sidebar-link active"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
+
     <!-- Page Header -->
     <section class="page-header">
         <div class="header-content">
-            <h1>Global Leaderboard</h1>
+            <h1>Leaderboard</h1>
             <p>Compete and see where you stand in the Kumpas community</p>
         </div>
     </section>
 
     <!-- Main Content -->
-    <main class="leaderboard-container">
+    <div class="leaderboard-container">
         <!-- Your Ranking Card -->
         <section class="your-ranking kd-fade-in">
             <div class="ranking-card">
@@ -140,7 +145,6 @@
             <h2>Top Players</h2>
             <div class="leaderboard-table">
                 <div class="table-header">
-                    <div class="col-rank">Rank</div>
                     <div class="col-user">User</div>
                     <div class="col-level">Level</div>
                     <div class="col-points">Points</div>
@@ -156,10 +160,8 @@
                 <div class="table-body" id="leaderboardRows"></div>
             </div>
 
-            <!-- Load More Button -->
-            <div class="load-more">
-                <button class="btn-secondary" id="leaderboardLoadMoreBtn" onclick="loadMorePlayers()">Load More Players</button>
-            </div>
+            <!-- Pagination -->
+            <div class="table-pagination" id="leaderboardPagination"></div>
         </section>
 
         <!-- Statistics Section -->
@@ -192,7 +194,9 @@
                 </div>
             </div>
         </section>
-    </main>
+    </div>
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -315,12 +319,14 @@
             display: block;
             opacity: 0.9;
             margin-bottom: 0.5rem;
+            color: white;
         }
 
         .rank-stat .stat-value {
             font-size: 1.3rem;
             font-weight: 700;
             display: block;
+            color: white;
         }
 
         .next-milestone {
@@ -619,9 +625,41 @@
             box-shadow: 0 8px 18px rgba(37,99,235,0.28);
         }
 
-        .load-more {
-            padding: 2rem;
-            text-align: center;
+        .table-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 1.25rem 2rem;
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: #1f2937;
+            padding: 8px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #eff6ff;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .statistics-section {
@@ -640,7 +678,7 @@
 
         .stats-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 1.5rem;
         }
 
@@ -786,17 +824,6 @@
             pointer-events: none;
         }
 
-        .load-more .btn-secondary {
-            padding: 0.75rem 2rem;
-            border-radius: 999px;
-            font-weight: 600;
-        }
-
-        .load-more .btn-secondary:disabled {
-            opacity: 0.6;
-            cursor: default;
-        }
-
         /* ---- Dark theme overrides ---- */
         :root[data-theme="dark"] .leaderboard-container {
             color: var(--text-body);
@@ -884,16 +911,67 @@
         :root[data-theme="dark"] .stat-number {
             color: #93c5fd;
         }
+
+        :root[data-theme="dark"] .pagination-info {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .pagination-btn {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+            background: rgba(37,99,235,0.14);
+            border-color: var(--primary);
+            color: #93c5fd;
+        }
+
+        /* ============ COMPACT NAVBAR ============ */
+        .navbar {
+            padding: 8px 22px !important;
+            min-height: 52px !important;
+        }
+
+        /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
+        }
     </style>
 
     <script>
         (function () {
             const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
-            const DEFAULT_LIMIT = 7;
+            const FETCH_LIMIT = 100;
+            const ROWS_PER_PAGE = 10;
 
             const leaderboardState = {
-                limit: DEFAULT_LIMIT,
+                limit: FETCH_LIMIT,
                 payload: null,
+                rows: [],
+                rowsPage: 1,
             };
 
             function getCurrentUser() {
@@ -1170,31 +1248,13 @@
                     });
                 }
 
-                const rowTarget = document.getElementById('leaderboardRows');
-                if (rowTarget) {
-                    const renderedEmails = new Set(players.map(entry => String(entry.email || '').toLowerCase()));
-                    const rows = players.slice(3).slice();
-                    if (currentUser && !renderedEmails.has(String(currentUser.email || '').toLowerCase())) {
-                        rows.push(currentUser);
-                    }
-
-                    rowTarget.innerHTML = rows.length
-                        ? rows.map(entry => buildRow(entry, Boolean(currentUser && String(entry.email || '').toLowerCase() === String(currentUser.email || '').toLowerCase()))).join('')
-                        : '<div style="padding: 1rem 2rem; color: #666;">No leaderboard entries match the selected filters.</div>';
-
-                    rowTarget.querySelectorAll('[data-email]').forEach(button => {
-                        button.addEventListener('click', function (event) {
-                            event.stopPropagation();
-                            viewProfile(this.getAttribute('data-email') || '');
-                        });
-                    });
-
-                    rowTarget.querySelectorAll('.table-row').forEach(row => {
-                        row.addEventListener('click', function () {
-                            highlightRow(this);
-                        });
-                    });
+                const renderedEmails = new Set(players.map(entry => String(entry.email || '').toLowerCase()));
+                const rows = players.slice(3).slice();
+                if (currentUser && !renderedEmails.has(String(currentUser.email || '').toLowerCase())) {
+                    rows.push(currentUser);
                 }
+                leaderboardState.rows = rows;
+                renderRowsPage();
 
                 const totalPlayers = document.getElementById('leaderboardTotalPlayers');
                 const averageAccuracy = document.getElementById('leaderboardAverageAccuracy');
@@ -1205,16 +1265,58 @@
                 if (averageAccuracy) averageAccuracy.textContent = `${Number(summary.averageAccuracy || 0)}%`;
                 if (longestStreak) longestStreak.textContent = `${Number(summary.longestStreak || 0)} days`;
                 if (totalPoints) totalPoints.textContent = formatPoints(summary.totalPoints || 0);
+            }
 
-                const loadMoreButton = document.getElementById('leaderboardLoadMoreBtn');
-                if (loadMoreButton) {
-                    if (players.length >= Number(leaderboardState.payload.totalPlayers || players.length)) {
-                        loadMoreButton.textContent = 'All Players Loaded';
-                        loadMoreButton.disabled = true;
-                    } else {
-                        loadMoreButton.textContent = 'Load More Players';
-                        loadMoreButton.disabled = false;
-                    }
+            function renderRowsPage() {
+                const rowTarget = document.getElementById('leaderboardRows');
+                const paginationTarget = document.getElementById('leaderboardPagination');
+                if (!rowTarget) return;
+
+                const rows = leaderboardState.rows;
+                const currentUser = leaderboardState.payload ? leaderboardState.payload.currentUser : null;
+
+                if (!rows.length) {
+                    rowTarget.innerHTML = '<div style="padding: 1rem 2rem; color: #666;">No leaderboard entries match the selected filters.</div>';
+                    if (paginationTarget) paginationTarget.innerHTML = '';
+                    return;
+                }
+
+                const totalPages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
+                leaderboardState.rowsPage = Math.min(Math.max(1, leaderboardState.rowsPage), totalPages);
+                const start = (leaderboardState.rowsPage - 1) * ROWS_PER_PAGE;
+                const pageRows = rows.slice(start, start + ROWS_PER_PAGE);
+
+                rowTarget.innerHTML = pageRows
+                    .map(entry => buildRow(entry, Boolean(currentUser && String(entry.email || '').toLowerCase() === String(currentUser.email || '').toLowerCase())))
+                    .join('');
+
+                rowTarget.querySelectorAll('[data-email]').forEach(button => {
+                    button.addEventListener('click', function (event) {
+                        event.stopPropagation();
+                        viewProfile(this.getAttribute('data-email') || '');
+                    });
+                });
+
+                rowTarget.querySelectorAll('.table-row').forEach(row => {
+                    row.addEventListener('click', function () {
+                        highlightRow(this);
+                    });
+                });
+
+                if (paginationTarget) {
+                    paginationTarget.innerHTML = `
+                        <span class="pagination-info">Showing ${start + 1}-${Math.min(start + ROWS_PER_PAGE, rows.length)} of ${rows.length} players</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button type="button" class="pagination-btn" ${leaderboardState.rowsPage <= 1 ? 'disabled' : ''} id="leaderboardPrevBtn">Prev</button>
+                            <span class="pagination-info">Page ${leaderboardState.rowsPage} of ${totalPages}</span>
+                            <button type="button" class="pagination-btn" ${leaderboardState.rowsPage >= totalPages ? 'disabled' : ''} id="leaderboardNextBtn">Next</button>
+                        </div>
+                    `;
+
+                    const prevBtn = document.getElementById('leaderboardPrevBtn');
+                    if (prevBtn) prevBtn.addEventListener('click', () => { leaderboardState.rowsPage -= 1; renderRowsPage(); });
+                    const nextBtn = document.getElementById('leaderboardNextBtn');
+                    if (nextBtn) nextBtn.addEventListener('click', () => { leaderboardState.rowsPage += 1; renderRowsPage(); });
                 }
             }
 
@@ -1224,7 +1326,7 @@
             }
 
             function updateLeaderboard() {
-                leaderboardState.limit = DEFAULT_LIMIT;
+                leaderboardState.rowsPage = 1;
                 refreshLeaderboard();
             }
 
@@ -1239,15 +1341,6 @@
                     localStorage.setItem('kumpasViewedProfile', String(userEmail).toLowerCase());
                 }
                 window.location.href = 'profile.html';
-            }
-
-            function loadMorePlayers() {
-                if (leaderboardState.payload && Array.isArray(leaderboardState.payload.players) && leaderboardState.payload.players.length >= Number(leaderboardState.payload.totalPlayers || 0)) {
-                    return;
-                }
-
-                leaderboardState.limit += 5;
-                refreshLeaderboard();
             }
 
             document.addEventListener('DOMContentLoaded', function () {
@@ -1265,7 +1358,6 @@
             window.updateLeaderboard = updateLeaderboard;
             window.highlightRow = highlightRow;
             window.viewProfile = viewProfile;
-            window.loadMorePlayers = loadMorePlayers;
         })();
     </script>
 </body>

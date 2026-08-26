@@ -939,19 +939,27 @@
     if (!target) return;
 
     const pagination = document.getElementById('learningModulesPagination');
+    const searchInput = document.getElementById('learningModulesSearch');
     const PAGE_SIZE = 5;
     let activeLevel = target.getAttribute('data-active-level') || 'all';
+    let searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
     let currentPage = 1;
 
     const render = () => {
-      const allModules = getFilteredModules(activeLevel);
+      const levelModules = getFilteredModules(activeLevel);
+      const allModules = searchQuery
+        ? levelModules.filter(module => {
+            const haystack = `${module.title || ''} ${module.description || ''} ${module.outcome || ''}`.toLowerCase();
+            return haystack.includes(searchQuery);
+          })
+        : levelModules;
       if (pagination) pagination.innerHTML = '';
 
       if (!allModules.length) {
         target.innerHTML = `
           <div class="table-container" style="padding:24px; text-align:center; color:#6b7280;">
-            <div style="font-size:1.05rem; font-weight:700; margin-bottom:8px;">No modules available</div>
-            <p style="margin:0;">Teachers will post learning modules here.</p>
+            <div style="font-size:1.05rem; font-weight:700; margin-bottom:8px;">No modules found</div>
+            <p style="margin:0;">${searchQuery ? 'Try a different search term.' : 'Teachers will post learning modules here.'}</p>
           </div>
         `;
         return;
@@ -1037,6 +1045,15 @@
     };
 
     render();
+
+    if (searchInput && !searchInput.dataset.filterBound) {
+      searchInput.dataset.filterBound = 'true';
+      searchInput.addEventListener('input', function () {
+        searchQuery = this.value.trim().toLowerCase();
+        currentPage = 1;
+        render();
+      });
+    }
 
     const filterButtons = document.querySelectorAll('.filter-btn[data-level]');
     filterButtons.forEach(button => {
