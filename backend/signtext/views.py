@@ -1428,6 +1428,7 @@ def instructor_dashboard(request: Any) -> Response:
         page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
     except Exception:
         page_size = 10
+    search = str(request.query_params.get("search") or "").strip()
 
     try:
         modules = list(LearningModule.objects.select_related("created_by", "updated_by").all())
@@ -1461,6 +1462,19 @@ def instructor_dashboard(request: Any) -> Response:
 
     students.sort(key=lambda item: (item["points"], item["overallProgress"], item["accuracy"]), reverse=True)
 
+    all_students_count = len(students)
+    average_completion = round(total_completion / all_students_count) if all_students_count else 0
+    average_accuracy = (
+        round(sum(student["accuracy"] for student in students) / all_students_count) if all_students_count else 0
+    )
+
+    if search:
+        needle = search.lower()
+        students = [
+            student for student in students
+            if needle in student["name"].lower() or needle in student["email"].lower()
+        ]
+
     total_students = len(students)
     start = (page - 1) * page_size
     end = start + page_size
@@ -1472,8 +1486,8 @@ def instructor_dashboard(request: Any) -> Response:
         "totalModules": total_modules,
         "publishedModules": sum(1 for module in modules if module.status == LearningModule.STATUS_PUBLISHED),
         "totalAnnouncements": len(announcements),
-        "averageCompletion": round(total_completion / len(students)) if students else 0,
-        "averageAccuracy": round(sum(student["accuracy"] for student in students) / len(students)) if students else 0,
+        "averageCompletion": average_completion,
+        "averageAccuracy": average_accuracy,
         "totalPoints": total_points,
     }
 
@@ -1502,6 +1516,7 @@ def instructor_dashboard(request: Any) -> Response:
             "page": page,
             "pageSize": page_size,
             "total": total_students,
+            "search": search,
         },
         "announcements": AnnouncementSerializer(announcements, many=True).data,
     }
@@ -1704,6 +1719,9 @@ def instructor_modules(request: Any) -> Response:
             year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
             if year_level != "all":
                 modules_qs = modules_qs.filter(year_level=year_level)
+            search = str(request.query_params.get("search") or "").strip()
+            if search:
+                modules_qs = modules_qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
             try:
                 page = max(1, int(request.query_params.get("page") or 1))
             except Exception:
@@ -1736,6 +1754,7 @@ def instructor_modules(request: Any) -> Response:
                 "page": page,
                 "limit": limit,
                 "yearLevel": year_level,
+                "search": search,
             })
         except (DatabaseError, OperationalError):
             return Response([])
@@ -2044,10 +2063,32 @@ def instructor_announcements(request: Any) -> Response:
 
     if request.method == "GET":
         try:
-            announcements = Announcement.objects.select_related("created_by", "updated_by").all()
-            return Response(AnnouncementSerializer(announcements, many=True).data)
+            announcements_qs = Announcement.objects.select_related("created_by", "updated_by").order_by("-updated_at", "-created_at")
+            search = str(request.query_params.get("search") or "").strip()
+            if search:
+                announcements_qs = announcements_qs.filter(Q(title__icontains=search) | Q(message__icontains=search))
+            try:
+                page = max(1, int(request.query_params.get("page") or 1))
+            except Exception:
+                page = 1
+            try:
+                limit = max(1, min(100, int(request.query_params.get("limit") or 10)))
+            except Exception:
+                limit = 10
+
+            total = announcements_qs.count()
+            start = (page - 1) * limit
+            end = start + limit
+            announcements = list(announcements_qs[start:end])
+            return Response({
+                "announcements": AnnouncementSerializer(announcements, many=True).data,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "search": search,
+            })
         except (DatabaseError, OperationalError):
-            return Response([])
+            return Response({"announcements": [], "total": 0, "page": 1, "limit": 10, "search": ""})
 
     serializer = AnnouncementSerializer(data={
         "title": str(request.data.get("title") or "").strip(),

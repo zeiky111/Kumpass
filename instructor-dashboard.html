@@ -325,6 +325,7 @@
                                 <h3 class="card-title">Manage Learning Modules</h3>
                             </div>
                             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input id="moduleSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search modules..." oninput="changeModuleSearch(this.value)">
                                 <select id="moduleYearFilter" class="form-input" style="width:auto;" onchange="changeModuleYearFilter(this.value)">
                                     <option value="all">All Years</option>
                                     <option value="1">1st Year</option>
@@ -361,6 +362,7 @@
                     <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Monitor Student Progress</h3>
+                        <input id="studentSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search students..." oninput="changeStudentSearch(this.value)">
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -388,10 +390,14 @@
                     <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Announcements</h3>
-                        <button class="btn btn-primary btn-sm" onclick="openAnnouncementModal()">+ Create Announcement</button>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <input id="announcementSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search announcements..." oninput="changeAnnouncementSearch(this.value)">
+                            <button class="btn btn-primary btn-sm" onclick="openAnnouncementModal()">+ Create Announcement</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="instructorAnnouncementsList" style="margin-top: 20px;"></div>
+                        <div id="announcementPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                     </div>
                 </div>
                 </div>
@@ -404,12 +410,16 @@
                                 <h3 class="card-title">Manage Game Levels</h3>
                                 <p style="color:#6b7280;font-size:0.92rem;margin-top:4px;">Add levels and content (words, sentences, scenarios) for each interactive game.</p>
                             </div>
-                            <button class="btn btn-primary btn-sm" onclick="openLevelModal()">+ Add Level</button>
+                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <input id="levelSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search levels..." oninput="changeLevelSearch(this.value)">
+                                <button class="btn btn-primary btn-sm" onclick="openLevelModal()">+ Add Level</button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
                             <div id="gameLevelsCoverage"></div>
                             <div id="instructorGameLevelsList"></div>
+                            <div id="levelPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
                 </div>
@@ -840,6 +850,19 @@
             window.__studentPage = Math.max(1, Number(page || 1));
         }
 
+        function getInstructorStudentSearch() {
+            return String(window.__studentSearch || '');
+        }
+
+        function changeStudentSearch(value) {
+            window.__studentSearch = String(value || '').trim();
+            clearTimeout(window.__studentSearchTimer);
+            window.__studentSearchTimer = setTimeout(async () => {
+                setInstructorStudentPage(1);
+                await refreshInstructorDashboard();
+            }, 350);
+        }
+
         function getInstructorModulePage() {
             return Number(window.__modulePage || 1);
         }
@@ -856,6 +879,68 @@
             window.__moduleYearFilter = String(yearLevel || 'all');
             setInstructorModulePage(1);
             await refreshInstructorDashboard();
+        }
+
+        function getInstructorModuleSearch() {
+            return String(window.__moduleSearch || '');
+        }
+
+        function changeModuleSearch(value) {
+            window.__moduleSearch = String(value || '').trim();
+            clearTimeout(window.__moduleSearchTimer);
+            window.__moduleSearchTimer = setTimeout(async () => {
+                setInstructorModulePage(1);
+                await refreshInstructorDashboard();
+            }, 350);
+        }
+
+        function getInstructorAnnouncementPage() {
+            return Number(window.__announcementPage || 1);
+        }
+
+        function setInstructorAnnouncementPage(page) {
+            window.__announcementPage = Math.max(1, Number(page || 1));
+        }
+
+        function getInstructorAnnouncementSearch() {
+            return String(window.__announcementSearch || '');
+        }
+
+        function changeAnnouncementSearch(value) {
+            window.__announcementSearch = String(value || '').trim();
+            clearTimeout(window.__announcementSearchTimer);
+            window.__announcementSearchTimer = setTimeout(async () => {
+                setInstructorAnnouncementPage(1);
+                await refreshInstructorDashboard();
+            }, 350);
+        }
+
+        async function changeAnnouncementPage(page) {
+            setInstructorAnnouncementPage(page);
+            await refreshInstructorDashboard();
+        }
+
+        function getGameLevelsSearch() {
+            return String(window.__levelSearch || '');
+        }
+
+        function changeLevelSearch(value) {
+            window.__levelSearch = String(value || '').trim();
+            setInstructorLevelPage(1);
+            renderGameLevels();
+        }
+
+        function getInstructorLevelPage() {
+            return Number(window.__levelPage || 1);
+        }
+
+        function setInstructorLevelPage(page) {
+            window.__levelPage = Math.max(1, Number(page || 1));
+        }
+
+        function changeLevelPage(page) {
+            setInstructorLevelPage(page);
+            renderGameLevels();
         }
 
         function sanitizeInstructorInput(value) {
@@ -976,6 +1061,7 @@
 
         function renderAnnouncements(announcements) {
             const target = document.getElementById('instructorAnnouncementsList');
+            const pagination = document.getElementById('announcementPagination');
             if (!target) return;
 
             target.innerHTML = (announcements && announcements.length)
@@ -994,7 +1080,25 @@
                         </div>
                     </div>
                 `).join('')
-                : '<div style="padding:16px;color:#6b7280;">No announcements posted yet.</div>';
+                : `<div style="padding:16px;color:#6b7280;">${getInstructorAnnouncementSearch() ? 'No announcements match your search.' : 'No announcements posted yet.'}</div>`;
+
+            if (pagination) {
+                const pageInfo = window.__announcementPagination || {};
+                const page = Number(pageInfo.page || getInstructorAnnouncementPage());
+                const pageSize = Number(pageInfo.limit || 5);
+                const total = Number(pageInfo.total || announcements.length || 0);
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                const start = total ? ((page - 1) * pageSize) + 1 : 0;
+                const end = total ? Math.min(page * pageSize, total) : 0;
+                pagination.innerHTML = `
+                    <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeAnnouncementPage(${page - 1})">Prev</button>
+                        <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeAnnouncementPage(${page + 1})">Next</button>
+                    </div>
+                `;
+            }
         }
 
         function populateModuleForm(module) {
@@ -1035,13 +1139,19 @@
 
             try {
                 const studentPage = getInstructorStudentPage();
+                const studentSearch = getInstructorStudentSearch();
                 const modulePage = getInstructorModulePage();
                 const moduleYearFilter = getInstructorModuleYearFilter();
-                const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5`);
-                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}`);
+                const moduleSearch = getInstructorModuleSearch();
+                const announcementPage = getInstructorAnnouncementPage();
+                const announcementSearch = getInstructorAnnouncementSearch();
+                const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5&search=${encodeURIComponent(studentSearch)}`);
+                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}&search=${encodeURIComponent(moduleSearch)}`);
+                const announcementsResponse = await requestJson(`/instructor/announcements/?actorEmail=${encodeURIComponent(actorId)}&page=${announcementPage}&limit=5&search=${encodeURIComponent(announcementSearch)}`);
                 window.__instructorModules = Array.isArray(modulesResponse.modules) ? modulesResponse.modules : [];
                 window.__modulePagination = modulesResponse || { page: modulePage, limit: 8, total: Array.isArray(modulesResponse.modules) ? modulesResponse.modules.length : 0 };
-                window.__instructorAnnouncements = Array.isArray(response.announcements) ? response.announcements : [];
+                window.__instructorAnnouncements = Array.isArray(announcementsResponse.announcements) ? announcementsResponse.announcements : [];
+                window.__announcementPagination = announcementsResponse || { page: announcementPage, limit: 5, total: window.__instructorAnnouncements.length };
                 window.__studentPagination = response.pagination || { page: studentPage, pageSize: 5, total: Array.isArray(response.students) ? response.students.length : 0 };
                 const welcomeTitle = document.getElementById('instructorWelcomeTitle');
                 const welcomeCopy = document.getElementById('instructorWelcomeCopy');
@@ -1055,7 +1165,7 @@
                 setOverviewStats(response.summary || {});
                 renderModules(window.__instructorModules);
                 renderStudents(response.students || []);
-                renderAnnouncements(response.announcements || []);
+                renderAnnouncements(window.__instructorAnnouncements);
             } catch (error) {
                 console.error('Dashboard error:', error);
                 alert(`Failed to load instructor dashboard: ${error.message}\n\nMake sure Django server is running: python manage.py runserver 127.0.0.1:8000`);
@@ -1510,6 +1620,7 @@
 
         function renderGameLevels() {
             const target = document.getElementById('instructorGameLevelsList');
+            const pagination = document.getElementById('levelPagination');
             if (!target) return;
             const activeGame = getGameLevelsFilter();
             const levels = (window.__gameLevels || [])
@@ -1522,12 +1633,48 @@
 
             renderGameLevelsCoverage(activeGame, levels);
 
+            const search = getGameLevelsSearch().toLowerCase();
+            const filteredLevels = search
+                ? levels.filter(level => {
+                    const haystack = `${level.title || ''} ${DIFFICULTY_LABELS[level.difficulty] || level.difficulty || ''} level ${level.level_number}`.toLowerCase();
+                    return haystack.includes(search);
+                })
+                : levels;
+
+            const pageSize = 5;
+            const total = filteredLevels.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(getInstructorLevelPage(), totalPages);
+            if (page !== getInstructorLevelPage()) {
+                setInstructorLevelPage(page);
+            }
+            const start = (page - 1) * pageSize;
+            const pagedLevels = filteredLevels.slice(start, start + pageSize);
+
+            if (pagination) {
+                pagination.innerHTML = total
+                    ? `
+                        <span style="color:#6b7280;">Showing ${start + 1}-${Math.min(start + pageSize, total)} of ${total}</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeLevelPage(${page - 1})">Prev</button>
+                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeLevelPage(${page + 1})">Next</button>
+                        </div>
+                    `
+                    : '';
+            }
+
             if (!levels.length) {
                 target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
                 return;
             }
 
-            target.innerHTML = levels.map(level => {
+            if (!filteredLevels.length) {
+                target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels match your search.</div>';
+                return;
+            }
+
+            target.innerHTML = pagedLevels.map(level => {
                 const assignedVideo = (level.items || []).find(item => item.media_url);
                 const hasContent = Number(level.items_count || 0) > 0;
                 return `
@@ -1558,6 +1705,7 @@
 
         function switchGameLevelsGame(gameKey) {
             window.__gameLevelsFilter = gameKey;
+            setInstructorLevelPage(1);
             renderGameLevelTabs();
             renderGameLevels();
             if (document.getElementById('levelModal')?.classList.contains('active')) {

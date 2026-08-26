@@ -44,11 +44,6 @@ body.pro-dashboard .navbar {
   position: relative;
 }
 
-body.pro-dashboard.instructor-theme .navbar {
-  background: linear-gradient(135deg, var(--pro-sidebar-from) 0%, var(--pro-sidebar-to) 60%, #2c5a8c 100%) !important;
-  box-shadow: 0 10px 28px var(--pro-accent-glow) !important;
-}
-
 body.pro-dashboard .navbar::after {
   content: '';
   position: absolute;
@@ -322,6 +317,26 @@ body.pro-dashboard .dashboard-welcome h1 {
 
 body.pro-dashboard .dashboard-welcome p {
   color: rgba(226, 232, 240, 0.82);
+}
+
+/* Instructor -- light, matches the student welcome banner */
+body.pro-dashboard.instructor-theme .dashboard-welcome {
+  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-left: 6px solid #3b82f6;
+}
+
+body.pro-dashboard.instructor-theme .dashboard-welcome::before {
+  background-image: radial-gradient(circle, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+  opacity: 1;
+}
+
+body.pro-dashboard.instructor-theme .dashboard-welcome h1 {
+  color: #0f172a;
+}
+
+body.pro-dashboard.instructor-theme .dashboard-welcome p {
+  color: #475569;
 }
 
 /* ---------- STAT CARDS ---------- */
