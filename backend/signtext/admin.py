@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     Achievement,
     Announcement,
+    FSL105Clip,
     GameLevel,
     GameLevelItem,
     LearningModule,
@@ -97,3 +98,11 @@ class UserAchievementAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "achievement__name")
     list_filter = ("achievement",)
     ordering = ("-unlocked_at",)
+
+
+@admin.register(FSL105Clip)
+class FSL105ClipAdmin(admin.ModelAdmin):
+    list_display = ("label", "clip_id", "category", "split", "created_at")
+    search_fields = ("label", "category", "source_path")
+    list_filter = ("split", "category")
+    ordering = ("label", "clip_id")

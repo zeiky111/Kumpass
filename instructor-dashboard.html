@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instructor Dashboard - Kumpas</title>
-    <link rel="stylesheet" href="css/style.css?v=20260801">
-    <link rel="stylesheet" href="css/pages.css?v=20260801">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260801">
-    <link rel="stylesheet" href="css/dashboard-pro.css?v=20260801">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         .tab-content {
@@ -216,11 +216,21 @@
     </style>
 </head>
 <body class="pro-dashboard instructor-theme">
-    <script src="js/auth.js"></script>
     <script>
-        // Instructor and admin accounts both belong on this page (admins can
-        // manage instructor-facing content too); students get bounced home.
-        requireAuth(['instructor', 'admin']);
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/me/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
     </script>
     <!-- Navigation -->
     <nav class="navbar">
@@ -336,21 +346,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Module Title</th>
-                                            <th>Year Level</th>
-                                            <th>Description</th>
-                                            <th>Status</th>
-                                            <th>Date Created</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="instructorModulesGrid"></tbody>
-                                </table>
-                            </div>
+                            <div id="instructorModulesGrid" class="module-grid"></div>
                             <div id="modulePagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
@@ -408,7 +404,6 @@
                         </div>
                         <div class="card-body">
                             <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
-                            <div id="gameLevelsCoverage"></div>
                             <div id="instructorGameLevelsList"></div>
                         </div>
                     </div>
@@ -545,13 +540,13 @@
                 <button class="modal-close" onclick="closeModal('levelModal')">&times;</button>
             </div>
             <div class="modal-split-grid" style="display:grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items:start;">
-                <div class="game-level-reference-panel">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
                         <div>
-                            <h3>Existing Levels</h3>
-                            <p class="reference-subtitle">Reference the current progression before adding a new level.</p>
+                            <h3 style="margin:0; font-size:1rem;">Existing Levels</h3>
+                            <p style="margin:4px 0 0; color:#6b7280; font-size:0.9rem;">Reference the current progression before adding a new level.</p>
                         </div>
-                        <span id="levelReferenceCount" class="game-level-reference-count">0</span>
+                        <span id="levelReferenceCount" style="background:#e5e7eb; color:#374151; border-radius:999px; padding:4px 10px; font-size:0.8rem;">0</span>
                     </div>
                     <div id="levelReferenceList" style="display:flex; flex-direction:column; gap:10px; max-height:520px; overflow:auto;"></div>
                 </div>
@@ -559,7 +554,7 @@
                     <input type="hidden" id="levelId">
                     <div class="form-group">
                         <label class="form-label">Game</label>
-                        <select id="levelGameKey" class="form-input" required onchange="handleLevelGameChange(this.value, Boolean(document.getElementById('levelId').value))">
+                        <select id="levelGameKey" class="form-input" required onchange="handleLevelGameChange(this.value)">
                             <option value="sign_match">Sign Match Game</option>
                             <option value="typing">Sign-to-Word Typing Game</option>
                             <option value="sentence">Sentence Builder Game</option>
@@ -568,7 +563,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Difficulty</label>
-                        <select id="levelDifficulty" class="form-input" required onchange="applySuggestedLevelNumber()">
+                        <select id="levelDifficulty" class="form-input" required>
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
                             <option value="hard">Hard</option>
@@ -576,8 +571,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Level Number</label>
-                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required readonly style="background:#f3f4f6;cursor:not-allowed;">
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Automatic: the next open number for this game and difficulty. To edit a level's number, open it from the list instead.</small>
+                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Title (optional)</label>
@@ -669,10 +663,10 @@
         </div>
     </div>
 
-    <script src="js/main.js?v=20260801"></script>
-    <script src="js/portal.js?v=20260801"></script>
+    <script src="js/main.js"></script>
+    <script src="js/portal.js"></script>
     <script>
-        const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+        const API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
         let currentUserPromise = null;
 
         async function getSessionCurrentUser() {
@@ -706,16 +700,12 @@
                 return sessionUser;
             }
 
-            // Fail closed: the page-load requireAuth(['instructor','admin']) guard
-            // should have already redirected away if there's no valid session, so
-            // reaching here with no session means something's wrong -- don't paper
-            // over it with a fake instructor identity.
-            return null;
+            return { name: 'Instructor', email: '', username: '', role: 'instructor' };
         }
 
         async function getInstructorActorIdentifier() {
             const currentUser = await getCurrentUser();
-            return (currentUser && (currentUser.email || currentUser.username)) || '';
+            return currentUser.email || currentUser.username || '';
         }
 
         function getCookie(name) {
@@ -729,18 +719,9 @@
             const existing = getCookie('csrftoken');
             if (existing) return existing;
             try {
-                // Browsers that block third-party/cross-site cookies (Safari ITP,
-                // Chrome/Firefox cross-site restrictions) drop the csrftoken cookie
-                // even though this request succeeds, so document.cookie never sees
-                // it. Fall back to the token the backend returns in the JSON body.
-                const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
-                const cookieToken = getCookie('csrftoken');
-                if (cookieToken) return cookieToken;
-                const data = await response.json().catch(() => ({}));
-                return data.csrfToken || '';
-            } catch (_) {
-                return getCookie('csrftoken');
-            }
+                await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+            } catch (_) {}
+            return getCookie('csrftoken');
         }
 
         async function requestJson(path, options = {}) {
@@ -883,34 +864,49 @@
                 ? modules.map(module => {
                     const files = Array.isArray(module.files) ? module.files : [];
                     const filesCount = files.length;
+                    const previewFiles = files.slice(0, 3);
                     return `
-                        <tr onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0" style="cursor:pointer;">
-                            <td>
-                                <div style="font-weight:600;color:#111827;">${safeText(module.title)}</div>
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                                    <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
-                                    <span class="module-chip">📎 ${filesCount} materials</span>
-                                    <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
+                        <article class="module-card" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0">
+                            <div class="module-card-header">
+                                <div>
+                                    <div class="module-card-meta" style="margin-bottom: 10px;">
+                                        <span class="module-chip">${safeText(formatYearLabel(module.year_level))}</span>
+                                        ${getStatusBadge(module.status)}
+                                    </div>
+                                    <h4 class="module-card-title">${safeText(module.title)}</h4>
                                 </div>
-                            </td>
-                            <td>${safeText(formatYearLabel(module.year_level))}</td>
-                            <td style="max-width:320px;color:#6b7280;">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</td>
-                            <td>${getStatusBadge(module.status)}</td>
-                            <td>${safeText(formatDateTime(module.created_at)) || '—'}</td>
-                            <td onclick="event.stopPropagation();">
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                    <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
-                                    <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
-                                    ${module.status === 'archived'
-                                        ? `<button class="btn btn-sm btn-secondary" onclick="unarchiveModule(${module.id})">Unarchive</button>`
-                                        : `<button class="btn btn-sm btn-danger" onclick="archiveModule(${module.id})">Archive</button>`}
-                                </div>
-                            </td>
-                        </tr>
+                                <span class="module-chip" style="background:#ecfeff;color:#0f766e;">${Number(module.studentCount || 0)} students</span>
+                            </div>
+                            <p class="module-card-description">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</p>
+                            <div class="module-card-meta">
+                                <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
+                                <span class="module-chip">📎 ${filesCount} materials</span>
+                                <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
+                            </div>
+                            <div class="module-card-files">
+                                <h4>Recent materials</h4>
+                                ${filesCount
+                                    ? previewFiles.map(file => `
+                                        <div class="module-file-item">
+                                            <div>
+                                                <div style="font-weight:600;color:#111827;">${safeText(file.file_name)}</div>
+                                                <small>${safeText(file.file_type || 'file')} • ${safeText(file.description || 'No description')}</small>
+                                            </div>
+                                            <span style="color:#2563eb;font-size:0.85rem;font-weight:600;">Open</span>
+                                        </div>
+                                    `).join('')
+                                    : '<div style="color:#6b7280;font-size:0.9rem;">No materials uploaded yet.</div>'}
+                            </div>
+                            <div class="module-card-actions" onclick="event.stopPropagation();">
+                                <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
+                                <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
+                                <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
+                            </div>
+                        </article>
                     `;
                 }).join('')
-                : '<tr><td colspan="6" style="padding: 18px; color: #6b7280;">No modules found in the database.</td></tr>';
+                : '<div style="padding: 18px; color: #6b7280;">No modules found in the database.</div>';
 
             if (pagination) {
                 const pageInfo = window.__modulePagination || {};
@@ -1227,11 +1223,8 @@
                 formData.append('description', descriptionPrefix || file.name);
 
                 try {
-                    const csrfToken = await ensureCsrfToken();
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
-                        credentials: 'include',
-                        headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
                         body: formData,
                     });
 
@@ -1284,16 +1277,12 @@
                 return;
             }
 
-            try {
-                await requestJson(`/instructor/modules/${moduleId}/files/${fileId}/`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
-                });
-                await refreshInstructorDashboard();
-                openModuleMaterialsModal(moduleId);
-            } catch (error) {
-                alert(`Failed to delete material: ${error.message}`);
-            }
+            await requestJson(`/instructor/modules/${moduleId}/files/${fileId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await refreshInstructorDashboard();
+            openModuleMaterialsModal(moduleId);
         }
 
         async function saveAnnouncement(event) {
@@ -1316,41 +1305,21 @@
 
             const path = announcementId ? `/instructor/announcements/${announcementId}/` : '/instructor/announcements/';
             const method = announcementId ? 'PATCH' : 'POST';
-            try {
-                await requestJson(path, { method, body: JSON.stringify(payload) });
-                closeModal('announcementModal');
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to save announcement: ${error.message}`);
-            }
+            await requestJson(path, { method, body: JSON.stringify(payload) });
+            closeModal('announcementModal');
+            await refreshInstructorDashboard();
         }
 
-        async function archiveModule(moduleId) {
-            if (!confirm('Archive this module? Students will no longer see it, but it stays in the database and can be restored later.')) {
+        async function deleteModule(moduleId) {
+            if (!confirm('Delete this module? This will remove it from the database.')) {
                 return;
             }
 
-            try {
-                await requestJson(`/instructor/modules/${moduleId}/`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'archived' }),
-                });
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to archive module: ${error.message}`);
-            }
-        }
-
-        async function unarchiveModule(moduleId) {
-            try {
-                await requestJson(`/instructor/modules/${moduleId}/`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'draft' }),
-                });
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to unarchive module: ${error.message}`);
-            }
+            await requestJson(`/instructor/modules/${moduleId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await refreshInstructorDashboard();
         }
 
         async function handleModuleQuizButton() {
@@ -1429,15 +1398,11 @@
                 return;
             }
 
-            try {
-                await requestJson(`/instructor/announcements/${announcementId}/`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
-                });
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to delete announcement: ${error.message}`);
-            }
+            await requestJson(`/instructor/announcements/${announcementId}/`, {
+                method: 'DELETE',
+                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+            });
+            await refreshInstructorDashboard();
         }
 
         const GAME_LABELS = {
@@ -1447,7 +1412,6 @@
             scenario: 'Scenario-Based Game',
         };
         const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-        const DIFFICULTY_ORDER = { easy: 0, medium: 1, hard: 2 };
         const GAME_PAGES = {
             sign_match: 'sign-match-game.html',
             typing: 'typing-game.html',
@@ -1480,25 +1444,6 @@
             return '';
         }
 
-        // Suggests the next free level number for a game+difficulty (existing
-        // max + 1), so a new level doesn't default to 1 and collide with one
-        // that's already there.
-        function getNextLevelNumber(gameKey, difficulty) {
-            const existing = (window.__gameLevels || []).filter(l => l.game_key === gameKey && l.difficulty === difficulty);
-            if (!existing.length) return 1;
-            return Math.max(...existing.map(l => Number(l.level_number) || 0)) + 1;
-        }
-
-        // Auto-fills Level Number with the next free one for the currently
-        // selected game+difficulty. Only applies while adding a new level --
-        // editing an existing level must keep showing its actual number.
-        function applySuggestedLevelNumber() {
-            if (document.getElementById('levelId').value) return;
-            const gameKey = document.getElementById('levelGameKey').value;
-            const difficulty = document.getElementById('levelDifficulty').value;
-            document.getElementById('levelNumber').value = getNextLevelNumber(gameKey, difficulty);
-        }
-
         function renderGameLevelTabs() {
             const target = document.getElementById('gameLevelGameTabs');
             if (!target) return;
@@ -1512,48 +1457,29 @@
             const target = document.getElementById('instructorGameLevelsList');
             if (!target) return;
             const activeGame = getGameLevelsFilter();
-            const levels = (window.__gameLevels || [])
-                .filter(level => level.game_key === activeGame)
-                .slice()
-                .sort((a, b) => {
-                    const diffOrder = (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99);
-                    return diffOrder !== 0 ? diffOrder : Number(a.level_number) - Number(b.level_number);
-                });
-
-            renderGameLevelsCoverage(activeGame, levels);
+            const levels = (window.__gameLevels || []).filter(level => level.game_key === activeGame);
 
             if (!levels.length) {
                 target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
                 return;
             }
 
-            target.innerHTML = levels.map(level => {
-                const assignedVideo = (level.items || []).find(item => item.media_url);
-                const hasContent = Number(level.items_count || 0) > 0;
-                return `
-                <div class="game-level-card">
-                    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
-                        <div>
-                            <h4>
-                                Level ${Number(level.level_number)} &middot; ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}
-                                ${level.title ? ` &mdash; ${safeText(level.title)}` : ''}
-                            </h4>
-                            <p>${Number(level.items_count || 0)} content item(s)${assignedVideo ? ` &middot; Video: ${safeText(assignedVideo.prompt || assignedVideo.media_url)}` : ''}</p>
-                        </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <span class="${level.is_published ? 'badge-published' : 'badge-draft'}">${level.is_published ? 'Published' : 'Draft'}</span>
-                            ${hasContent ? '' : '<span class="badge-no-content">No content yet</span>'}
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+            target.innerHTML = levels.map(level => `
+                <div class="announcement-item">
+                    <h4>
+                        ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)} &middot; Level ${Number(level.level_number)}
+                        ${level.title ? ` &mdash; ${safeText(level.title)}` : ''}
+                        ${level.is_published ? '' : ' <span style="color:#b45309;font-size:0.8rem;">(Draft)</span>'}
+                    </h4>
+                    <p>${Number(level.items_count || 0)} content item(s)</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
                         <button class="btn btn-sm btn-info" onclick="previewLevel(${Number(level.id)})">Preview as Student</button>
                         <button class="btn btn-sm btn-secondary" onclick="openLevelItemsModal(${Number(level.id)})">Manage Content</button>
                         <button class="btn btn-sm btn-secondary" onclick="openLevelModal(${Number(level.id)})">Edit</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteLevel(${Number(level.id)})">Delete</button>
                     </div>
                 </div>
-            `;
-            }).join('');
+            `).join('');
         }
 
         function switchGameLevelsGame(gameKey) {
@@ -1570,7 +1496,6 @@
                 const actorId = await getInstructorActorIdentifier();
                 const response = await requestJson(`/instructor/game-levels/?actorEmail=${encodeURIComponent(actorId)}`);
                 window.__gameLevels = Array.isArray(response) ? response : [];
-                await ensureSignVideoLibrary();
                 renderGameLevelTabs();
                 renderGameLevels();
                 if (document.getElementById('levelModal')?.classList.contains('active')) {
@@ -1581,41 +1506,8 @@
             }
         }
 
-        // There is no default/fallback content anymore -- students only see
-        // what a teacher has actually published for that game+difficulty.
-        function renderGameLevelsCoverage(activeGame, levelsForGame) {
-            const target = document.getElementById('gameLevelsCoverage');
-            if (!target) return;
-
-            const rows = ['easy', 'medium', 'hard'].map(difficulty => {
-                const published = levelsForGame.filter(l => l.difficulty === difficulty && l.is_published && Number(l.items_count || 0) > 0);
-                const text = published.length
-                    ? `${published.length} published level(s) with content`
-                    : 'Nothing published yet — students see no content for this difficulty.';
-                return `
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:180px;">
-                        <span class="${published.length ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
-                        <span style="color:#64748b; font-size:0.85rem;">${safeText(text)}</span>
-                    </div>
-                `;
-            }).join('');
-
-            target.innerHTML = `
-                <div style="background:#f9fafb; border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
-                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty</div>
-                    <div style="display:flex; gap:14px; flex-wrap:wrap;">${rows}</div>
-                </div>
-            `;
-        }
-
         function renderLevelReference(gameKey) {
-            const levels = (window.__gameLevels || [])
-                .filter(l => l.game_key === gameKey)
-                .slice()
-                .sort((a, b) => {
-                    const diffOrder = (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99);
-                    return diffOrder !== 0 ? diffOrder : Number(a.level_number) - Number(b.level_number);
-                });
+            const levels = (window.__gameLevels || []).filter(l => l.game_key === gameKey);
             const container = document.getElementById('levelReferenceList');
             const count = document.getElementById('levelReferenceCount');
             if (!container || !count) return;
@@ -1628,22 +1520,16 @@
 
             container.innerHTML = levels.map(level => {
                 const assigned = (level.items || []).find(item => item.media_url);
-                const hasContent = Number(level.items_count || 0) > 0;
                 return `
-                    <div class="game-level-card" style="margin-bottom:0;">
+                    <div style="padding:12px; border-radius:10px; background:#ffffff; border:1px solid #e5e7eb;">
                         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
                             <div>
-                                <div style="font-weight:600; color:#0f172a;">Level ${Number(level.level_number)} — ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}</div>
+                                <div style="font-weight:600;">Level ${Number(level.level_number)} — ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}</div>
                                 <div style="margin-top:4px; color:#6b7280; font-size:0.92rem;">${level.title ? safeText(level.title) : `${Number(level.items_count || 0)} item(s)`}</div>
-                                <div style="margin-top:6px; color:#4b5563; font-size:0.85rem;">
-                                    ${assigned
-                                        ? `Assigned video: ${safeText(assigned.prompt || assigned.media_url)} &middot; <a href="${safeAttr(assigned.media_url)}" target="_blank" rel="noopener">Preview</a>`
-                                        : 'No assigned video'}
-                                </div>
+                                <div style="margin-top:6px; color:#4b5563; font-size:0.85rem;">${assigned ? `Assigned video: ${safeText(assigned.prompt || assigned.media_url)}` : 'No assigned video'}</div>
                             </div>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span class="${level.is_published ? 'badge-published' : 'badge-draft'}">${level.is_published ? 'Published' : 'Draft'}</span>
-                                ${hasContent ? '' : '<span class="badge-no-content">No content</span>'}
+                            <div style="text-align:right; color:#6b7280; font-size:0.82rem;">
+                                ${level.is_published ? 'Published' : 'Draft'}<br>${formatDateTime(level.updated_at || level.created_at)}
                             </div>
                         </div>
                     </div>
@@ -1651,29 +1537,17 @@
             }).join('');
         }
 
-        function handleLevelGameChange(gameKey, isEdit = false) {
+        function handleLevelGameChange(gameKey) {
             const container = document.getElementById('levelDynamicFields');
             if (!container) return;
             renderLevelReference(gameKey);
-            if (!isEdit) applySuggestedLevelNumber();
-
-            if (isEdit) {
-                // These starter-content fields only apply when creating a new level;
-                // editing content for an existing level happens via "Manage Content".
-                container.innerHTML = `
-                    <div class="form-group">
-                        <small style="color:#6b7280; display:block;">To add, edit, or replace this level's sign video (or sentence/scenario content), use the <strong>Manage Content</strong> button after saving.</small>
-                    </div>
-                `;
-                return;
-            }
 
             if (gameKey === 'sign_match' || gameKey === 'typing') {
                 container.innerHTML = `
                     <div class="form-group">
-                        <label class="form-label">Assigned Sign Video <span style="color:#b91c1c;">*</span></label>
+                        <label class="form-label">Assigned Sign Video</label>
                         <div id="levelPrimaryVideoPicker"></div>
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Required. Choose an existing video or upload a new one for this level.</small>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Choose an existing video or upload a new one for this level.</small>
                     </div>
                 `;
                 document.getElementById('levelPrimaryVideoPicker').innerHTML = renderVideoPicker('level_primary', '', '');
@@ -1681,11 +1555,20 @@
                     const picker = document.getElementById('levelPrimaryVideoPicker');
                     if (picker) picker.innerHTML = renderVideoPicker('level_primary', '', '');
                 }).catch(() => {});
-            } else if (gameKey === 'sentence' || gameKey === 'scenario') {
-                const kind = gameKey === 'sentence' ? 'signs (with their videos)' : 'scenario options (with their videos)';
+            } else if (gameKey === 'sentence') {
                 container.innerHTML = `
                     <div class="form-group">
-                        <small style="color:#6b7280; display:block;">After saving, you'll be taken straight to <strong>Manage Content</strong> to add the ${kind} for this level.</small>
+                        <label class="form-label">Preview Sentence (optional)</label>
+                        <input type="text" id="levelPreviewSentence" class="form-input" placeholder="e.g. I am fine">
+                        <small style="color:#6b7280; display:block; margin-top:6px;">This text helps create a primary sentence-level item automatically.</small>
+                    </div>
+                `;
+            } else if (gameKey === 'scenario') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Scenario Lead (optional)</label>
+                        <textarea id="levelScenarioLead" class="form-input" rows="2" placeholder="Short scenario description"></textarea>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Add a starting prompt for the scenario if you want quick setup.</small>
                     </div>
                 `;
             } else {
@@ -1704,20 +1587,13 @@
             document.getElementById('levelTitle').value = level ? (level.title || '') : '';
             document.getElementById('levelPublished').checked = level ? Boolean(level.is_published) : true;
 
-            // Level Number is auto-computed while adding (locked); editing an
-            // existing level still allows changing its number manually.
-            const levelNumberInput = document.getElementById('levelNumber');
-            levelNumberInput.readOnly = !level;
-            levelNumberInput.style.background = level ? '' : '#f3f4f6';
-            levelNumberInput.style.cursor = level ? '' : 'not-allowed';
-
             const title = document.getElementById('levelModalTitle');
             if (title) {
                 title.textContent = level ? 'Edit Level' : 'Add Level';
             }
 
             const currentGame = level ? level.game_key : getGameLevelsFilter();
-            handleLevelGameChange(currentGame, Boolean(level));
+            handleLevelGameChange(currentGame);
 
             openModal('levelModal');
         }
@@ -1740,19 +1616,6 @@
                 return;
             }
 
-            // For new Sign Match / Typing levels, the sign video is the level's core
-            // content — require it up front instead of allowing an empty level to be saved.
-            let initialVideo = '';
-            let initialVideoName = '';
-            if (!levelId && (payload.game_key === 'sign_match' || payload.game_key === 'typing')) {
-                initialVideo = document.getElementById('picker-video-level_primary')?.value || '';
-                initialVideoName = sanitizeInstructorInput(document.getElementById('picker-name-level_primary')?.value || '');
-                if (!initialVideo) {
-                    alert('Choose or upload a sign video for this level before saving.');
-                    return;
-                }
-            }
-
             const path = levelId ? `/instructor/game-levels/${levelId}/` : '/instructor/game-levels/';
             const method = levelId ? 'PATCH' : 'POST';
             let savedLevel = null;
@@ -1763,35 +1626,65 @@
                 return;
             }
 
-            // Sign Match/Typing: the single required video was already collected
-            // above, so create its one-item level content right away.
-            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sign_match' || payload.game_key === 'typing')) {
-                try {
-                    await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
-                        method: 'POST',
-                        body: JSON.stringify({
+            // Auto-create a primary level item when adding a new level with starter data.
+            if (!levelId && savedLevel && savedLevel.id) {
+                const gameKey = payload.game_key;
+                let itemPayload = null;
+
+                if (gameKey === 'sign_match' || gameKey === 'typing') {
+                    const video = document.getElementById('picker-video-level_primary')?.value || '';
+                    const name = sanitizeInstructorInput(document.getElementById('picker-name-level_primary')?.value || '');
+                    if (video) {
+                        itemPayload = {
                             actorEmail: await getInstructorActorIdentifier(),
-                            prompt: initialVideoName || 'Primary level item',
+                            prompt: name || 'Primary level item',
                             answer: '',
-                            media_url: initialVideo,
+                            media_url: video,
                             extra_data: {},
                             order: 0,
-                        }),
-                    });
-                } catch (warnError) {
-                    alert(`Level was saved, but its content could not be added: ${warnError.message}\nOpen "Manage Content" to add it manually.`);
+                        };
+                    }
+                } else if (gameKey === 'sentence') {
+                    const sentence = sanitizeInstructorInput(document.getElementById('levelPreviewSentence')?.value || '');
+                    if (sentence) {
+                        const words = sentence.toLowerCase().split(/\s+/).filter(Boolean);
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: sentence,
+                            answer: sentence,
+                            media_url: '',
+                            extra_data: { words, signs: [] },
+                            order: 0,
+                        };
+                    }
+                } else if (gameKey === 'scenario') {
+                    const lead = sanitizeInstructorInput(document.getElementById('levelScenarioLead')?.value || '');
+                    if (lead) {
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: lead,
+                            answer: '',
+                            media_url: '',
+                            extra_data: {},
+                            order: 0,
+                        };
+                    }
+                }
+
+                if (itemPayload) {
+                    try {
+                        await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
+                            method: 'POST',
+                            body: JSON.stringify(itemPayload),
+                        });
+                    } catch (warnError) {
+                        console.warn('Could not create initial level item:', warnError);
+                    }
                 }
             }
 
             closeModal('levelModal');
             await loadGameLevels();
-
-            // Sentence/Scenario levels need multiple signs/options with their own
-            // videos, which can't be captured in this simple form -- go straight
-            // to Manage Content so the teacher can add real content right away.
-            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sentence' || payload.game_key === 'scenario')) {
-                await openLevelItemsModal(savedLevel.id);
-            }
         }
 
         async function deleteLevel(levelId) {
@@ -1839,11 +1732,11 @@
                     <select id="picker-select-${uid}" class="form-input" onchange="onVideoPickerSelect('${uid}')">
                         ${videoPickerOptionsHtml(selectedUrl)}
                     </select>
-                    <div class="video-picker-actions">
+                    <div style="margin-top:6px;">
                         <button type="button" class="btn btn-sm btn-secondary" onclick="toggleVideoUpload('${uid}')">Upload new video</button>
-                        ${selectedUrl ? `<a href="${safeAttr(selectedUrl)}" target="_blank" rel="noopener" style="font-size:0.82rem;">Preview current video</a>` : '<span style="color:#b91c1c;font-size:0.82rem;">No video selected</span>'}
+                        ${selectedUrl ? `<a href="${safeAttr(selectedUrl)}" target="_blank" rel="noopener" style="margin-left:8px;font-size:0.82rem;">Preview</a>` : ''}
                     </div>
-                    <div id="picker-upload-${uid}" class="video-picker-upload" style="display:none;">
+                    <div id="picker-upload-${uid}" style="display:none; margin-top:8px; padding:10px; background:#f3f4f6; border-radius:4px;">
                         <input type="text" id="picker-word-${uid}" class="form-input" placeholder="Word / phrase for this video" value="${safeAttr(selectedWord)}" style="margin-bottom:6px;">
                         <input type="file" id="picker-file-${uid}" class="form-input" accept=".mp4,.mov,.webm,.avi,.mkv" style="margin-bottom:6px;">
                         <button type="button" class="btn btn-sm btn-primary" onclick="uploadVideoForPicker('${uid}')">Upload &amp; Use</button>
@@ -1886,13 +1779,7 @@
             formData.append('video', fileInput.files[0]);
 
             try {
-                const csrfToken = await ensureCsrfToken();
-                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
-                    body: formData,
-                });
+                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', body: formData });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${response.status})`);
@@ -2277,25 +2164,6 @@
             _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
             document.addEventListener('click', function() { _d.classList.remove('open'); });
         }
-
-        function doLogout(e) {
-            e.preventDefault();
-            fetch('https://kumpass.onrender.com/api/auth/logout/', {
-                method: 'POST',
-                credentials: 'include'
-            }).catch(function () {
-                // Continue even if logout request fails
-            }).finally(function () {
-                if (window.KumpasSession && typeof window.KumpasSession.clearCurrentUser === 'function') {
-                    window.KumpasSession.clearCurrentUser();
-                }
-                window.location.replace('index.html');
-            });
-        }
-
-        document.querySelectorAll('a.logout, a[href="index.html"]').forEach(function (link) {
-            link.addEventListener('click', doLogout);
-        });
     })();
     </script>
 </body>

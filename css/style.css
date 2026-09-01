@@ -106,6 +106,13 @@
 
 html, body {
   max-width: 100%;
+}
+
+/* overflow-x lives on html only (not body) so body never becomes a second
+   scroll container -- when both html and body clip overflow-x, Chromium
+   miscalculates position:sticky for descendants like .dashboard-sidebar,
+   causing it to scroll away instead of staying pinned. */
+html {
   overflow-x: hidden;
 }
 

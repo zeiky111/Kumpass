@@ -1,5 +1,5 @@
 // Session-based authentication using HTTP-only cookies
-const DEFAULT_API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+const DEFAULT_API_BASE = localStorage.getItem('kumpasApiBase') || 'http://127.0.0.1:8000/api';
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -16,34 +16,16 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
         return existingToken;
     }
 
-    // Browsers that block third-party cookies (Safari ITP, Chrome/Firefox
-    // cross-site restrictions) drop the cross-site csrftoken cookie, so
-    // document.cookie never sees it even though the request succeeded.
-    // Fall back to the token returned in the response body in that case.
-    //
-    // Retry on network failure: Render's free tier spins the backend down
-    // after inactivity, so the very first request can take 30-50s to wake
-    // it up and may fail before the server responds.
-    const attempts = 4;
-    for (let i = 0; i < attempts; i++) {
-        try {
-            const response = await fetch(`${base}/auth/csrf/`, {
-                method: 'GET',
-                credentials: 'include'
-            });
-            const cookieToken = getCookie('csrftoken');
-            if (cookieToken) {
-                return cookieToken;
-            }
-            const data = await response.json().catch(() => ({}));
-            return data.csrfToken || '';
-        } catch (_) {
-            if (i < attempts - 1) {
-                await new Promise(resolve => setTimeout(resolve, 3000 * (i + 1)));
-            }
-        }
+    try {
+        await fetch(`${base}/auth/csrf/`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+    } catch (_) {
+        return '';
     }
-    return '';
+
+    return getCookie('csrftoken');
 }
 
 // Check if user is authenticated with the backend
@@ -74,60 +56,14 @@ async function getCurrentUser() {
     }
 }
 
-// Map a role to the dashboard page it belongs on (mirrors the backend's
-// _redirect_for_role in backend/signtext/views.py).
-function dashboardForRole(role) {
-    if (role === 'instructor') return 'instructor-dashboard.html';
-    if (role === 'admin') return 'admin-dashboard.html';
-    return 'dashboard.html';
-}
-
-// Require authentication on protected pages. Pass an array of allowed roles
-// (e.g. ['admin'] or ['instructor', 'admin']) to also enforce that the
-// signed-in user's role may access this page; omit it to just require any
-// authenticated session. Logged-out users are sent to login.html; logged-in
-// users on the wrong page are sent to their own dashboard rather than
-// login.html, since they don't need to log in again.
-async function requireAuth(allowedRoles) {
-    const user = await getCurrentUser();
-    if (!user) {
+// Require authentication on protected pages
+async function requireAuth() {
+    const isAuth = await isUserAuthenticated();
+    if (!isAuth) {
         window.location.replace('login.html');
-        return false;
-    }
-    if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(user.role)) {
-        window.location.replace(dashboardForRole(user.role));
         return false;
     }
     return true;
-}
-
-// Wrapper around fetch() for authenticated in-page API calls. Attaches the
-// CSRF token to state-changing requests and treats a 401 response as an
-// expired/invalid session, redirecting to login immediately instead of
-// letting the caller silently fail (page-load guards only run once, so a
-// session that dies mid-page needs this to react right away).
-async function fetchWithAuth(url, options = {}) {
-    const method = (options.method || 'GET').toUpperCase();
-    const needsCsrf = method !== 'GET' && method !== 'HEAD';
-    const headers = Object.assign({}, options.headers || {});
-
-    if (needsCsrf && !headers['X-CSRFToken']) {
-        const csrfToken = await ensureCsrfToken();
-        if (csrfToken) {
-            headers['X-CSRFToken'] = csrfToken;
-        }
-    }
-
-    const response = await fetch(url, Object.assign({}, options, {
-        credentials: 'include',
-        headers
-    }));
-
-    if (response.status === 401) {
-        window.location.replace('login.html');
-    }
-
-    return response;
 }
 
 // Logout user
@@ -151,33 +87,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${base.replace(/\/$/, '')}${path}`;
     }
 
-    function delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // Render's free tier spins the backend down after inactivity, so the
-    // first request after a while can take 30-50s to wake it up. Retry a
-    // few times with backoff before giving up, instead of failing instantly.
-    async function fetchWithWakeupRetry(url, options, attempts = 4) {
-        let lastError;
-        for (let i = 0; i < attempts; i++) {
-            try {
-                return await fetch(url, options);
-            } catch (error) {
-                lastError = error;
-                if (i < attempts - 1) {
-                    await delay(3000 * (i + 1));
-                }
-            }
-        }
-        throw lastError;
-    }
-
     async function postJson(path, payload, base = API_BASE) {
         let response;
         try {
             const csrfToken = await ensureCsrfToken(base);
-            response = await fetchWithWakeupRetry(getUrl(path, base), {
+            response = await fetch(getUrl(path, base), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -187,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(payload)
             });
         } catch (error) {
-            throw new Error(`Cannot reach the server at ${base}. It may be waking up from sleep — please wait a moment and try again.`);
+            throw new Error(`Cannot reach the backend at ${base}. Start the Django server and try again.`);
         }
 
         let data = {};
@@ -412,6 +326,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Hamburger menu
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('navMenu');
+    
+    if (hamburger && navMenu) {
+        hamburger.addEventListener('click', function() {
+            navMenu.classList.toggle('active');
+        });
+    }
 });
 
 // Navigation between dashboard sections

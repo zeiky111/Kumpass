@@ -414,3 +414,30 @@ class UserCertificate(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} earned {self.certificate.game_key}"
+
+
+class FSL105Clip(models.Model):
+    """One video clip from the FSL-105 dataset (Mendeley 48y2y99mb9):
+    105 Filipino Sign Language classes, 2,130 clips, split train/test.
+    Source: https://data.mendeley.com/datasets/48y2y99mb9/2
+    """
+    SPLIT_TRAIN = "train"
+    SPLIT_TEST = "test"
+    SPLIT_CHOICES = [
+        (SPLIT_TRAIN, "Train"),
+        (SPLIT_TEST, "Test"),
+    ]
+
+    clip_id = models.PositiveIntegerField(unique=True)
+    label = models.CharField(max_length=150, db_index=True)
+    category = models.CharField(max_length=150, blank=True, default="")
+    split = models.CharField(max_length=10, choices=SPLIT_CHOICES)
+    source_path = models.CharField(max_length=500)
+    video = models.FileField(upload_to="fsl105_clips/%Y/%m/%d/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["label", "clip_id"]
+
+    def __str__(self) -> str:
+        return f"{self.label} #{self.clip_id} ({self.split})"
