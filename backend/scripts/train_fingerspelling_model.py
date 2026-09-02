@@ -54,9 +54,43 @@ LANDMARK_COLUMNS = 21 * 3
 # jitter strength covered. Doubled both the noise magnitude and the number
 # of jittered variants per real sample so the model sees a wider range of
 # imprecise/noisy landmark positions during training.
-JITTERS_PER_SAMPLE = 8
+JITTERS_PER_SAMPLE = 4
 JITTER_STDDEV = 0.02
+# How many rotated variants to generate per real recorded row -- see
+# _rotate_landmarks for why this exists. Kept modest (each rotation also
+# produces a jittered twin below, so the real multiplier is 2x this) to
+# keep training time and the resulting model file size reasonable.
+ROTATIONS_PER_SAMPLE = 3
+MAX_ROTATION_DEGREES = 20.0
 _NP_RNG = np.random.default_rng(42)
+
+
+def _rotate_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Rotates every landmark around the wrist (landmark 0) by a random
+    small angle in the image plane (x/y only; z is left alone).
+
+    collect-landmarks.html recordings have the signer's hand held at a
+    fairly consistent, deliberate angle relative to the camera. A live
+    user's hand is rarely at that exact angle -- a slight wrist tilt or a
+    camera that isn't perfectly perpendicular to the hand rotates the whole
+    landmark set in the image plane, which the geometric features (angles,
+    horizontal/vertical projections) are not inherently invariant to.
+    Training on randomly rotated copies of every real sample teaches the
+    model to tolerate that instead of requiring the exact recorded angle.
+    """
+    wrist = landmarks[0]
+    wx, wy = float(wrist["x"]), float(wrist["y"])
+    angle = np.radians(_NP_RNG.uniform(-MAX_ROTATION_DEGREES, MAX_ROTATION_DEGREES))
+    cos_a, sin_a = np.cos(angle), np.sin(angle)
+
+    rotated = []
+    for point in landmarks:
+        dx = float(point["x"]) - wx
+        dy = float(point["y"]) - wy
+        new_x = wx + dx * cos_a - dy * sin_a
+        new_y = wy + dx * sin_a + dy * cos_a
+        rotated.append({"x": new_x, "y": new_y, "z": float(point["z"])})
+    return rotated
 
 
 def _jitter_landmarks(landmarks: list[dict]) -> list[dict]:
@@ -122,6 +156,20 @@ def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
                         _jitter_landmarks(landmarks), handedness
                     ).reshape(-1)
                     features.append(jittered_vector)
+                    labels.append(label)
+
+                for _ in range(ROTATIONS_PER_SAMPLE):
+                    # Jitter each rotated variant too, so the model sees the
+                    # combined effect of tilt + noisy tracking together.
+                    rotated = _rotate_landmarks(landmarks)
+                    rotated_vector = extract_features_from_landmarks(rotated, handedness).reshape(-1)
+                    features.append(rotated_vector)
+                    labels.append(label)
+
+                    jittered_rotated_vector = extract_features_from_landmarks(
+                        _jitter_landmarks(rotated), handedness
+                    ).reshape(-1)
+                    features.append(jittered_rotated_vector)
                     labels.append(label)
 
     if skipped:
