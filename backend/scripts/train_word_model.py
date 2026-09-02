@@ -42,9 +42,17 @@ DATASET_DIR = BACKEND_DIR / "datasets" / "phrases"
 MANIFEST_PATH = MODEL_PATH.parent / "word_sequence_svc.meta.json"
 MIN_SAMPLES_PER_PHRASE_FOR_EVAL = 2
 # How many randomly-cropped variants to generate per sequence (in addition
-# to the untrimmed original) -- see _random_crop for why this exists.
-CROPS_PER_SEQUENCE = 4
+# to the untrimmed original) -- see _random_crop for why this exists. Kept
+# modest: each crop variant roughly doubles again with its jittered twin
+# below, and an RBF SVC's serialized size scales with training-set size, so
+# an overly high multiplier here previously produced a 276MB model file
+# that exceeded GitHub's 100MB push limit.
+CROPS_PER_SEQUENCE = 3
+# Per-landmark coordinate jitter stddev, in the same normalized [0,1] units
+# MediaPipe reports -- see _jitter_frames for why this exists.
+JITTER_STDDEV = 0.01
 _AUG_RNG = random.Random(42)
+_NP_RNG = np.random.default_rng(42)
 
 
 def _mirror_frames(frames: list[dict]) -> list[dict]:
@@ -99,6 +107,33 @@ def _random_crop(frames: list[dict]) -> list[dict] | None:
     return cropped if len(cropped) >= MIN_FRAMES else None
 
 
+def _jitter_frames(frames: list[dict]) -> list[dict]:
+    """Adds small per-landmark Gaussian noise to every coordinate.
+
+    FSL-105's clips are clean, well-lit, blue-background studio recordings,
+    so MediaPipe's hand tracking on them is near-perfect. A live webcam feed
+    (variable lighting, motion blur, a messier background) makes MediaPipe's
+    landmark estimates noisier frame to frame -- a model that only ever saw
+    noise-free landmarks has no reason to be robust to that jitter. This
+    perturbs every (x, y, z) coordinate by a small amount so the model
+    learns the sign's shape is what matters, not exact pixel-level
+    landmark positions.
+    """
+    jittered = []
+    for frame in frames:
+        new_frame = {}
+        for slot in ("left", "right"):
+            points = frame.get(slot)
+            if points is None:
+                new_frame[slot] = None
+                continue
+            arr = np.asarray(points, dtype=np.float64)
+            noise = _NP_RNG.normal(0.0, JITTER_STDDEV, size=arr.shape)
+            new_frame[slot] = (arr + noise).tolist()
+        jittered.append(new_frame)
+    return jittered
+
+
 def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
     jsonl_files = sorted(DATASET_DIR.glob("*.jsonl"))
     features: list[np.ndarray] = []
@@ -142,15 +177,20 @@ def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
                     groups.append(clip_group)
 
                 # Crop both the original and its mirror, so the model sees
-                # partial windows in both handedness orientations.
+                # partial windows in both handedness orientations. Every
+                # other crop also gets a jittered twin, so noise-robustness
+                # is learned alongside crop-robustness without doubling the
+                # dataset size again on top of the crop multiplier.
                 for source_frames in (frames, mirrored_frames):
-                    for _ in range(CROPS_PER_SEQUENCE):
+                    for crop_idx in range(CROPS_PER_SEQUENCE):
                         cropped = _random_crop(source_frames)
                         if cropped is None:
                             continue
-                        cropped_vector = extract_sequence_features(cropped)
-                        if cropped_vector is not None:
-                            features.append(cropped_vector.reshape(-1))
+                        use_jitter = crop_idx % 2 == 1
+                        variant = _jitter_frames(cropped) if use_jitter else cropped
+                        variant_vector = extract_sequence_features(variant)
+                        if variant_vector is not None:
+                            features.append(variant_vector.reshape(-1))
                             labels.append(label)
                             groups.append(clip_group)
 
