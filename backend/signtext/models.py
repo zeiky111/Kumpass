@@ -275,6 +275,16 @@ class SignVideo(models.Model):
     CATEGORY_GREETINGS = "greetings"
     CATEGORY_PHRASES = "phrases"
     CATEGORY_RESPONSES = "responses"
+    # FSL-105 dataset categories (backend/datasets/fsl105/labels.csv)
+    CATEGORY_CALENDAR = "calendar"
+    CATEGORY_COLORS = "colors"
+    CATEGORY_NUMBERS = "numbers"
+    CATEGORY_DAYS = "days"
+    CATEGORY_FAMILY = "family"
+    CATEGORY_RELATIONSHIPS = "relationships"
+    CATEGORY_FOOD = "food"
+    CATEGORY_DRINK = "drink"
+    CATEGORY_SURVIVAL = "survival"
     CATEGORY_CHOICES = [
         (CATEGORY_ALPHABET, "Alphabet"),
         (CATEGORY_EMOTIONS, "Emotions"),
@@ -283,6 +293,15 @@ class SignVideo(models.Model):
         (CATEGORY_GREETINGS, "Greetings"),
         (CATEGORY_PHRASES, "Phrases"),
         (CATEGORY_RESPONSES, "Responses"),
+        (CATEGORY_CALENDAR, "Calendar"),
+        (CATEGORY_COLORS, "Colors"),
+        (CATEGORY_NUMBERS, "Numbers"),
+        (CATEGORY_DAYS, "Days"),
+        (CATEGORY_FAMILY, "Family"),
+        (CATEGORY_RELATIONSHIPS, "Relationships"),
+        (CATEGORY_FOOD, "Food"),
+        (CATEGORY_DRINK, "Drink"),
+        (CATEGORY_SURVIVAL, "Survival"),
     ]
 
     key = models.CharField(max_length=120, unique=True, db_index=True)
@@ -433,7 +452,11 @@ class FSL105Clip(models.Model):
     category = models.CharField(max_length=150, blank=True, default="")
     split = models.CharField(max_length=10, choices=SPLIT_CHOICES)
     source_path = models.CharField(max_length=500)
-    video = models.FileField(upload_to="fsl105_clips/%Y/%m/%d/")
+    # Raw video bytes stored directly in the row (not a file-storage path),
+    # per requirement: the dataset must live inside the database itself.
+    video_data = models.BinaryField(null=True, blank=True, editable=True)
+    video_filename = models.CharField(max_length=255, blank=True, default="")
+    video_content_type = models.CharField(max_length=100, blank=True, default="video/quicktime")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

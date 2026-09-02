@@ -18,14 +18,25 @@ dataset must be downloaded by hand:
 train.csv / test.csv columns: vid_path, id_label, label, category
   e.g. "clips\\17\\6.MOV", 17, "CORRECT", "SURVIVAL"
 
-Then run, from the backend/ directory with the main venv active:
+Each clip's raw video bytes are read from disk and stored directly in the
+FSL105Clip.video_data column (Postgres BYTEA) -- the row itself carries the
+video, not just a filename/path -- per the requirement that the dataset
+live inside the database.
+
+Usage, from the backend/ directory with the main venv active:
     python scripts/import_fsl105.py [path/to/backend/datasets/fsl105]
 
-For every row in train.csv/test.csv this copies the referenced video file
-into Django media storage (fsl105_clips/YYYY/MM/DD/...) via FSL105Clip.video
-and creates/updates one FSL105Clip row. clip_id is assigned as
-"<id_label>_<clip number>" (e.g. "17_6") derived from vid_path, which is
-stable across re-runs, so running this script again is idempotent.
+clip_id is derived from vid_path (label_id * 1000 + clip number), so
+re-running this script is idempotent.
+
+To target a different database (e.g. the Render production Postgres
+instead of local), set these env vars before running:
+    USE_POSTGRES=True
+    POSTGRES_DB=...
+    POSTGRES_USER=...
+    POSTGRES_PASSWORD=...
+    POSTGRES_HOST=...
+    POSTGRES_PORT=...
 """
 
 from __future__ import annotations
@@ -45,7 +56,6 @@ import django  # noqa: E402
 
 django.setup()
 
-from django.core.files import File  # noqa: E402
 from signtext.models import FSL105Clip  # noqa: E402
 
 DEFAULT_DATASET_DIR = BACKEND_DIR / "datasets" / "fsl105"
@@ -88,6 +98,8 @@ def _import_split(dataset_dir: Path, split_name: str, csv_name: str) -> tuple[in
                 skipped += 1
                 continue
 
+            video_bytes = video_path.read_bytes()
+
             obj, was_created = FSL105Clip.objects.get_or_create(
                 clip_id=clip_id,
                 defaults={
@@ -95,21 +107,22 @@ def _import_split(dataset_dir: Path, split_name: str, csv_name: str) -> tuple[in
                     "category": category,
                     "split": split_name,
                     "source_path": vid_path,
+                    "video_data": video_bytes,
+                    "video_filename": video_path.name,
+                    "video_content_type": "video/quicktime",
                 },
             )
-            if not obj.video:
-                with video_path.open("rb") as fh:
-                    obj.video.save(f"{clip_id}_{video_path.name}", File(fh), save=False)
-            obj.label = word
-            obj.category = category
-            obj.split = split_name
-            obj.source_path = vid_path
-            obj.save()
-
-            if was_created:
-                created += 1
-            else:
+            if not was_created:
+                obj.label = word
+                obj.category = category
+                obj.split = split_name
+                obj.source_path = vid_path
+                obj.video_data = video_bytes
+                obj.video_filename = video_path.name
+                obj.save()
                 updated += 1
+            else:
+                created += 1
 
     return (created, updated, skipped)
 
