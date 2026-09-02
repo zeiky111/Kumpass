@@ -20,6 +20,8 @@ from .views import (
     instructor_module_detail,
     instructor_modules,
     instructor_upload_sign_video,
+    fsl105_clip_video,
+    fsl105_signs,
     logout,
     module_quiz_question_detail,
     module_quiz_questions,
@@ -94,4 +96,6 @@ urlpatterns = [
     path("sign/word-sequence/", predict_word_sequence, name="predict-word-sequence"),
     path("sign/recent/", recent_predictions, name="recent-predictions"),
     path("sign-videos/", sign_videos, name="sign-videos"),
+    path("fsl105-signs/", fsl105_signs, name="fsl105-signs"),
+    path("fsl105-clips/<int:clip_id>/video/", fsl105_clip_video, name="fsl105-clip-video"),
 ]

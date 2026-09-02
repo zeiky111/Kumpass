@@ -89,6 +89,10 @@
                             <option value="numbers">Numbers</option>
                             <option value="emotions">Emotions</option>
                             <option value="school">School</option>
+                            <option value="calendar">Calendar</option>
+                            <option value="colors">Colors</option>
+                            <option value="food_drink">Food &amp; Drink</option>
+                            <option value="survival">Survival</option>
                         </select>
                     </div>
                 </div>
@@ -177,6 +181,21 @@
             <div class="word-browse-pagination" id="wordBrowsePagination"></div>
         </section>
 
+    </div>
+
+    <!-- Sign video preview modal -->
+    <div class="sign-preview-overlay hidden" id="signPreviewOverlay">
+        <div class="sign-preview-modal">
+            <button type="button" class="sign-preview-close" id="signPreviewClose" aria-label="Close">&times;</button>
+            <div class="sign-preview-media" id="signPreviewMedia"></div>
+            <h3 class="sign-preview-word" id="signPreviewWord"></h3>
+            <div class="sign-preview-actions">
+                <button type="button" class="btn-primary" id="signPreviewAddBtn">
+                    <span>+</span> Add to Sentence
+                </button>
+                <button type="button" class="btn-secondary" id="signPreviewCloseBtn">Close</button>
+            </div>
+        </div>
     </div>
         </main>
     </div>
@@ -372,31 +391,59 @@
         .word-picker-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 0.5rem;
-            max-height: 220px;
+            gap: 0.6rem;
+            max-height: 320px;
             overflow-y: auto;
             padding: 0.25rem;
             margin-bottom: 1.25rem;
         }
 
-        .word-picker-chip {
+        .word-picker-card {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            padding: 0.5rem 0.9rem;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: #1f2937;
+            border-radius: 12px;
+            padding: 0.5rem;
             cursor: pointer;
             text-align: center;
             transition: all 0.2s ease;
         }
 
-        .word-picker-chip:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            border-color: transparent;
-            color: white;
+        .word-picker-card:hover {
+            border-color: var(--primary-blue);
             transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+        }
+
+        .word-picker-thumb {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e5e7eb;
+            font-size: 1.6rem;
+            overflow: hidden;
+        }
+
+        .word-picker-thumb i.fa-play {
+            font-size: 1.1rem;
+            color: white;
+            background: rgba(37, 99, 235, 0.85);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .word-picker-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1f2937;
         }
 
         .word-picker-empty {
@@ -456,6 +503,89 @@
 
         .selected-word-remove:hover {
             background: rgba(255,255,255,0.4);
+        }
+
+        .sign-preview-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1300;
+            padding: 1.5rem;
+        }
+
+        .sign-preview-overlay.hidden {
+            display: none;
+        }
+
+        .sign-preview-modal {
+            position: relative;
+            width: min(480px, 100%);
+            background: white;
+            border-radius: 18px;
+            padding: 1.75rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+        }
+
+        .sign-preview-close {
+            position: absolute;
+            top: 0.85rem;
+            right: 0.85rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sign-preview-close:hover {
+            background: #e2e8f0;
+        }
+
+        .sign-preview-media {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .sign-preview-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sign-preview-media .demo-icon {
+            font-size: 3rem;
+            color: #e5e7eb;
+        }
+
+        .sign-preview-word {
+            margin: 0 0 1.25rem;
+            text-align: center;
+            font-size: 1.25rem;
+            color: #0f172a;
+        }
+
+        .sign-preview-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
         }
 
         .translator-container .btn-primary,
@@ -991,29 +1121,9 @@
 
         .word-browse-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 0.6rem;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.75rem;
             min-height: 60px;
-        }
-
-        .word-browse-chip {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            padding: 0.55rem 1rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #1f2937;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-
-        .word-browse-chip:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            border-color: transparent;
-            color: white;
-            transform: translateY(-2px);
         }
 
         .word-browse-empty {
@@ -1077,12 +1187,6 @@
         :root[data-theme="dark"] .browse-search-input {
             background: var(--input-bg);
             border-color: var(--input-border);
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .word-browse-chip {
-            background: var(--surface-card-alt);
-            border-color: var(--surface-border);
             color: var(--text-body);
         }
 
@@ -1155,9 +1259,12 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .word-picker-chip {
+        :root[data-theme="dark"] .word-picker-card {
             background: var(--surface-card-alt);
             border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .word-picker-label {
             color: var(--text-body);
         }
 
@@ -1170,6 +1277,19 @@
         }
 
         :root[data-theme="dark"] .selected-words-empty {
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .sign-preview-modal {
+            background: var(--surface-card);
+        }
+
+        :root[data-theme="dark"] .sign-preview-word {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-preview-close {
+            background: var(--surface-card-alt);
             color: var(--text-muted-2);
         }
 
@@ -1321,8 +1441,12 @@
 
         // Sign videos are loaded from the database (SignVideo table), which is
         // populated from the "Sign Language" media library. Both the Games and
-        // Text-to-Sign modules read from this same API endpoint.
+        // Text-to-Sign modules read from this same API endpoint. FSL-105 (the
+        // Mendeley dataset used to train the sign-detection model) lives in its
+        // own table and is merged in from a second endpoint so those clips show
+        // up here too.
         const SIGN_VIDEOS_API = 'https://kumpass.onrender.com/api/sign-videos/';
+        const FSL105_SIGNS_API = 'https://kumpass.onrender.com/api/fsl105-signs/';
 
         const BACKEND_TO_UI_CATEGORY = {
             alphabet: 'school',
@@ -1332,6 +1456,15 @@
             greetings: 'greetings',
             phrases: 'everyday',
             responses: 'everyday',
+            calendar: 'calendar',
+            colors: 'colors',
+            numbers: 'numbers',
+            days: 'calendar',
+            family: 'family',
+            relationships: 'family',
+            food: 'food_drink',
+            drink: 'food_drink',
+            survival: 'survival',
         };
 
         let signLibrary = {};
@@ -1344,23 +1477,49 @@
             return 'video/mp4';
         }
 
-        async function loadSignLibrary() {
-            const response = await fetch(SIGN_VIDEOS_API);
-            if (!response.ok) {
-                throw new Error(`Failed to load sign videos (${response.status})`);
-            }
-            const items = await response.json();
-            const library = {};
+        function addItemsToLibrary(library, items) {
             items.forEach(item => {
-                library[String(item.key || '').toLowerCase()] = {
+                const key = String(item.key || '').toLowerCase();
+                if (!key || library[key]) return;
+                library[key] = {
                     label: item.word,
                     category: BACKEND_TO_UI_CATEGORY[item.category] || 'everyday',
                     video: item.video_url || '',
                     fallback: '🤟',
                 };
             });
+        }
+
+        async function loadSignLibrary() {
+            const [signVideosResult, fsl105Result] = await Promise.allSettled([
+                fetch(SIGN_VIDEOS_API).then(res => {
+                    if (!res.ok) throw new Error(`Failed to load sign videos (${res.status})`);
+                    return res.json();
+                }),
+                fetch(FSL105_SIGNS_API).then(res => {
+                    if (!res.ok) throw new Error(`Failed to load FSL-105 signs (${res.status})`);
+                    return res.json();
+                }),
+            ]);
+
+            const library = {};
+            if (signVideosResult.status === 'fulfilled') {
+                addItemsToLibrary(library, signVideosResult.value);
+            } else {
+                console.error('Failed to load sign videos:', signVideosResult.reason);
+            }
+            if (fsl105Result.status === 'fulfilled') {
+                addItemsToLibrary(library, fsl105Result.value);
+            } else {
+                console.error('Failed to load FSL-105 signs:', fsl105Result.reason);
+            }
+
             signLibrary = library;
             signLibraryReady = true;
+
+            if (signVideosResult.status === 'rejected' && fsl105Result.status === 'rejected') {
+                throw new Error('Failed to load sign videos and FSL-105 signs');
+            }
         }
 
         const geExamples = {
@@ -1531,6 +1690,24 @@
             renderSelectedWords();
         }
 
+        function renderPickerCardHtml(sign) {
+            const thumb = sign.video
+                ? `<i class="fas fa-play"></i>`
+                : sign.fallback;
+            return `
+                <button type="button" class="word-picker-card" data-word="${escapeHtml(sign.label)}">
+                    <div class="word-picker-thumb">${thumb}</div>
+                    <div class="word-picker-label">${escapeHtml(sign.label)}</div>
+                </button>
+            `;
+        }
+
+        function attachPickerCardHandlers(container) {
+            container.querySelectorAll('.word-picker-card').forEach(card => {
+                card.addEventListener('click', () => openSignPreview(card.dataset.word));
+            });
+        }
+
         function renderWordPicker() {
             if (!wordPickerGrid) return;
 
@@ -1553,13 +1730,8 @@
                 return;
             }
 
-            wordPickerGrid.innerHTML = words.map(sign =>
-                `<button type="button" class="word-picker-chip" data-word="${escapeHtml(sign.label)}">${escapeHtml(sign.label)}</button>`
-            ).join('');
-
-            wordPickerGrid.querySelectorAll('.word-picker-chip').forEach(chip => {
-                chip.addEventListener('click', () => addWordToInput(chip.dataset.word));
-            });
+            wordPickerGrid.innerHTML = words.map(renderPickerCardHtml).join('');
+            attachPickerCardHandlers(wordPickerGrid);
         }
 
         if (wordSearchInput) {
@@ -1591,13 +1763,8 @@
             const start = (wordBrowsePage - 1) * WORDS_PER_PAGE;
             const pageWords = allWords.slice(start, start + WORDS_PER_PAGE);
 
-            wordBrowseGrid.innerHTML = pageWords.map(sign =>
-                `<button type="button" class="word-browse-chip" data-word="${escapeHtml(sign.label)}">${escapeHtml(sign.label)}</button>`
-            ).join('');
-
-            wordBrowseGrid.querySelectorAll('.word-browse-chip').forEach(chip => {
-                chip.addEventListener('click', () => addWordToInput(chip.dataset.word));
-            });
+            wordBrowseGrid.innerHTML = pageWords.map(renderPickerCardHtml).join('');
+            attachPickerCardHandlers(wordBrowseGrid);
 
             wordBrowsePagination.innerHTML = `
                 <span class="browse-page-info">Showing ${start + 1}-${Math.min(start + WORDS_PER_PAGE, allWords.length)} of ${allWords.length} signs</span>
@@ -1620,6 +1787,51 @@
                 renderWordBrowse();
             });
         }
+
+        const signPreviewOverlay = document.getElementById('signPreviewOverlay');
+        const signPreviewMedia = document.getElementById('signPreviewMedia');
+        const signPreviewWord = document.getElementById('signPreviewWord');
+        const signPreviewAddBtn = document.getElementById('signPreviewAddBtn');
+        const signPreviewClose = document.getElementById('signPreviewClose');
+        const signPreviewCloseBtn = document.getElementById('signPreviewCloseBtn');
+        let signPreviewWordValue = '';
+
+        function openSignPreview(word) {
+            const sign = lookupSign(word);
+            if (!sign) return;
+
+            signPreviewWordValue = sign.label;
+            signPreviewWord.textContent = sign.label;
+            signPreviewMedia.innerHTML = sign.video
+                ? `<video controls playsinline preload="metadata" autoplay muted><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
+                : `<div class="demo-icon">${sign.fallback}</div>`;
+
+            signPreviewOverlay.classList.remove('hidden');
+        }
+
+        function closeSignPreview() {
+            signPreviewOverlay.classList.add('hidden');
+            signPreviewMedia.innerHTML = '';
+        }
+
+        if (signPreviewAddBtn) {
+            signPreviewAddBtn.addEventListener('click', () => {
+                if (signPreviewWordValue) addWordToInput(signPreviewWordValue);
+                closeSignPreview();
+            });
+        }
+        if (signPreviewClose) signPreviewClose.addEventListener('click', closeSignPreview);
+        if (signPreviewCloseBtn) signPreviewCloseBtn.addEventListener('click', closeSignPreview);
+        if (signPreviewOverlay) {
+            signPreviewOverlay.addEventListener('click', (e) => {
+                if (e.target === signPreviewOverlay) closeSignPreview();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && signPreviewOverlay && !signPreviewOverlay.classList.contains('hidden')) {
+                closeSignPreview();
+            }
+        });
 
         function renderSignCard(word, sign, index) {
             const mediaBlock = sign.video
