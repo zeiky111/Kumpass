@@ -46,6 +46,34 @@ DATASET_DIR = BACKEND_DIR / "datasets" / "fingerspelling"
 MANIFEST_PATH = MODEL_PATH.parent / "fingerspelling_svc.meta.json"
 SYNTHETIC_SAMPLES_PER_MISSING_LETTER = 200
 LANDMARK_COLUMNS = 21 * 3
+# How many jittered variants to generate per real recorded row -- see
+# _jitter_landmarks for why this exists.
+JITTERS_PER_SAMPLE = 4
+JITTER_STDDEV = 0.01
+_NP_RNG = np.random.default_rng(42)
+
+
+def _jitter_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Adds small per-landmark Gaussian noise to every (x, y, z) coordinate.
+
+    The recorded training CSVs come from collect-landmarks.html under
+    controlled conditions (deliberate, held poses), so MediaPipe's landmark
+    estimates in that data are cleaner than what live webcam use produces
+    (motion blur, variable lighting, a signer who isn't holding perfectly
+    still). extract_features_from_landmarks derives geometric ratios
+    (distances, curl, extension) straight from raw coordinates, so a model
+    trained only on clean landmarks has no built-in tolerance for that
+    real-world noise. This mirrors the same fix already applied to the word
+    sequence model (see train_word_model.py's _jitter_frames).
+    """
+    jittered = []
+    for point in landmarks:
+        jittered.append({
+            "x": float(point["x"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+            "y": float(point["y"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+            "z": float(point["z"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+        })
+    return jittered
 
 
 def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
@@ -82,6 +110,13 @@ def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
                 feature_vector = extract_features_from_landmarks(landmarks, handedness).reshape(-1)
                 features.append(feature_vector)
                 labels.append(label)
+
+                for _ in range(JITTERS_PER_SAMPLE):
+                    jittered_vector = extract_features_from_landmarks(
+                        _jitter_landmarks(landmarks), handedness
+                    ).reshape(-1)
+                    features.append(jittered_vector)
+                    labels.append(label)
 
     if skipped:
         print(f"Skipped {skipped} malformed/unrecognized rows across {len(csv_files)} CSV file(s).")
