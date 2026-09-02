@@ -1238,6 +1238,11 @@
                 markApiRecovered();
                 const processingMs = Math.round(performance.now() - requestStart);
                 handleHandWordSequenceResult(handedness, data, processingMs);
+
+                // Same fix as maybePostWordSequence: drop the frames just
+                // sent so the next call gets a fresh window instead of
+                // resending mostly the same buffer.
+                handState.wordFrameBuffer = handState.wordFrameBuffer.filter(frame => frame.t > now);
             } catch (error) {
                 markApiFailure(error.message || 'Failed to fetch');
                 debugLog(`❌ Word-sequence request error (${normalizeHandednessLabel(handedness)}): ${error.message}`, 'error');
@@ -1644,6 +1649,7 @@
                     wordRequestInFlight = true;
                     lastWordApiCallAt = now;
                     const requestStart = performance.now();
+                    const requestStartedAt = now; // Date.now()-style, matches frame.t below
 
                     try {
                         const response = await fetch(`${API_BASE}/sign/word-sequence/`, {
@@ -1666,6 +1672,16 @@
                                 aiUnavailableLogged = true;
                             }
                             handleWordSequenceResult(data, processingMs);
+
+                            // Drop the frames just sent (everything up to this
+                            // request's start) so the next call gets a fresh
+                            // window instead of re-sending mostly the same
+                            // buffer -- WORD_BUFFER_MAX_AGE_MS (2600ms) is far
+                            // longer than WORD_API_INTERVAL_MS (700ms), so
+                            // without this, consecutive calls overlapped by
+                            // ~65-75% and produced the same frozen
+                            // prediction/confidence call after call.
+                            wordFrameBuffer = wordFrameBuffer.filter(frame => frame.t > requestStartedAt);
                         }
                     } catch (error) {
                         markApiFailure(error.message || 'Failed to fetch');
