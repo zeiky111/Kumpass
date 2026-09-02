@@ -19,6 +19,7 @@ Usage (from the backend/ directory, with the virtualenv active):
 from __future__ import annotations
 
 import json
+import random
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -35,11 +36,15 @@ from sklearn.svm import SVC
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from signtext.word_sequence_svc import MODEL_PATH, extract_sequence_features  # noqa: E402
+from signtext.word_sequence_svc import MIN_FRAMES, MODEL_PATH, extract_sequence_features  # noqa: E402
 
 DATASET_DIR = BACKEND_DIR / "datasets" / "phrases"
 MANIFEST_PATH = MODEL_PATH.parent / "word_sequence_svc.meta.json"
 MIN_SAMPLES_PER_PHRASE_FOR_EVAL = 2
+# How many randomly-cropped variants to generate per sequence (in addition
+# to the untrimmed original) -- see _random_crop for why this exists.
+CROPS_PER_SEQUENCE = 4
+_AUG_RNG = random.Random(42)
 
 
 def _mirror_frames(frames: list[dict]) -> list[dict]:
@@ -65,6 +70,33 @@ def _mirror_frames(frames: list[dict]) -> list[dict]:
         new_right = [[1.0 - pt[0], pt[1], pt[2]] for pt in left] if left is not None else None
         mirrored.append({"left": new_left, "right": new_right})
     return mirrored
+
+
+def _random_crop(frames: list[dict]) -> list[dict] | None:
+    """Trims a random amount off the start and/or end of a sequence.
+
+    FSL-105's clips are pre-trimmed to exactly the gesture's start/end, but
+    the deployed app feeds the model a rolling buffer sampled from a live
+    webcam stream -- there is no way for that buffer to land on the exact
+    same start/end frame every time. extract_sequence_features leans heavily
+    on first-frame/last-frame features, so a model trained only on
+    perfectly-trimmed clips is brittle to this: trimming even 2 frames off
+    a real clip was enough to flip a correct prediction to a wrong one in
+    testing. Training on randomly-cropped variants of every sequence (in
+    addition to the untrimmed original) teaches the model to tolerate
+    whatever partial window a live buffer actually captures.
+    """
+    n = len(frames)
+    if n <= MIN_FRAMES:
+        return None
+
+    max_trim = max(0, n - MIN_FRAMES)
+    start_trim = _AUG_RNG.randint(0, max_trim)
+    end_trim = _AUG_RNG.randint(0, max_trim - start_trim)
+    if start_trim == 0 and end_trim == 0:
+        end_trim = 1  # force at least some crop, otherwise this is just the original
+    cropped = frames[start_trim: n - end_trim] if end_trim else frames[start_trim:]
+    return cropped if len(cropped) >= MIN_FRAMES else None
 
 
 def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
@@ -97,16 +129,30 @@ def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
                     skipped += 1
                     continue
 
-                clip_group = len(features)  # groups a clip with its mirror below
+                clip_group = len(features)  # groups a clip with all its augmented variants below
                 features.append(feature_vector.reshape(-1))
                 labels.append(label)
                 groups.append(clip_group)
 
-                mirrored_vector = extract_sequence_features(_mirror_frames(frames))
+                mirrored_frames = _mirror_frames(frames)
+                mirrored_vector = extract_sequence_features(mirrored_frames)
                 if mirrored_vector is not None:
                     features.append(mirrored_vector.reshape(-1))
                     labels.append(label)
                     groups.append(clip_group)
+
+                # Crop both the original and its mirror, so the model sees
+                # partial windows in both handedness orientations.
+                for source_frames in (frames, mirrored_frames):
+                    for _ in range(CROPS_PER_SEQUENCE):
+                        cropped = _random_crop(source_frames)
+                        if cropped is None:
+                            continue
+                        cropped_vector = extract_sequence_features(cropped)
+                        if cropped_vector is not None:
+                            features.append(cropped_vector.reshape(-1))
+                            labels.append(label)
+                            groups.append(clip_group)
 
     if skipped:
         print(f"Skipped {skipped} malformed/too-short sequences across {len(jsonl_files)} file(s).")
