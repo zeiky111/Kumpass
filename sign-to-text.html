@@ -727,7 +727,14 @@
         const WORD_API_INTERVAL_MS = 700;
         const WORD_MIN_FRAMES = 6;
         const WORD_STABLE_MS = 600;
-        const WORD_MIN_CONFIDENCE = 40;
+        // The 105-class word SVC is poorly calibrated (rbf SVC + probability=True
+        // over many classes): correct predictions on real test data span
+        // 21-78% confidence, so a 40% cutoff was silently discarding a large
+        // share of correct low-confidence predictions -- this is why words
+        // "never got detected" even though the model itself scored 95%
+        // accuracy end-to-end. Lowered to 15%, just below the lowest wrong
+        // prediction observed (19.6%) in a same-model sample test.
+        const WORD_MIN_CONFIDENCE = 15;
         const WORD_MIN_REPEAT = 1;
 
         function apiBackoffActive() {
