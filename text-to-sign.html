@@ -79,36 +79,6 @@
                         <p>Click a sign below to see the demonstration</p>
                     </div>
                 </div>
-
-                <!-- Translation Details -->
-                <div id="translationDetails" class="translation-details" style="display: none;">
-                    <h3>Translation Details</h3>
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Words Translated:</span>
-                            <span id="wordCount" class="detail-value">0</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Duration:</span>
-                            <span id="duration" class="detail-value">0s</span>
-                        </div>
-                    </div>
-
-                    <div class="option-group">
-                        <label for="speedControl">Playback Speed:</label>
-                        <div class="slider-container">
-                            <input id="speedControl" class="slider" type="range" min="0.5" max="2" value="1" step="0.1">
-                            <span id="speedValue">Normal (1x)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div id="actionButtons" class="action-buttons" style="display: none;">
-                    <button class="btn-secondary" onclick="repeatSign()">🔄 Repeat</button>
-                    <button class="btn-secondary" onclick="slowMotion()">🐢 Slow Motion</button>
-                    <button class="btn-secondary" onclick="downloadSign()">⬇️ Download</button>
-                </div>
             </section>
         </div>
 
@@ -283,64 +253,6 @@
             transform: translateY(-1px);
         }
 
-        .option-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .option-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .option-group label {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .slider {
-            flex: 1;
-            height: 4px;
-            background: #ddd;
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary-blue);
-            cursor: pointer;
-            border-radius: 50%;
-        }
-
-        .slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: var(--primary-blue);
-            cursor: pointer;
-            border-radius: 50%;
-            border: none;
-        }
-
-        #speedValue {
-            font-size: 0.9rem;
-            color: #666;
-            min-width: 100px;
-        }
-
         .translation-result {
             background: #f8fafc;
             border-radius: 16px;
@@ -437,47 +349,6 @@
             color: #6b7280;
         }
 
-        .translation-details {
-            background: #e8f5e9;
-            border-radius: 14px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .translation-details h3 {
-            margin-top: 0;
-            font-size: 1rem;
-            color: var(--dark);
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-
-        .detail-label {
-            font-weight: 600;
-            color: #555;
-        }
-
-        .detail-value {
-            color: var(--primary-blue);
-            font-weight: 700;
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
         .history-section {
             background: white;
             border-radius: 12px;
@@ -555,14 +426,6 @@
             }
 
             .translator-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .action-buttons {
                 grid-template-columns: 1fr;
             }
 
@@ -774,18 +637,6 @@
             color: var(--text-muted-2);
         }
 
-        :root[data-theme="dark"] .option-group label {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .slider {
-            background: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] #speedValue {
-            color: var(--text-muted-2);
-        }
-
         :root[data-theme="dark"] .translation-result {
             background: var(--surface-card-alt);
         }
@@ -808,18 +659,6 @@
         }
 
         :root[data-theme="dark"] .sign-card-meta {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translation-details {
-            background: rgba(16, 185, 129, 0.12);
-        }
-
-        :root[data-theme="dark"] .translation-details h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .detail-label {
             color: var(--text-muted-2);
         }
 
@@ -874,9 +713,6 @@
 
     <script src="js/main.js"></script>
     <script>
-        const speedControl = document.getElementById('speedControl');
-        const speedValue = document.getElementById('speedValue');
-
         // Sign videos are loaded from the database (SignVideo table), which is
         // populated from the "Sign Language" media library (this includes the
         // FSL-105/Mendeley videos, already imported as SignVideo rows keyed
@@ -944,29 +780,6 @@
         }
 
         let lastTranslation = [];
-        let currentSpeed = 1;
-
-        function setSpeedLabel(value) {
-            const map = {
-                '0.5': '0.5x Slow',
-                '0.6': '0.6x',
-                '0.7': '0.7x',
-                '0.8': '0.8x',
-                '0.9': '0.9x',
-                '1.0': 'Normal (1x)',
-                '1.1': '1.1x',
-                '1.2': '1.2x',
-                '1.3': '1.3x',
-                '1.4': '1.4x',
-                '1.5': '1.5x',
-                '1.6': '1.6x',
-                '1.7': '1.7x',
-                '1.8': '1.8x',
-                '1.9': '1.9x',
-                '2.0': '2x Fast'
-            };
-            speedValue.textContent = map[Number(value).toFixed(1)] || `${value}x`;
-        }
 
         function normalizeWord(word) {
             return word
@@ -1117,12 +930,12 @@
 
             lastTranslation = [{ sourceText: sign.label, sign }];
             renderTranslationResult(lastTranslation);
-            document.getElementById('translationDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('translationResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function renderSignCard(word, sign, index) {
             const mediaBlock = sign.video
-                ? `<video class="sign-video" controls playsinline preload="metadata" muted data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
+                ? `<video class="sign-video" controls playsinline preload="metadata" autoplay muted data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
                 : `<div class="sign-video-placeholder"><div class="demo-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${sign.fallback}</div><span>Add video later</span></div>`;
 
             return `
@@ -1134,74 +947,8 @@
             `;
         }
 
-        function getRenderedVideos() {
-            return Array.from(document.querySelectorAll('#translationResult .sign-video'));
-        }
-
-        function updateDurationEstimate() {
-            const videos = getRenderedVideos();
-            if (!videos.length) {
-                document.getElementById('duration').textContent = `${Math.max(2, Math.round(lastTranslation.length * (2 / currentSpeed)))}s`;
-                return;
-            }
-
-            let totalSeconds = 0;
-            videos.forEach(video => {
-                const duration = Number(video.duration);
-                if (Number.isFinite(duration) && duration > 0) {
-                    totalSeconds += duration / Math.max(currentSpeed, 0.1);
-                } else {
-                    totalSeconds += 2 / Math.max(currentSpeed, 0.1);
-                }
-            });
-
-            document.getElementById('duration').textContent = `${Math.max(1, Math.round(totalSeconds))}s`;
-        }
-
-        function applyPlaybackSpeed() {
-            getRenderedVideos().forEach(video => {
-                video.playbackRate = currentSpeed;
-                video.defaultPlaybackRate = currentSpeed;
-            });
-            updateDurationEstimate();
-        }
-
-        async function playSignSequence() {
-            const videos = getRenderedVideos();
-            if (!videos.length) {
-                return;
-            }
-
-            for (const video of videos) {
-                video.pause();
-                video.currentTime = 0;
-                video.playbackRate = currentSpeed;
-                video.defaultPlaybackRate = currentSpeed;
-
-                try {
-                    await video.play();
-                } catch (_) {
-                    continue;
-                }
-
-                await new Promise(resolve => {
-                    const onDone = () => {
-                        video.removeEventListener('ended', onDone);
-                        video.removeEventListener('error', onDone);
-                        resolve();
-                    };
-
-                    video.addEventListener('ended', onDone, { once: true });
-                    video.addEventListener('error', onDone, { once: true });
-                });
-            }
-        }
-
         function renderTranslationResult(units) {
             const resultDiv = document.getElementById('translationResult');
-            const translationDetails = document.getElementById('translationDetails');
-            const actionButtons = document.getElementById('actionButtons');
-
             const cardsHtml = units.map((unit, index) => {
                 return renderSignCard(unit.sourceText, unit.sign, index);
             }).join('');
@@ -1212,53 +959,8 @@
                     <div class="signs-grid">${cardsHtml}</div>
                 </div>
             `;
-
-            document.getElementById('wordCount').textContent = units.length;
-
-            getRenderedVideos().forEach(video => {
-                video.addEventListener('loadedmetadata', updateDurationEstimate);
-            });
-
-            applyPlaybackSpeed();
-            translationDetails.style.display = 'block';
-            actionButtons.style.display = 'grid';
         }
 
-        function repeatSign() {
-            if (!lastTranslation.length) return;
-            playSignSequence();
-        }
-
-        function slowMotion() {
-            currentSpeed = currentSpeed === 1 ? 0.5 : 1;
-            speedControl.value = String(currentSpeed);
-            setSpeedLabel(currentSpeed);
-            if (lastTranslation.length) applyPlaybackSpeed();
-        }
-
-        function downloadSign() {
-            if (!lastTranslation.length) {
-                alert('Pick a sign first.');
-                return;
-            }
-
-            const payload = {
-                text: lastTranslation.map(item => item.sourceText).join(' '),
-                words: lastTranslation.map(item => item.sourceText),
-                generatedAt: new Date().toISOString(),
-                note: 'Video files can be added later by setting the video field in signLibrary.'
-            };
-
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'text-to-sign-output.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        setSpeedLabel(speedControl.value);
         renderWordBrowse();
 
         loadSignLibrary()
@@ -1267,12 +969,6 @@
                 console.error('Failed to load sign videos:', err);
                 renderWordBrowse();
             });
-
-        speedControl.addEventListener('input', function() {
-            currentSpeed = Number(this.value);
-            setSpeedLabel(this.value);
-            if (lastTranslation.length) applyPlaybackSpeed();
-        });
 
         // Navbar dropdown
         (function() {
