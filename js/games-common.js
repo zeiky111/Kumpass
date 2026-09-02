@@ -304,20 +304,38 @@
   function createGameEngine(opts) {
     const state = {
       difficulty: 'easy',
-      levelIndex: 0, // index into levelsByDifficulty[difficulty] (a teacher level)
+      levelIndex: 0, // index into the CURRENT SHUFFLED ORDER for this difficulty
       questionIndex: 0, // index into the current level's question/item list
       score: 0,
       correct: 0,
       total: 0,
       completedDifficulties: { easy: false, medium: false, hard: false },
       levelsByDifficulty: { easy: [], medium: [], hard: [] },
+      // Per-difficulty shuffled level order, re-rolled every time that
+      // difficulty is (re)started -- so replaying assigns different
+      // questions to the "Level 1", "Level 2", ... slots instead of always
+      // playing the same authored level_number order every session.
+      shuffledOrder: { easy: null, medium: null, hard: null },
     };
+
+    // Re-shuffles which authored level fills each position for `difficulty`.
+    // Called every time that difficulty is (re)selected, including replays.
+    function reshuffleLevelOrder(difficulty) {
+      const list = state.levelsByDifficulty[difficulty] || [];
+      state.shuffledOrder[difficulty] = shuffle(list);
+    }
 
     // All playable content comes from teacher-authored GameLevel rows -- no
     // default/fallback pool. A difficulty with zero published levels simply
     // has nothing to play (see hasNextLevel/totalLevelsForDifficulty below).
     function activeLevelList() {
-      const list = state.levelsByDifficulty[state.difficulty] || [];
+      // Lazily shuffle on first access (e.g. the very first "Start Game" of a
+      // fresh page load, before any explicit setDifficulty() call) so even a
+      // brand-new session doesn't play the raw authored level_number order.
+      if (!state.shuffledOrder[state.difficulty]) {
+        reshuffleLevelOrder(state.difficulty);
+      }
+      const list = state.shuffledOrder[state.difficulty] || [];
       return list.length ? list : null;
     }
 
@@ -330,15 +348,13 @@
       return level ? level.items : [];
     }
 
+    // Displayed level number is the player's slot position in this session
+    // (1, 2, 3, ...) rather than the authored level_number, since the order
+    // is reshuffled every time the difficulty is (re)started -- showing the
+    // raw level_number would make the on-screen counter jump around
+    // non-sequentially (e.g. "Level 5" then "Level 2").
     function currentLevelNumber() {
-      const levels = activeLevelList();
-      let result;
-      if (levels) {
-        const level = levels[Math.min(state.levelIndex, levels.length - 1)];
-        result = level ? level.levelNumber : state.levelIndex + 1;
-      } else {
-        result = state.levelIndex + 1;
-      }
+      const result = state.levelIndex + 1;
       if (window.__KUMPAS_DEBUG_LEVELS__) {
         console.log('[KumpasGames.currentLevelNumber]', { difficulty: state.difficulty, levelIndex: state.levelIndex, result });
       }
@@ -427,6 +443,7 @@
     function setDifficulty(level, resetScore) {
       state.difficulty = level;
       state.levelIndex = 0;
+      reshuffleLevelOrder(level);
       document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('selected'));
       const btn = document.querySelector(`.difficulty-btn[data-level="${level}"]`);
       if (btn) btn.classList.add('selected');
