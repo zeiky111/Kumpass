@@ -770,6 +770,7 @@
         <div class="game-topbar">
             <div class="topbar-title-row">
                 <span class="level-badge"><strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></span>
+                <span class="level-badge" id="questionProgressBadge"></span>
             </div>
             <div class="topbar-controls">
                 <div class="difficulty-buttons">
@@ -918,6 +919,12 @@
             if (ofTotal) {
                 const totalLevels = engine.totalLevelsForDifficulty(engine.state.difficulty);
                 ofTotal.textContent = totalLevels ? `of ${totalLevels}` : '';
+            }
+            const progressBadge = document.getElementById('questionProgressBadge');
+            if (progressBadge) {
+                progressBadge.textContent = activeQuestions.length
+                    ? `Question ${Math.min(currentIndex + 1, activeQuestions.length)} of ${activeQuestions.length}`
+                    : '';
             }
         }
 
