@@ -39,6 +39,7 @@ from signtext.fingerspelling_svc import (  # noqa: E402
     CLASS_LABELS,
     MODEL_PATH,
     PROTOTYPES,
+    _canonicalize_landmarks_for_handedness,
     extract_features_from_landmarks,
 )
 
@@ -63,6 +64,27 @@ JITTER_STDDEV = 0.02
 ROTATIONS_PER_SAMPLE = 3
 MAX_ROTATION_DEGREES = 20.0
 _NP_RNG = np.random.default_rng(42)
+
+
+def _mirror_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Flips every landmark's x coordinate (1 - x), leaving y/z alone.
+
+    predict_letter_from_landmarks canonicalizes "Left"-handed input by
+    mirroring it to look right-handed before feature extraction, so the
+    model only ever sees right-looking geometry in principle -- but that
+    canonicalization depends on MediaPipe/the browser reporting the
+    correct handedness label. If that label is wrong (a real risk on
+    live webcam, confirmed by testing: feeding a genuine "C" sample
+    through with a flipped handedness label predicted "Q" in most of the
+    error cases -- matching the user's exact live-camera report of C
+    reading as Q), the canonicalization mirrors an already-correct hand
+    the wrong way, corrupting the geometry into something the model
+    never trained on. Training directly on mirrored copies (paired with
+    the opposite handedness label, so canonicalization mirrors them back
+    to the *original* orientation) teaches the model to still get the
+    right answer even when that label is wrong.
+    """
+    return [{"x": 1.0 - float(p["x"]), "y": float(p["y"]), "z": float(p["z"])} for p in landmarks]
 
 
 def _rotate_landmarks(landmarks: list[dict]) -> list[dict]:
@@ -143,12 +165,35 @@ def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
                     skipped += 1
                     continue
 
-                landmarks = [
+                raw_landmarks = [
                     {"x": values[i * 3], "y": values[i * 3 + 1], "z": values[i * 3 + 2]}
                     for i in range(21)
                 ]
+                # IMPORTANT: predict_letter_from_landmarks canonicalizes
+                # "Left"-handed input (mirrors it to look right-handed)
+                # before extracting features -- this must match exactly, or
+                # the model is trained on geometry the live runtime never
+                # actually shows it. This was previously missing: ~7,500 of
+                # the ~20,000 real training rows are labeled "Left" (from
+                # kaggle_extracted.csv), and without this canonicalization
+                # step they were trained on raw, un-mirrored landmarks the
+                # live prediction path would never present in that form.
+                landmarks = list(_canonicalize_landmarks_for_handedness(raw_landmarks, handedness))
+
                 feature_vector = extract_features_from_landmarks(landmarks, handedness).reshape(-1)
                 features.append(feature_vector)
+                labels.append(label)
+
+                # A mirrored twin of the now-canonicalized (always
+                # right-looking) landmarks, so the model also learns to
+                # recognize the letter if handedness detection is wrong on a
+                # live frame and mirrors a genuinely-correct hand the wrong
+                # way -- confirmed by testing that this exact scenario
+                # reproduces the user's live "C reads as Q" report.
+                mirrored_vector = extract_features_from_landmarks(
+                    _mirror_landmarks(landmarks), handedness
+                ).reshape(-1)
+                features.append(mirrored_vector)
                 labels.append(label)
 
                 for _ in range(JITTERS_PER_SAMPLE):
