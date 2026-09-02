@@ -97,10 +97,8 @@
                         </div>
                     </div>
 
-                    <div class="camera-settings">
-                        <h3>Camera Selection</h3>
-                        <label for="cameraSelect" class="camera-select-label">Choose camera</label>
-                        <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)">
+                    <div class="camera-settings" id="cameraSettings" hidden>
+                        <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)" aria-label="Choose camera">
                             <option value="">Default front camera</option>
                         </select>
                         <p id="cameraStatus" class="camera-status">Using default camera.</p>
@@ -157,10 +155,32 @@
     </footer>
 
     <style>
+        /* Scoped to this page only: the shared .page-header is tall (42px
+           top/bottom padding) and .footer adds a 60px top margin -- both,
+           combined with the camera panel, pushed this page past one
+           screen's height and forced scrolling. */
+        .page-header {
+            padding: 14px 20px;
+        }
+
+        body:has(.sign-to-text-container) .footer {
+            margin-top: 12px;
+            padding: 12px 20px;
+        }
+
+        .page-header .header-content h1 {
+            font-size: clamp(1.1rem, 1.6vw + 0.8rem, 1.5rem);
+            margin-bottom: 2px;
+        }
+
+        .page-header .header-content p {
+            font-size: 0.85rem;
+        }
+
         .sign-to-text-container {
             max-width: 1440px;
             margin: 0 auto;
-            padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem);
+            padding: clamp(0.5rem, 2vw, 1rem) clamp(1rem, 3vw, 2rem) clamp(1rem, 3vw, 1.5rem);
             font-family: 'Inter', -apple-system, sans-serif;
         }
 
@@ -174,14 +194,14 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             align-items: start;
-            gap: 2rem;
-            margin-bottom: 3rem;
+            gap: 1.25rem;
+            margin-bottom: 1rem;
         }
 
         .realtime-panel {
             background: #0f172a;
             border-radius: 14px;
-            padding: 1.25rem;
+            padding: 0.85rem;
             text-align: center;
         }
 
@@ -196,10 +216,10 @@
         .realtime-letter {
             font-family: 'Poppins', sans-serif;
             font-weight: 800;
-            font-size: 3rem;
+            font-size: 2rem;
             line-height: 1;
             color: #818cf8;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
         }
 
         .realtime-meta {
@@ -210,13 +230,13 @@
         .results-section {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 0.85rem;
         }
 
         .results-panel {
             background: rgba(255,255,255,0.95);
             border-radius: 22px;
-            padding: 1.5rem;
+            padding: 1.1rem 1.25rem;
             box-shadow: 0 14px 34px rgba(15,23,42,0.09);
             border: 1px solid rgba(148,163,184,0.14);
             animation: kdRiseIn 0.55s ease both;
@@ -232,7 +252,7 @@
 
         .stable-transcript {
             width: 100%;
-            min-height: 120px;
+            min-height: 70px;
             resize: vertical;
             border: 1px solid rgba(148,163,184,0.35);
             border-radius: 12px;
@@ -259,8 +279,8 @@
         .detection-history {
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
-            max-height: 320px;
+            gap: 0.5rem;
+            max-height: 190px;
             overflow-y: auto;
         }
 
@@ -316,7 +336,7 @@
         .camera-panel {
             background: rgba(255,255,255,0.95);
             border-radius: 22px;
-            padding: 1.5rem;
+            padding: 1rem 1.15rem;
             box-shadow: 0 14px 34px rgba(15,23,42,0.09);
             border: 1px solid rgba(148,163,184,0.14);
             animation: kdRiseIn 0.55s ease both;
@@ -330,17 +350,17 @@
             margin-top: 0;
             color: #0f172a;
             font-weight: 700;
-            margin-bottom: 1rem;
-            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.05rem;
         }
 
         .camera-container {
             background: #000;
             border-radius: 16px;
             overflow: hidden;
-            margin-bottom: 1.25rem;
-            aspect-ratio: 3/4;
-            max-height: 72vh;
+            margin-bottom: 0.6rem;
+            aspect-ratio: 4/3;
+            max-height: 30vh;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -373,8 +393,8 @@
         .camera-controls {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 0.6rem;
+            margin-bottom: 0.6rem;
         }
 
         .camera-select-label {
@@ -388,17 +408,17 @@
         .camera-select {
             width: 100%;
             border: 1px solid rgba(148,163,184,0.35);
-            border-radius: 12px;
-            padding: 0.8rem 0.95rem;
-            font-size: 0.95rem;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
             background: #fff;
             color: #0f172a;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.25rem;
         }
 
         .camera-status {
-            margin: 0 0 1rem;
-            font-size: 0.88rem;
+            margin: 0;
+            font-size: 0.75rem;
             color: #64748b;
         }
 
@@ -424,9 +444,9 @@
 
         .recognition-status, .camera-settings {
             background: #f8fafc;
-            border-radius: 14px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border-radius: 12px;
+            padding: 0.65rem 0.85rem;
+            margin-bottom: 0.6rem;
         }
 
         .recognition-status h3, .camera-settings h3 {
@@ -685,7 +705,7 @@
             }
 
             .camera-container {
-                max-height: 65vh;
+                max-height: 38vh;
             }
 
             .camera-controls,
@@ -702,7 +722,15 @@
 
         @media (max-height: 700px) {
             .camera-container {
-                max-height: 58vh;
+                max-height: 34vh;
+            }
+
+            .results-panel {
+                padding: 1rem;
+            }
+
+            .detection-history {
+                max-height: 160px;
             }
         }
 
@@ -1149,6 +1177,11 @@
                 if (currentValue && availableCameras.some(device => device.deviceId === currentValue)) {
                     select.value = currentValue;
                 }
+
+                // Most users only have one camera; the picker is only useful
+                // (and only shown) when there's actually a choice to make.
+                const settingsBlock = document.getElementById('cameraSettings');
+                if (settingsBlock) settingsBlock.hidden = availableCameras.length <= 1;
 
                 updateCameraStatus();
             } catch (error) {
@@ -1687,14 +1720,10 @@
                         if (bothHandsClose) {
                             // Two hands visible AND close together = likely a
                             // two-handed word/phrase sign performed as one gesture.
-                            // Draw one combined box around both hands instead of two
-                            // separate boxes, with each hand's skeleton inside it.
+                            // Draw one combined box around both hands instead of
+                            // two separate boxes.
                             const combinedLandmarks = handRecords.flatMap(hand => hand.landmarks);
                             drawHandBox(combinedLandmarks, overlayLabel || 'Sign', '#ff33cc');
-                            handRecords.forEach((hand, idx) => {
-                                const isPrimary = idx === primaryIndex;
-                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
-                            });
                         } else {
                             // Either one hand, or two hands far apart (e.g. one hand
                             // fingerspelling while the other rests elsewhere in frame)
@@ -1704,7 +1733,6 @@
                                 const color = isPrimary ? '#ff33cc' : '#33ff99';
                                 const label = getHandDisplayLabel(hand.handedness);
                                 drawHandBox(hand.landmarks, label, color);
-                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
                             });
                         }
                     } catch (e) {
