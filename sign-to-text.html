@@ -654,7 +654,16 @@
         const DEBUG = true;
         function debugLog(msg, type = 'log') {
             const timestamp = new Date().toLocaleTimeString();
-            console[type](`[${timestamp}] ${msg}`);
+            // Only 'log'/'error'/'warn'/'info' exist on the console object --
+            // callers also pass 'success' (e.g. when a word is committed) as
+            // a purely cosmetic type, which isn't a real console method and
+            // used to throw "console[type] is not a function" right at the
+            // moment a correct prediction was about to be displayed. That
+            // thrown error aborted the calling function before it could
+            // finish showing the result, so a correct word could compute
+            // successfully and still never appear on screen.
+            const fn = typeof console[type] === 'function' ? type : 'log';
+            console[fn](`[${timestamp}] ${msg}`);
         }
 
         function isMobileDevice() {
