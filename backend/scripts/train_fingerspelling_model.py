@@ -48,8 +48,14 @@ SYNTHETIC_SAMPLES_PER_MISSING_LETTER = 200
 LANDMARK_COLUMNS = 21 * 3
 # How many jittered variants to generate per real recorded row -- see
 # _jitter_landmarks for why this exists.
-JITTERS_PER_SAMPLE = 4
-JITTER_STDDEV = 0.01
+# Increased from 4/0.01: the user reports widespread misdetection across
+# many letters on live webcam despite 96%+ accuracy on clean recorded data,
+# pointing to a bigger clean-data-vs-live-camera gap than the original
+# jitter strength covered. Doubled both the noise magnitude and the number
+# of jittered variants per real sample so the model sees a wider range of
+# imprecise/noisy landmark positions during training.
+JITTERS_PER_SAMPLE = 8
+JITTER_STDDEV = 0.02
 _NP_RNG = np.random.default_rng(42)
 
 
@@ -154,7 +160,7 @@ def evaluate_on_real_data(x_real: np.ndarray, y_real: np.ndarray, counts: Counte
     x_train, x_test, y_train, y_test = train_test_split(
         x_real, y_real, test_size=0.2, stratify=y_real, random_state=42
     )
-    model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
+    model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=20.0, gamma="scale", probability=True))
     model.fit(x_train, y_train)
     predictions = model.predict(x_test)
     accuracy = float(accuracy_score(y_test, predictions))
@@ -190,7 +196,7 @@ def main() -> None:
     print(f"\nTraining deployed model on {len(y_final)} rows "
           f"({len(y_real)} real + {len(y_fill)} synthetic-filled for missing letters)...")
 
-    final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
+    final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=20.0, gamma="scale", probability=True))
     final_model.fit(x_final, y_final)
 
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
