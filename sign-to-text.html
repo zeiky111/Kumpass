@@ -113,6 +113,32 @@
                         <button class="btn-secondary" onclick="stopCameraFeed()">Stop</button>
                         <button id="mirrorFixBtn" class="btn-secondary" onclick="toggleMirrorFix()">Mirror Fix: ON</button>
                     </div>
+
+                    <div class="realtime-panel">
+                        <h3>Real-Time Detection</h3>
+                        <div id="realtimeLetter" class="realtime-letter">–</div>
+                        <div id="realtimeMeta" class="realtime-meta">Waiting for a sign…</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section">
+                <div class="results-panel">
+                    <h2>📝 Stable Transcript</h2>
+                    <textarea id="stableTranscript" class="stable-transcript" readonly placeholder="Recognized letters and words will appear here…"></textarea>
+                    <div class="transcript-actions">
+                        <button class="btn-secondary" onclick="clearTranscript()">🗑️ Clear All</button>
+                        <button class="btn-primary" onclick="exportTranscript()">⬇️ Export Transcript</button>
+                    </div>
+                </div>
+
+                <div class="results-panel">
+                    <h2>📜 Detection History</h2>
+                    <div id="detectionHistory" class="detection-history">
+                        <p class="detection-history-empty">No signs detected yet.</p>
+                    </div>
+                    <p id="detectionTotal" class="detection-total">Total signs: 0</p>
                 </div>
             </section>
 
@@ -146,9 +172,145 @@
 
         .translator-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            align-items: start;
             gap: 2rem;
             margin-bottom: 3rem;
+        }
+
+        .realtime-panel {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .realtime-panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 0.85rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .realtime-letter {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 3rem;
+            line-height: 1;
+            color: #818cf8;
+            margin-bottom: 0.5rem;
+        }
+
+        .realtime-meta {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .results-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            padding: 1.5rem;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+        }
+
+        .results-panel h2 {
+            margin-top: 0;
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
+        }
+
+        .stable-transcript {
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+            border: 1px solid rgba(148,163,184,0.35);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            font-size: 1.4rem;
+            letter-spacing: 0.08em;
+            font-family: 'Poppins', 'Inter', sans-serif;
+            color: #0f172a;
+            background: #f8fafc;
+            box-sizing: border-box;
+        }
+
+        .transcript-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .transcript-actions .btn-primary,
+        .transcript-actions .btn-secondary {
+            flex: 1;
+        }
+
+        .detection-history {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .detection-history-empty {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .detection-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+        }
+
+        .detection-item-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detection-item-label {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .detection-item-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .detection-item-confidence {
+            background: #6366f1;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+        }
+
+        .detection-total {
+            margin: 1rem 0 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: right;
         }
 
         .camera-panel {
@@ -683,6 +845,8 @@
         let lastPrediction = '';
         let lastPredictionAt = 0;
         let mirrorFixEnabled = true;
+        let detectionHistoryEntries = [];
+        const DETECTION_HISTORY_MAX = 30;
 
         let availableCameras = [];
         let selectedCameraId = '';
@@ -820,9 +984,31 @@
             overlayCtx.fillStyle = color.startsWith('#') ? `${color}1f` : color;
             overlayCtx.fillRect(x, y, boxW, boxH);
             overlayCtx.strokeRect(x, y, boxW, boxH);
-            overlayCtx.font = '20px sans-serif';
-            overlayCtx.fillStyle = '#fff';
-            overlayCtx.fillText(label, x + 8, y + 22);
+
+            // A single recognized letter/word gets a large, solid, centered
+            // badge (matching the reference UI: a bold letter filling most
+            // of the box) instead of small corner text -- multi-word labels
+            // ("LEFT"/"RIGHT" fallback, or full word predictions) stay as a
+            // smaller top-left tag since they wouldn't fit legibly centered.
+            const isSingleGlyph = label.length <= 2;
+            if (isSingleGlyph) {
+                const badgeSize = Math.min(boxW, boxH) * 0.45;
+                const badgeX = x + boxW / 2 - badgeSize / 2;
+                const badgeY = y + 10;
+                overlayCtx.fillStyle = color;
+                overlayCtx.fillRect(badgeX, badgeY, badgeSize, badgeSize);
+                overlayCtx.font = `700 ${Math.round(badgeSize * 0.55)}px 'Poppins', sans-serif`;
+                overlayCtx.fillStyle = '#fff';
+                overlayCtx.textAlign = 'center';
+                overlayCtx.textBaseline = 'middle';
+                overlayCtx.fillText(label, badgeX + badgeSize / 2, badgeY + badgeSize / 2 + 2);
+                overlayCtx.textAlign = 'left';
+                overlayCtx.textBaseline = 'alphabetic';
+            } else {
+                overlayCtx.font = '20px sans-serif';
+                overlayCtx.fillStyle = '#fff';
+                overlayCtx.fillText(label, x + 8, y + 22);
+            }
         }
 
         function drawHandSkeleton(landmarks, color = '#00e5ff') {
@@ -1092,6 +1278,7 @@
 
             handState.previewLetter = dominantLetter;
             try { drawPredictionLabel(dominantLetter, dominantAvgConfidence); } catch (e) { /* ignore */ }
+            try { updateRealtimePanel(dominantLetter, dominantAvgConfidence); } catch (e) { /* ignore */ }
 
             if (dominantCount < minVoteCount || dominantRatio < LETTER_VOTE_MIN_RATIO || dominantAvgConfidence < minAvgConfidence) {
                 return;
@@ -1112,6 +1299,7 @@
             if (now - handState.lastCommittedLetterAt < requiredCooldownMs) return;
 
             commitDetectedLetter(handedness, dominantLetter);
+            pushDetectionHistory(dominantLetter, dominantAvgConfidence);
             handState.lastCommittedLetterAt = now;
             handState.lastCommittedLetter = dominantLetter;
             handState.letterVoteBuffer = [];
@@ -1131,6 +1319,82 @@
         function appendOutputToken(token, icon, confidence, processingMs) {
             lastPrediction = String(token).toUpperCase();
             lastPredictionAt = Date.now();
+
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) {
+                transcript.value = transcript.value ? `${transcript.value} ${lastPrediction}` : lastPrediction;
+                transcript.scrollTop = transcript.scrollHeight;
+            }
+
+            pushDetectionHistory(lastPrediction, confidence);
+        }
+
+        function pushDetectionHistory(label, confidence) {
+            detectionHistoryEntries.unshift({
+                label: String(label || '').toUpperCase(),
+                confidence: Number(confidence || 0),
+                at: new Date(),
+            });
+            if (detectionHistoryEntries.length > DETECTION_HISTORY_MAX) {
+                detectionHistoryEntries.length = DETECTION_HISTORY_MAX;
+            }
+            renderDetectionHistory();
+        }
+
+        function renderDetectionHistory() {
+            const container = document.getElementById('detectionHistory');
+            const totalEl = document.getElementById('detectionTotal');
+            if (totalEl) totalEl.textContent = `Total signs: ${detectionHistoryEntries.length}`;
+            if (!container) return;
+
+            if (!detectionHistoryEntries.length) {
+                container.innerHTML = '<p class="detection-history-empty">No signs detected yet.</p>';
+                return;
+            }
+
+            container.innerHTML = detectionHistoryEntries.map(entry => `
+                <div class="detection-item">
+                    <div class="detection-item-main">
+                        <span class="detection-item-label">${entry.label}</span>
+                        <span class="detection-item-time">${entry.at.toLocaleTimeString()}</span>
+                    </div>
+                    <span class="detection-item-confidence">${entry.confidence.toFixed(0)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function updateRealtimePanel(label, confidence) {
+            const letterEl = document.getElementById('realtimeLetter');
+            const metaEl = document.getElementById('realtimeMeta');
+            if (letterEl) letterEl.textContent = label || '–';
+            if (metaEl) {
+                metaEl.textContent = label
+                    ? `${Number(confidence || 0).toFixed(0)}% • ${new Date().toLocaleTimeString()}`
+                    : 'Waiting for a sign…';
+            }
+        }
+
+        function clearTranscript() {
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) transcript.value = '';
+            detectionHistoryEntries = [];
+            renderDetectionHistory();
+            updateRealtimePanel('', 0);
+        }
+
+        function exportTranscript() {
+            const transcript = document.getElementById('stableTranscript');
+            const text = transcript ? transcript.value : '';
+            if (!text) return;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sign-to-text-transcript-${Date.now()}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         function handleWordSequenceResult(data, processingMs) {
@@ -1180,6 +1444,12 @@
             handState.lastLetterAddedAt = Date.now();
             handState.previewLetter = String(letter || '').trim().toUpperCase();
             handState.lastCommittedLetter = handState.previewLetter;
+
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) {
+                transcript.value += handState.previewLetter;
+                transcript.scrollTop = transcript.scrollHeight;
+            }
         }
 
         function removeLastLetter(handedness) {
@@ -1537,8 +1807,12 @@
             // overlay for boxes and labels
             createOverlay(container);
 
-            debugLog('⏱️ Starting hand tracking (200ms) and word-sequence poll (700ms)', 'log');
-            captureTimer = setInterval(maybePostWordSequence, WORD_API_INTERVAL_MS);
+            // Word-sequence detection is temporarily disabled -- letters
+            // (fingerspelling) are the current focus, so the word-sequence
+            // poll (maybePostWordSequence) is not started. Re-enable by
+            // uncommenting the setInterval line below.
+            debugLog('⏱️ Starting hand tracking (200ms); word-sequence detection disabled (letters-only mode)', 'log');
+            // captureTimer = setInterval(maybePostWordSequence, WORD_API_INTERVAL_MS);
             handsTimer = setInterval(runFingerSpellingFrame, 200);
         }
 
