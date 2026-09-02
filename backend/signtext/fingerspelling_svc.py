@@ -296,6 +296,17 @@ def _apply_letter_rules(scores: Dict[str, float], features: np.ndarray) -> None:
         _boost(scores, "C", 0.45)
         scores["X"] = max(0.0, float(scores.get("X", 0.0)) - 0.20)
 
+    # C vs O was investigated as a hand-tuned rule (single-feature threshold
+    # on thumb_middle_dist), but real O samples overlap C's range on every
+    # individual feature tried (best single-feature split still let ~15-19%
+    # of real O rows through as false C boosts), so any such threshold
+    # traded C accuracy for O accuracy rather than net improving either. A
+    # dedicated binary classifier on the FULL feature vector separates C
+    # from O at 99.5%, confirming the two are separable -- just not via one
+    # or two hand-picked thresholds -- so this is left to the main 26-class
+    # SVC's own decision boundary (already 97%+ on real C data) instead of
+    # a crude rule that only sees a slice of the feature space.
+
     if (
         index_ext >= 0.78
         and middle_ext <= 0.35
