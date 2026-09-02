@@ -68,20 +68,6 @@
 
     <!-- Main Content -->
     <div class="translator-container" id="translatorMain">
-        <div class="translator-grid translator-grid-single">
-            <!-- Output Section -->
-            <section class="translator-panel output-panel">
-                <h2>🤟 Sign Language Demonstration</h2>
-
-                <div id="translationResult" class="translation-result">
-                    <div class="demo-placeholder">
-                        <div class="demo-icon">👋</div>
-                        <p>Click a sign below to see the demonstration</p>
-                    </div>
-                </div>
-            </section>
-        </div>
-
         <!-- Browse All Signs -->
         <section class="browse-section">
             <div class="browse-header">
@@ -95,6 +81,15 @@
             <div class="word-browse-pagination" id="wordBrowsePagination"></div>
         </section>
 
+    </div>
+
+    <!-- Sign video preview modal -->
+    <div class="sign-preview-overlay hidden" id="signPreviewOverlay">
+        <div class="sign-preview-modal">
+            <button type="button" class="sign-preview-close" id="signPreviewClose" aria-label="Close">&times;</button>
+            <div class="sign-preview-media" id="signPreviewMedia"></div>
+            <h3 class="sign-preview-word" id="signPreviewWord"></h3>
+        </div>
     </div>
         </main>
     </div>
@@ -198,155 +193,10 @@
             flex-wrap: wrap;
         }
 
-        .translator-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-            align-items: stretch;
-        }
-
-        .translator-grid-single {
-            grid-template-columns: 1fr;
-            max-width: 720px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .translator-panel {
-            background: rgba(255,255,255,0.95);
-            border-radius: 22px;
-            padding: 2rem;
-            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
-            border: 1px solid rgba(148,163,184,0.14);
-            animation: kdRiseIn 0.55s ease both;
-        }
-
-        .output-panel {
-            animation-delay: .08s;
-        }
-
-        .translator-panel h2 {
-            margin-top: 0;
-            color: #0f172a;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .translator-container .btn-primary,
-        .translator-container .btn-secondary {
-            border-radius: 999px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .translator-container .btn-primary {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
-        }
-
-        .translator-container .btn-primary:hover {
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
-        }
-
-        .translator-container .btn-secondary:hover {
-            transform: translateY(-1px);
-        }
-
-        .translation-result {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 2rem;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .demo-placeholder {
-            text-align: center;
-            color: #999;
-        }
-
         .demo-icon {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
-        }
-
-        .signs-container {
-            margin-bottom: 1.5rem;
-        }
-
-        .signs-container h3 {
-            margin-top: 0;
-            font-size: 1rem;
-            color: var(--dark);
-            margin-bottom: 1rem;
-        }
-
-        .signs-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-        }
-
-        .sign-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 14px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-        }
-
-        .sign-card:hover {
-            border-color: var(--primary-blue);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
-        }
-
-        .sign-video,
-        .sign-video-placeholder {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 8px;
-            margin-bottom: 0.6rem;
-            background: #111827;
-        }
-
-        .sign-video {
-            display: block;
-            object-fit: cover;
-            object-position: center top;
-        }
-
-        .sign-video-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #e5e7eb;
-            font-size: 0.75rem;
-        }
-
-        .sign-card-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .sign-card-text {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .sign-card-meta {
-            margin-top: 0.3rem;
-            font-size: 0.75rem;
-            color: #6b7280;
         }
 
         .history-section {
@@ -410,29 +260,106 @@
             color: #999;
         }
 
-        @media (max-width: 1024px) {
-            .translator-grid {
-                gap: 1.25rem;
-            }
-
-            .translator-panel {
-                padding: 1.5rem;
-            }
-        }
-
         @media (max-width: 768px) {
             .ge-modal {
                 padding: 1.5rem;
-            }
-
-            .translator-grid {
-                grid-template-columns: 1fr;
             }
 
             .browse-search-row {
                 max-width: 100%;
                 width: 100%;
             }
+        }
+
+        /* ---- Sign preview modal ---- */
+        .sign-preview-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1300;
+            padding: 1.5rem;
+        }
+
+        .sign-preview-overlay.hidden {
+            display: none;
+        }
+
+        .sign-preview-modal {
+            position: relative;
+            width: min(480px, 100%);
+            background: white;
+            border-radius: 18px;
+            padding: 1.75rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+        }
+
+        .sign-preview-close {
+            position: absolute;
+            top: 0.85rem;
+            right: 0.85rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sign-preview-close:hover {
+            background: #e2e8f0;
+        }
+
+        .sign-preview-media {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .sign-preview-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sign-preview-media .demo-icon {
+            font-size: 3rem;
+            color: #e5e7eb;
+        }
+
+        .sign-preview-word {
+            margin: 0;
+            text-align: center;
+            font-size: 1.25rem;
+            color: #0f172a;
+        }
+
+        :root[data-theme="dark"] .sign-preview-modal {
+            background: var(--surface-card);
+        }
+
+        :root[data-theme="dark"] .sign-preview-word {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-preview-close {
+            background: var(--surface-card-alt);
+            color: var(--text-muted-2);
         }
 
         /* ---- Browse All Signs ---- */
@@ -546,10 +473,6 @@
         }
 
         /* ---- Dark theme overrides ---- */
-        :root[data-theme="dark"] .translator-panel h2 {
-            color: var(--text-body);
-        }
-
         :root[data-theme="dark"] .browse-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
@@ -581,7 +504,6 @@
             color: #93c5fd;
         }
 
-        :root[data-theme="dark"] .translator-panel,
         :root[data-theme="dark"] .history-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
@@ -634,31 +556,6 @@
         }
 
         :root[data-theme="dark"] .word-picker-empty {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translation-result {
-            background: var(--surface-card-alt);
-        }
-
-        :root[data-theme="dark"] .demo-placeholder {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .signs-container h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .sign-card {
-            background: var(--surface-card);
-            border-color: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] .sign-card-text {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .sign-card-meta {
             color: var(--text-muted-2);
         }
 
@@ -779,8 +676,6 @@
             signLibraryReady = true;
         }
 
-        let lastTranslation = [];
-
         function normalizeWord(word) {
             return word
                 .toLowerCase()
@@ -792,53 +687,6 @@
         function lookupSign(word) {
             const clean = normalizeWord(word);
             return signLibrary[clean] || null;
-        }
-
-        function splitWords(text) {
-            return normalizeWord(text)
-                .split(/\s+/)
-                .filter(Boolean);
-        }
-
-        function buildTranslationUnits(text) {
-            const tokens = splitWords(text);
-            const units = [];
-            let index = 0;
-
-            while (index < tokens.length) {
-                let match = null;
-                let size = 0;
-
-                for (let len = 5; len >= 1; len--) {
-                    const phrase = tokens.slice(index, index + len).join(' ');
-                    if (phrase && signLibrary[phrase]) {
-                        match = signLibrary[phrase];
-                        size = len;
-                        break;
-                    }
-                }
-
-                if (match) {
-                    const sourceText = tokens.slice(index, index + size).join(' ');
-                    units.push({ sourceText, sign: match });
-                    index += size;
-                    continue;
-                }
-
-                const token = tokens[index];
-                units.push({
-                    sourceText: token,
-                    sign: {
-                        label: token,
-                        category: 'unknown',
-                        video: '',
-                        fallback: '🔤'
-                    }
-                });
-                index += 1;
-            }
-
-            return units;
         }
 
         function escapeHtml(value) {
@@ -924,42 +772,39 @@
             });
         }
 
+        const signPreviewOverlay = document.getElementById('signPreviewOverlay');
+        const signPreviewMedia = document.getElementById('signPreviewMedia');
+        const signPreviewWord = document.getElementById('signPreviewWord');
+        const signPreviewClose = document.getElementById('signPreviewClose');
+
         function previewSign(word) {
             const sign = lookupSign(word);
             if (!sign) return;
 
-            lastTranslation = [{ sourceText: sign.label, sign }];
-            renderTranslationResult(lastTranslation);
-            document.getElementById('translationResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            signPreviewWord.textContent = sign.label;
+            signPreviewMedia.innerHTML = sign.video
+                ? `<video controls playsinline preload="metadata" autoplay muted><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
+                : `<div class="demo-icon">${sign.fallback}</div>`;
+
+            signPreviewOverlay.classList.remove('hidden');
         }
 
-        function renderSignCard(word, sign, index) {
-            const mediaBlock = sign.video
-                ? `<video class="sign-video" controls playsinline preload="metadata" autoplay muted data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
-                : `<div class="sign-video-placeholder"><div class="demo-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${sign.fallback}</div><span>Add video later</span></div>`;
-
-            return `
-                <article class="sign-card" data-sign-word="${escapeHtml(word)}" data-sign-index="${index}">
-                    ${mediaBlock}
-                    <div class="sign-card-text">${escapeHtml(sign.label)}</div>
-                    <div class="sign-card-meta">${escapeHtml(word)}</div>
-                </article>
-            `;
+        function closeSignPreview() {
+            signPreviewOverlay.classList.add('hidden');
+            signPreviewMedia.innerHTML = '';
         }
 
-        function renderTranslationResult(units) {
-            const resultDiv = document.getElementById('translationResult');
-            const cardsHtml = units.map((unit, index) => {
-                return renderSignCard(unit.sourceText, unit.sign, index);
-            }).join('');
-
-            resultDiv.innerHTML = `
-                <div class="signs-container">
-                    <h3>Sign Demonstration</h3>
-                    <div class="signs-grid">${cardsHtml}</div>
-                </div>
-            `;
+        if (signPreviewClose) signPreviewClose.addEventListener('click', closeSignPreview);
+        if (signPreviewOverlay) {
+            signPreviewOverlay.addEventListener('click', (e) => {
+                if (e.target === signPreviewOverlay) closeSignPreview();
+            });
         }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && signPreviewOverlay && !signPreviewOverlay.classList.contains('hidden')) {
+                closeSignPreview();
+            }
+        });
 
         renderWordBrowse();
 
