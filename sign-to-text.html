@@ -123,22 +123,19 @@
             <!-- Results Section -->
             <section class="results-section">
                 <div class="results-panel">
-                    <h2>📝 Stable Transcript</h2>
-                    <textarea id="stableTranscript" class="stable-transcript" readonly placeholder="Recognized letters and words will appear here…"></textarea>
-                    <div class="transcript-actions">
-                        <button class="btn-secondary" onclick="clearTranscript()">🗑️ Clear All</button>
-                        <button class="btn-primary" onclick="exportTranscript()">⬇️ Export Transcript</button>
-                    </div>
-                </div>
-
-                <div class="results-panel">
                     <h2>📜 Detection History</h2>
                     <div id="detectionHistory" class="detection-history">
                         <p class="detection-history-empty">No signs detected yet.</p>
                     </div>
                     <p id="detectionTotal" class="detection-total">Total signs: 0</p>
+                    <div class="transcript-actions">
+                        <button class="btn-secondary" onclick="clearTranscript()">🗑️ Clear All</button>
+                        <button class="btn-primary" onclick="exportTranscript()">⬇️ Export Transcript</button>
+                    </div>
                 </div>
             </section>
+
+            <textarea id="stableTranscript" hidden></textarea>
 
 
         </div>
@@ -280,7 +277,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            max-height: 190px;
+            max-height: 420px;
             overflow-y: auto;
         }
 
