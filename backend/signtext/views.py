@@ -9,7 +9,6 @@ from django.db import DatabaseError, IntegrityError, OperationalError
 from django.db.models import F, Q, Sum
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -33,7 +32,6 @@ from .models import (
     Achievement,
     Announcement,
     Certificate,
-    FSL105Clip,
     GameLevel,
     GameLevelItem,
     LearningModule,
@@ -2404,69 +2402,6 @@ def sign_videos(request: Any) -> Response:
 
 def _key_for_word(word: str) -> str:
     return str(word or "").strip().lower()
-
-
-# FSL-105 (Mendeley) label -> SignVideo category, so these clips file into the
-# same category filter the Text-to-Sign UI already offers.
-FSL105_CATEGORY_MAP = {
-    "CALENDAR": SignVideo.CATEGORY_CALENDAR,
-    "COLOR": SignVideo.CATEGORY_COLORS,
-    "NUMBER": SignVideo.CATEGORY_NUMBERS,
-    "DAYS": SignVideo.CATEGORY_DAYS,
-    "FAMILY": SignVideo.CATEGORY_FAMILY,
-    "RELATIONSHIPS": SignVideo.CATEGORY_RELATIONSHIPS,
-    "FOOD": SignVideo.CATEGORY_FOOD,
-    "DRINK": SignVideo.CATEGORY_DRINK,
-    "SURVIVAL": SignVideo.CATEGORY_SURVIVAL,
-    "GREETING": SignVideo.CATEGORY_GREETINGS,
-}
-
-
-@api_view(["GET"])
-def fsl105_signs(request: Any) -> Response:
-    """Public listing of FSL-105 (Mendeley dataset) signs, one entry per
-    unique label, so they browse/search alongside the SignVideo library in
-    the Text-to-Sign translator. The actual clip stays stored as a binary
-    blob on FSL105Clip and is streamed on demand by fsl105_clip_video.
-    """
-    seen_labels = set()
-    results = []
-    clips = (
-        FSL105Clip.objects.exclude(video_data=None)
-        .only("clip_id", "label", "category")
-        .order_by("label", "clip_id")
-    )
-    for clip in clips:
-        if clip.label in seen_labels:
-            continue
-        seen_labels.add(clip.label)
-
-        word = clip.label.strip().replace("’", "'").title().replace("'T ", "'t ").replace("'S ", "'s ")
-        results.append(
-            {
-                "id": f"fsl105-{clip.clip_id}",
-                "key": _key_for_word(word),
-                "word": word,
-                "category": FSL105_CATEGORY_MAP.get(clip.category.strip().upper(), SignVideo.CATEGORY_PHRASES),
-                "video_url": request.build_absolute_uri(f"/api/fsl105-clips/{clip.clip_id}/video/"),
-                "order": 0,
-            }
-        )
-    return Response(results)
-
-
-@api_view(["GET"])
-def fsl105_clip_video(request: Any, clip_id: int) -> Response:
-    """Streams the raw video bytes for one FSL105Clip."""
-    clip = get_object_or_404(FSL105Clip, clip_id=clip_id)
-    if not clip.video_data:
-        return Response({"error": "No video data for this clip"}, status=404)
-
-    content_type = clip.video_content_type or "video/quicktime"
-    response = HttpResponse(bytes(clip.video_data), content_type=content_type)
-    response["Content-Disposition"] = f'inline; filename="{clip.video_filename or f"clip-{clip.clip_id}.mov"}"'
-    response["Cache-Control"] = "public, max-age=86400"
-    return response
 
 
 @api_view(["GET", "POST"])

@@ -68,71 +68,15 @@
 
     <!-- Main Content -->
     <div class="translator-container" id="translatorMain">
-        <div class="translator-grid">
-            <!-- Input Section -->
-            <section class="translator-panel input-panel">
-                <h2>📝 Build Your Sentence</h2>
-
-                <div class="word-search-row">
-                    <i class="fas fa-search word-search-icon"></i>
-                    <input type="text" id="wordSearchInput" class="word-search-input" placeholder="Search a sign word…" autocomplete="off">
-                </div>
-
-                <div class="translator-options">
-                    <div class="option-group">
-                        <label for="categorySelect"><i class="fas fa-tags"></i> Category</label>
-                        <select id="categorySelect" class="select-input">
-                            <option value="all">All Categories</option>
-                            <option value="greetings">Greetings</option>
-                            <option value="everyday">Everyday Words</option>
-                            <option value="family">Family</option>
-                            <option value="numbers">Numbers</option>
-                            <option value="emotions">Emotions</option>
-                            <option value="school">School</option>
-                            <option value="calendar">Calendar</option>
-                            <option value="colors">Colors</option>
-                            <option value="food_drink">Food &amp; Drink</option>
-                            <option value="survival">Survival</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="word-picker-grid" id="wordPickerGrid"></div>
-
-                <div class="panel-divider"><span>selected words</span></div>
-
-                <div class="selected-words-wrapper">
-                    <div class="selected-words" id="selectedWords">
-                        <span class="selected-words-empty" id="selectedWordsEmpty">No words selected yet — click a word above to add it.</span>
-                    </div>
-                    <div class="input-counter">
-                        <span id="charCount">0</span>/200
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="btn-primary" onclick="translateText()">
-                        <span>▶</span> Translate to Sign
-                    </button>
-                    <button class="btn-secondary" onclick="clearInput()">Clear</button>
-                </div>
-
-                <div class="panel-divider"><span>or try a quick example</span></div>
-
-                <div class="quick-examples">
-                    <h3><i class="fas fa-bolt"></i> Quick Examples <span id="exampleCategoryLabel" class="example-category-label"></span></h3>
-                    <div class="example-chips" id="exampleChips"></div>
-                </div>
-            </section>
-
+        <div class="translator-grid translator-grid-single">
             <!-- Output Section -->
             <section class="translator-panel output-panel">
                 <h2>🤟 Sign Language Demonstration</h2>
-                
+
                 <div id="translationResult" class="translation-result">
                     <div class="demo-placeholder">
                         <div class="demo-icon">👋</div>
-                        <p>Pick words and click "Translate to Sign" to see the demonstration</p>
+                        <p>Click a sign below to see the demonstration</p>
                     </div>
                 </div>
 
@@ -181,21 +125,6 @@
             <div class="word-browse-pagination" id="wordBrowsePagination"></div>
         </section>
 
-    </div>
-
-    <!-- Sign video preview modal -->
-    <div class="sign-preview-overlay hidden" id="signPreviewOverlay">
-        <div class="sign-preview-modal">
-            <button type="button" class="sign-preview-close" id="signPreviewClose" aria-label="Close">&times;</button>
-            <div class="sign-preview-media" id="signPreviewMedia"></div>
-            <h3 class="sign-preview-word" id="signPreviewWord"></h3>
-            <div class="sign-preview-actions">
-                <button type="button" class="btn-primary" id="signPreviewAddBtn">
-                    <span>+</span> Add to Sentence
-                </button>
-                <button type="button" class="btn-secondary" id="signPreviewCloseBtn">Close</button>
-            </div>
-        </div>
     </div>
         </main>
     </div>
@@ -307,6 +236,13 @@
             align-items: stretch;
         }
 
+        .translator-grid-single {
+            grid-template-columns: 1fr;
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         .translator-panel {
             background: rgba(255,255,255,0.95);
             border-radius: 22px;
@@ -327,267 +263,6 @@
             margin-bottom: 1.5rem;
         }
 
-        .input-wrapper {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-
-        .text-input {
-            width: 100%;
-            min-height: clamp(140px, 22vh, 220px);
-            padding: 1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 1rem;
-            resize: vertical;
-            transition: border-color 0.3s ease;
-        }
-
-        .text-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .input-counter {
-            text-align: right;
-            font-size: 0.85rem;
-            color: #999;
-            margin-top: 0.5rem;
-        }
-
-        .word-search-row {
-            position: relative;
-            margin-bottom: 1.25rem;
-        }
-
-        .word-search-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 13px;
-            pointer-events: none;
-        }
-
-        .word-search-input {
-            width: 100%;
-            padding: 12px 14px 12px 40px;
-            border: 2px solid #e0e0e0;
-            border-radius: 999px;
-            font-size: 0.95rem;
-            font-family: inherit;
-            transition: border-color 0.25s ease, box-shadow 0.25s ease;
-        }
-
-        .word-search-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
-        }
-
-        .word-picker-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 0.6rem;
-            max-height: 320px;
-            overflow-y: auto;
-            padding: 0.25rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .word-picker-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 0.5rem;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-
-        .word-picker-card:hover {
-            border-color: var(--primary-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
-        }
-
-        .word-picker-thumb {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 8px;
-            margin-bottom: 0.45rem;
-            background: #111827;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #e5e7eb;
-            font-size: 1.6rem;
-            overflow: hidden;
-        }
-
-        .word-picker-thumb i.fa-play {
-            font-size: 1.1rem;
-            color: white;
-            background: rgba(37, 99, 235, 0.85);
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .word-picker-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #1f2937;
-        }
-
-        .word-picker-empty {
-            grid-column: 1 / -1;
-            text-align: center;
-            color: #999;
-            padding: 1rem 0;
-            font-size: 0.85rem;
-        }
-
-        .selected-words-wrapper {
-            margin-bottom: 1.5rem;
-        }
-
-        .selected-words {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 0.5rem;
-            min-height: 52px;
-            border: 2px dashed #e0e0e0;
-            border-radius: 10px;
-            padding: 0.65rem 0.75rem;
-        }
-
-        .selected-words-empty {
-            color: #999;
-            font-size: 0.85rem;
-        }
-
-        .selected-word-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            color: white;
-            border-radius: 999px;
-            padding: 0.4rem 0.5rem 0.4rem 0.9rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .selected-word-remove {
-            background: rgba(255,255,255,0.25);
-            border: none;
-            color: white;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 0.75rem;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .selected-word-remove:hover {
-            background: rgba(255,255,255,0.4);
-        }
-
-        .sign-preview-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1300;
-            padding: 1.5rem;
-        }
-
-        .sign-preview-overlay.hidden {
-            display: none;
-        }
-
-        .sign-preview-modal {
-            position: relative;
-            width: min(480px, 100%);
-            background: white;
-            border-radius: 18px;
-            padding: 1.75rem;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
-        }
-
-        .sign-preview-close {
-            position: absolute;
-            top: 0.85rem;
-            right: 0.85rem;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: none;
-            background: #f1f5f9;
-            color: #475569;
-            font-size: 1.2rem;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sign-preview-close:hover {
-            background: #e2e8f0;
-        }
-
-        .sign-preview-media {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #111827;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        .sign-preview-media video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .sign-preview-media .demo-icon {
-            font-size: 3rem;
-            color: #e5e7eb;
-        }
-
-        .sign-preview-word {
-            margin: 0 0 1.25rem;
-            text-align: center;
-            font-size: 1.25rem;
-            color: #0f172a;
-        }
-
-        .sign-preview-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-        }
-
         .translator-container .btn-primary,
         .translator-container .btn-secondary {
             border-radius: 999px;
@@ -606,29 +281,6 @@
 
         .translator-container .btn-secondary:hover {
             transform: translateY(-1px);
-        }
-
-        .translator-options {
-            background: #f8fafc;
-            border-radius: 14px;
-            padding: 0.9rem 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .translator-options .option-group {
-            display: flex;
-            align-items: center;
-            gap: 0.85rem;
-            margin-bottom: 0;
-        }
-
-        .translator-options .option-group label {
-            margin-bottom: 0;
-            white-space: nowrap;
-        }
-
-        .translator-options .select-input {
-            flex: 1;
         }
 
         .option-group {
@@ -687,136 +339,6 @@
             font-size: 0.9rem;
             color: #666;
             min-width: 100px;
-        }
-
-        .select-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            background: white;
-        }
-
-        .select-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .button-group .btn-primary {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .panel-divider {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin: 0 0 1.25rem;
-            color: #94a3b8;
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .panel-divider::before,
-        .panel-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e5e7eb;
-        }
-
-        .quick-examples {
-            background: #fff8f0;
-            border-radius: 14px;
-            padding: 1rem;
-        }
-
-        .quick-examples h3 {
-            margin-top: 0;
-            font-size: 0.9rem;
-            color: var(--dark);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .quick-examples h3 i {
-            color: #f59e0b;
-        }
-
-        .example-category-label {
-            font-weight: 500;
-            color: #999;
-            text-transform: none;
-        }
-
-        .option-group label i {
-            color: #2563eb;
-        }
-
-        .example-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .chip-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .chip.is-active {
-            background: var(--primary-blue);
-            color: white;
-            border-color: var(--primary-blue);
-        }
-
-        .chip-hint {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: #777;
-        }
-
-        .ge-badge {
-            display: inline-block;
-            background: #eef2ff;
-            color: #4338ca;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            margin-left: 0.4rem;
-            vertical-align: middle;
-        }
-
-        .chip {
-            background: white;
-            border: 1px solid #ddd;
-            padding: 0.5rem 1rem;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.25s ease;
-        }
-
-        .chip:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            border-color: transparent;
-            color: white;
-            transform: translateY(-2px);
         }
 
         .translation-result {
@@ -1044,16 +566,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .button-group {
-                grid-template-columns: 1fr;
-            }
-
-            .translator-options .option-group {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5rem;
-            }
-
             .browse-search-row {
                 max-width: 100%;
                 width: 100%;
@@ -1249,16 +761,6 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .input-counter {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .word-search-input {
-            background: var(--input-bg);
-            border-color: var(--input-border);
-            color: var(--text-body);
-        }
-
         :root[data-theme="dark"] .word-picker-card {
             background: var(--surface-card-alt);
             border-color: var(--surface-border);
@@ -1272,31 +774,6 @@
             color: var(--text-muted-2);
         }
 
-        :root[data-theme="dark"] .selected-words {
-            border-color: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] .selected-words-empty {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .sign-preview-modal {
-            background: var(--surface-card);
-        }
-
-        :root[data-theme="dark"] .sign-preview-word {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .sign-preview-close {
-            background: var(--surface-card-alt);
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translator-options {
-            background: var(--surface-card-alt);
-        }
-
         :root[data-theme="dark"] .option-group label {
             color: var(--text-body);
         }
@@ -1306,37 +783,6 @@
         }
 
         :root[data-theme="dark"] #speedValue {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .panel-divider {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .panel-divider::before,
-        :root[data-theme="dark"] .panel-divider::after {
-            background: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] .quick-examples {
-            background: rgba(124, 58, 237, 0.1);
-        }
-
-        :root[data-theme="dark"] .quick-examples h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .example-category-label {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .chip {
-            background: var(--surface-card-alt);
-            border-color: var(--surface-border);
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .chip-hint {
             color: var(--text-muted-2);
         }
 
@@ -1428,25 +874,15 @@
 
     <script src="js/main.js"></script>
     <script>
-        const charCount = document.getElementById('charCount');
-        const wordSearchInput = document.getElementById('wordSearchInput');
-        const wordPickerGrid = document.getElementById('wordPickerGrid');
-        const selectedWordsEl = document.getElementById('selectedWords');
-        const selectedWordsEmpty = document.getElementById('selectedWordsEmpty');
         const speedControl = document.getElementById('speedControl');
         const speedValue = document.getElementById('speedValue');
-        const exampleChips = document.getElementById('exampleChips');
-        const categorySelect = document.getElementById('categorySelect');
-        const exampleCategoryLabel = document.getElementById('exampleCategoryLabel');
 
         // Sign videos are loaded from the database (SignVideo table), which is
-        // populated from the "Sign Language" media library. Both the Games and
-        // Text-to-Sign modules read from this same API endpoint. FSL-105 (the
-        // Mendeley dataset used to train the sign-detection model) lives in its
-        // own table and is merged in from a second endpoint so those clips show
-        // up here too.
+        // populated from the "Sign Language" media library (this includes the
+        // FSL-105/Mendeley videos, already imported as SignVideo rows keyed
+        // "fsl105_..."). Both the Games and Text-to-Sign modules read from
+        // this same API endpoint.
         const SIGN_VIDEOS_API = 'https://kumpass.onrender.com/api/sign-videos/';
-        const FSL105_SIGNS_API = 'https://kumpass.onrender.com/api/fsl105-signs/';
 
         const BACKEND_TO_UI_CATEGORY = {
             alphabet: 'school',
@@ -1477,60 +913,35 @@
             return 'video/mp4';
         }
 
-        function addItemsToLibrary(library, items) {
+        async function loadSignLibrary() {
+            const response = await fetch(SIGN_VIDEOS_API);
+            if (!response.ok) {
+                throw new Error(`Failed to load sign videos (${response.status})`);
+            }
+            const items = await response.json();
+
+            // Some words exist twice (an original entry plus a same-word
+            // FSL-105 import, e.g. key "hello" and key "fsl105_hello"). When
+            // that happens, keep the original (non "fsl105_"-prefixed) entry.
+            const library = {};
             items.forEach(item => {
-                const key = String(item.key || '').toLowerCase();
-                if (!key || library[key]) return;
-                library[key] = {
+                const wordKey = normalizeWord(String(item.word || ''));
+                if (!wordKey) return;
+
+                const isFsl105 = String(item.key || '').startsWith('fsl105_');
+                if (library[wordKey] && isFsl105) return;
+
+                library[wordKey] = {
                     label: item.word,
                     category: BACKEND_TO_UI_CATEGORY[item.category] || 'everyday',
                     video: item.video_url || '',
                     fallback: '🤟',
                 };
             });
-        }
-
-        async function loadSignLibrary() {
-            const [signVideosResult, fsl105Result] = await Promise.allSettled([
-                fetch(SIGN_VIDEOS_API).then(res => {
-                    if (!res.ok) throw new Error(`Failed to load sign videos (${res.status})`);
-                    return res.json();
-                }),
-                fetch(FSL105_SIGNS_API).then(res => {
-                    if (!res.ok) throw new Error(`Failed to load FSL-105 signs (${res.status})`);
-                    return res.json();
-                }),
-            ]);
-
-            const library = {};
-            if (signVideosResult.status === 'fulfilled') {
-                addItemsToLibrary(library, signVideosResult.value);
-            } else {
-                console.error('Failed to load sign videos:', signVideosResult.reason);
-            }
-            if (fsl105Result.status === 'fulfilled') {
-                addItemsToLibrary(library, fsl105Result.value);
-            } else {
-                console.error('Failed to load FSL-105 signs:', fsl105Result.reason);
-            }
 
             signLibrary = library;
             signLibraryReady = true;
-
-            if (signVideosResult.status === 'rejected' && fsl105Result.status === 'rejected') {
-                throw new Error('Failed to load sign videos and FSL-105 signs');
-            }
         }
-
-        const geExamples = {
-            all: { label: 'All', examples: ['Hello', 'How are you', 'What is your name', 'Thank you', 'Sorry'] },
-            greetings: { label: 'Greetings', examples: ['Hello', 'Good morning', 'How are you', 'Nice to meet you', 'Goodbye'] },
-            everyday: { label: 'Everyday Words', examples: ['Thank you', 'Please', 'Yes', 'No', 'Sorry'] },
-            family: { label: 'Family', examples: ['Mother', 'Father', 'Sister', 'Brother', 'Family'] },
-            numbers: { label: 'Numbers', examples: ['One', 'Two', 'Three', 'Ten', 'Twenty'] },
-            emotions: { label: 'Emotions', examples: ['Happy', 'Sad', 'Angry', 'Excited', 'Scared'] },
-            school: { label: 'School', examples: ['Teacher', 'Student', 'Book', 'Learn', 'School'] }
-        };
 
         let lastTranslation = [];
         let currentSpeed = 1;
@@ -1555,27 +966,6 @@
                 '2.0': '2x Fast'
             };
             speedValue.textContent = map[Number(value).toFixed(1)] || `${value}x`;
-        }
-
-        function renderExampleChips(examples) {
-            exampleChips.innerHTML = '';
-            examples.forEach(text => {
-                const button = document.createElement('button');
-                button.className = 'chip';
-                button.type = 'button';
-                button.textContent = text;
-                button.addEventListener('click', () => setExample(text));
-                exampleChips.appendChild(button);
-            });
-        }
-
-        function updateExamplesForCategory() {
-            const category = categorySelect.value || 'all';
-            const entry = geExamples[category] || geExamples.all;
-            renderExampleChips(entry.examples);
-            if (exampleCategoryLabel) {
-                exampleCategoryLabel.textContent = category === 'all' ? '' : `— ${entry.label}`;
-            }
         }
 
         function normalizeWord(word) {
@@ -1653,43 +1043,6 @@
         const WORDS_PER_PAGE = 24;
         let wordBrowsePage = 1;
 
-        let selectedWords = [];
-
-        function currentInputText() {
-            return selectedWords.join(' ');
-        }
-
-        function renderSelectedWords() {
-            const text = currentInputText();
-            charCount.textContent = text.length;
-
-            if (!selectedWords.length) {
-                selectedWordsEl.innerHTML = '<span class="selected-words-empty" id="selectedWordsEmpty">No words selected yet — click a word below to add it.</span>';
-                return;
-            }
-
-            selectedWordsEl.innerHTML = selectedWords.map((word, index) => `
-                <span class="selected-word-chip" data-index="${index}">
-                    ${escapeHtml(word)}
-                    <button type="button" class="selected-word-remove" data-remove-index="${index}" aria-label="Remove ${escapeHtml(word)}">&times;</button>
-                </span>
-            `).join('');
-
-            selectedWordsEl.querySelectorAll('[data-remove-index]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const idx = Number(btn.dataset.removeIndex);
-                    selectedWords.splice(idx, 1);
-                    renderSelectedWords();
-                });
-            });
-        }
-
-        function addWordToInput(word) {
-            if (currentInputText().length + word.length + 1 > 200) return;
-            selectedWords.push(word);
-            renderSelectedWords();
-        }
-
         function renderPickerCardHtml(sign) {
             const thumb = sign.video
                 ? `<i class="fas fa-play"></i>`
@@ -1704,38 +1057,8 @@
 
         function attachPickerCardHandlers(container) {
             container.querySelectorAll('.word-picker-card').forEach(card => {
-                card.addEventListener('click', () => openSignPreview(card.dataset.word));
+                card.addEventListener('click', () => previewSign(card.dataset.word));
             });
-        }
-
-        function renderWordPicker() {
-            if (!wordPickerGrid) return;
-
-            if (!signLibraryReady) {
-                wordPickerGrid.innerHTML = '<div class="word-picker-empty">Loading sign words…</div>';
-                return;
-            }
-
-            const query = wordSearchInput ? wordSearchInput.value.trim().toLowerCase() : '';
-            const category = categorySelect ? categorySelect.value : 'all';
-
-            const words = Object.values(signLibrary)
-                .filter(sign => category === 'all' || sign.category === category)
-                .filter(sign => !query || sign.label.toLowerCase().includes(query))
-                .sort((a, b) => a.label.localeCompare(b.label))
-                .slice(0, 60);
-
-            if (!words.length) {
-                wordPickerGrid.innerHTML = '<div class="word-picker-empty">No signs match your search.</div>';
-                return;
-            }
-
-            wordPickerGrid.innerHTML = words.map(renderPickerCardHtml).join('');
-            attachPickerCardHandlers(wordPickerGrid);
-        }
-
-        if (wordSearchInput) {
-            wordSearchInput.addEventListener('input', renderWordPicker);
         }
 
         function renderWordBrowse() {
@@ -1788,50 +1111,14 @@
             });
         }
 
-        const signPreviewOverlay = document.getElementById('signPreviewOverlay');
-        const signPreviewMedia = document.getElementById('signPreviewMedia');
-        const signPreviewWord = document.getElementById('signPreviewWord');
-        const signPreviewAddBtn = document.getElementById('signPreviewAddBtn');
-        const signPreviewClose = document.getElementById('signPreviewClose');
-        const signPreviewCloseBtn = document.getElementById('signPreviewCloseBtn');
-        let signPreviewWordValue = '';
-
-        function openSignPreview(word) {
+        function previewSign(word) {
             const sign = lookupSign(word);
             if (!sign) return;
 
-            signPreviewWordValue = sign.label;
-            signPreviewWord.textContent = sign.label;
-            signPreviewMedia.innerHTML = sign.video
-                ? `<video controls playsinline preload="metadata" autoplay muted><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
-                : `<div class="demo-icon">${sign.fallback}</div>`;
-
-            signPreviewOverlay.classList.remove('hidden');
+            lastTranslation = [{ sourceText: sign.label, sign }];
+            renderTranslationResult(lastTranslation);
+            document.getElementById('translationDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-
-        function closeSignPreview() {
-            signPreviewOverlay.classList.add('hidden');
-            signPreviewMedia.innerHTML = '';
-        }
-
-        if (signPreviewAddBtn) {
-            signPreviewAddBtn.addEventListener('click', () => {
-                if (signPreviewWordValue) addWordToInput(signPreviewWordValue);
-                closeSignPreview();
-            });
-        }
-        if (signPreviewClose) signPreviewClose.addEventListener('click', closeSignPreview);
-        if (signPreviewCloseBtn) signPreviewCloseBtn.addEventListener('click', closeSignPreview);
-        if (signPreviewOverlay) {
-            signPreviewOverlay.addEventListener('click', (e) => {
-                if (e.target === signPreviewOverlay) closeSignPreview();
-            });
-        }
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && signPreviewOverlay && !signPreviewOverlay.classList.contains('hidden')) {
-                closeSignPreview();
-            }
-        });
 
         function renderSignCard(word, sign, index) {
             const mediaBlock = sign.video
@@ -1937,43 +1224,6 @@
             actionButtons.style.display = 'grid';
         }
 
-        function translateText() {
-            if (!signLibraryReady) {
-                alert('Sign videos are still loading, please wait a moment and try again.');
-                return;
-            }
-
-            const text = currentInputText();
-            if (!text) {
-                alert('Please select at least one word to translate');
-                return;
-            }
-
-            lastTranslation = buildTranslationUnits(text);
-            renderTranslationResult(lastTranslation);
-            document.getElementById('translationDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function clearInput() {
-            selectedWords = [];
-            renderSelectedWords();
-            lastTranslation = [];
-            document.getElementById('translationResult').innerHTML = `
-                <div class="demo-placeholder">
-                    <div class="demo-icon">👋</div>
-                    <p>Pick words below and click "Translate to Sign" to see the demonstration</p>
-                </div>
-            `;
-            document.getElementById('translationDetails').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'none';
-        }
-
-        function setExample(text) {
-            selectedWords = splitWords(text);
-            renderSelectedWords();
-            translateText();
-        }
-
         function repeatSign() {
             if (!lastTranslation.length) return;
             playSignSequence();
@@ -1988,12 +1238,12 @@
 
         function downloadSign() {
             if (!lastTranslation.length) {
-                alert('Translate text first.');
+                alert('Pick a sign first.');
                 return;
             }
 
             const payload = {
-                text: currentInputText(),
+                text: lastTranslation.map(item => item.sourceText).join(' '),
                 words: lastTranslation.map(item => item.sourceText),
                 generatedAt: new Date().toISOString(),
                 note: 'Video files can be added later by setting the video field in signLibrary.'
@@ -2008,32 +1258,20 @@
             URL.revokeObjectURL(url);
         }
 
-        updateExamplesForCategory();
         setSpeedLabel(speedControl.value);
         renderWordBrowse();
-        renderWordPicker();
-        renderSelectedWords();
 
         loadSignLibrary()
-            .then(() => {
-                renderWordBrowse();
-                renderWordPicker();
-            })
+            .then(() => renderWordBrowse())
             .catch(err => {
                 console.error('Failed to load sign videos:', err);
                 renderWordBrowse();
-                renderWordPicker();
             });
 
         speedControl.addEventListener('input', function() {
             currentSpeed = Number(this.value);
             setSpeedLabel(this.value);
             if (lastTranslation.length) applyPlaybackSpeed();
-        });
-
-        categorySelect.addEventListener('change', function() {
-            updateExamplesForCategory();
-            renderWordPicker();
         });
 
         // Navbar dropdown
