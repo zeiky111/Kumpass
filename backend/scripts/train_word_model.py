@@ -42,10 +42,36 @@ MANIFEST_PATH = MODEL_PATH.parent / "word_sequence_svc.meta.json"
 MIN_SAMPLES_PER_PHRASE_FOR_EVAL = 2
 
 
-def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter]:
+def _mirror_frames(frames: list[dict]) -> list[dict]:
+    """Flips a frame sequence left<->right (x -> 1-x on each landmark).
+
+    FSL-105's clips were filmed of a signer facing the camera third-person,
+    while the deployed app runs a selfie-view webcam feed straight through
+    MediaPipe -- so which physical hand MediaPipe calls "Left" vs "Right"
+    for the same real-world gesture depends on camera/device conventions
+    that vary per setup. A model trained only on the dataset's own
+    handedness convention collapses to ~13% accuracy (vs 99%) the moment a
+    live user's feed happens to report the opposite handedness for a given
+    hand -- see the investigation that added this function. Mirroring every
+    training sequence (flipping x and swapping the left/right slots) and
+    training on both orientations makes the model handedness-invariant
+    instead of trying to guess/normalize orientation at inference time.
+    """
+    mirrored = []
+    for frame in frames:
+        left = frame.get("left")
+        right = frame.get("right")
+        new_left = [[1.0 - pt[0], pt[1], pt[2]] for pt in right] if right is not None else None
+        new_right = [[1.0 - pt[0], pt[1], pt[2]] for pt in left] if left is not None else None
+        mirrored.append({"left": new_left, "right": new_right})
+    return mirrored
+
+
+def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
     jsonl_files = sorted(DATASET_DIR.glob("*.jsonl"))
     features: list[np.ndarray] = []
     labels: list[str] = []
+    groups: list[int] = []
     skipped = 0
 
     for jsonl_path in jsonl_files:
@@ -71,30 +97,48 @@ def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter]:
                     skipped += 1
                     continue
 
+                clip_group = len(features)  # groups a clip with its mirror below
                 features.append(feature_vector.reshape(-1))
                 labels.append(label)
+                groups.append(clip_group)
+
+                mirrored_vector = extract_sequence_features(_mirror_frames(frames))
+                if mirrored_vector is not None:
+                    features.append(mirrored_vector.reshape(-1))
+                    labels.append(label)
+                    groups.append(clip_group)
 
     if skipped:
         print(f"Skipped {skipped} malformed/too-short sequences across {len(jsonl_files)} file(s).")
 
     if not features:
-        return np.zeros((0, 0)), np.asarray([]), Counter()
+        return np.zeros((0, 0)), np.asarray([]), Counter(), np.asarray([])
 
-    return np.vstack(features), np.asarray(labels), Counter(labels)
+    return np.vstack(features), np.asarray(labels), Counter(labels), np.asarray(groups)
 
 
-def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter) -> float | None:
+def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter, groups: np.ndarray) -> float | None:
     usable_labels = {label for label, count in counts.items() if count >= MIN_SAMPLES_PER_PHRASE_FOR_EVAL}
     if len(usable_labels) < 2:
         print("Not enough phrases with >=2 samples yet for a held-out accuracy check.")
         return None
 
     mask = np.asarray([label in usable_labels for label in y])
-    x_eval, y_eval = x[mask], y[mask]
+    x_eval, y_eval, groups_eval = x[mask], y[mask], groups[mask]
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x_eval, y_eval, test_size=0.25, stratify=y_eval, random_state=42
+    # Split by clip group (not by row) so a clip and its mirrored twin always
+    # land on the same side -- otherwise the split leaks a near-duplicate of
+    # every test row into training and the held-out score is inflated.
+    unique_groups = np.unique(groups_eval)
+    group_labels = np.asarray([y_eval[groups_eval == g][0] for g in unique_groups])
+    train_groups, test_groups = train_test_split(
+        unique_groups, test_size=0.25, stratify=group_labels, random_state=42
     )
+    train_mask = np.isin(groups_eval, train_groups)
+    test_mask = np.isin(groups_eval, test_groups)
+    x_train, x_test = x_eval[train_mask], x_eval[test_mask]
+    y_train, y_test = y_eval[train_mask], y_eval[test_mask]
+
     model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
     model.fit(x_train, y_train)
     predictions = model.predict(x_test)
@@ -106,9 +150,9 @@ def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter) -> float | None:
 
 
 def main() -> None:
-    x, y, counts = load_sequences()
+    x, y, counts, groups = load_sequences()
 
-    print(f"Loaded {len(y)} real sequences covering {len(counts)} phrase(s).")
+    print(f"Loaded {len(y)} sequences (original + mirrored) covering {len(counts)} phrase(s).")
     for label, count in sorted(counts.items()):
         print(f"  {label}: {count} sequences")
 
@@ -126,7 +170,7 @@ def main() -> None:
         )
         return
 
-    held_out_accuracy = evaluate(x, y, counts)
+    held_out_accuracy = evaluate(x, y, counts, groups)
 
     print(f"\nTraining deployed model on all {len(y)} recorded sequences...")
     final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
