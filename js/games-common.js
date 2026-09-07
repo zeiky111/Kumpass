@@ -246,7 +246,12 @@
   }
 
   // Shows an in-page "Difficulty/Game Complete" panel instead of a jarring alert().
-  function showCompletionModal({ title, message, onContinue, continueLabel, autoContinueAfterMs = 0 }) {
+  // reviewItems (optional): [{ question, correctAnswer }, ...] -- missed
+  // questions to reveal now that the game has actually ended. Answers are
+  // intentionally withheld during play (no per-question reveal) so a wrong
+  // guess doesn't hand the player the answer for next time; this is the one
+  // place they're shown, once there's no more of that difficulty left to play.
+  function showCompletionModal({ title, message, onContinue, continueLabel, autoContinueAfterMs = 0, reviewItems }) {
     let modal = document.getElementById('gameCompleteModal');
     if (!modal) {
       document.body.insertAdjacentHTML('beforeend', `
@@ -257,6 +262,7 @@
               <button type="button" class="modal-close" aria-label="Close" onclick="KumpasGames.closeModal('gameCompleteModal')">&times;</button>
             </div>
             <p id="gameCompleteMessage"></p>
+            <div id="gameCompleteReview" style="display:none; text-align:left; max-height:220px; overflow-y:auto; margin-top:12px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
             <div class="button-group" style="margin-top:18px;">
               <button type="button" class="btn btn-primary" id="gameCompleteContinueBtn">Continue</button>
             </div>
@@ -266,6 +272,18 @@
     }
     document.getElementById('gameCompleteTitle').textContent = title || 'Great job!';
     document.getElementById('gameCompleteMessage').textContent = message || '';
+    const reviewDiv = document.getElementById('gameCompleteReview');
+    if (reviewDiv) {
+      if (Array.isArray(reviewItems) && reviewItems.length) {
+        reviewDiv.style.display = 'block';
+        reviewDiv.innerHTML = '<strong>Answers to review:</strong><ul style="margin:8px 0 0; padding-left:20px;">'
+          + reviewItems.map(item => `<li style="margin-bottom:4px;">${item.question} &rarr; <strong>${item.correctAnswer}</strong></li>`).join('')
+          + '</ul>';
+      } else {
+        reviewDiv.style.display = 'none';
+        reviewDiv.innerHTML = '';
+      }
+    }
     const btn = document.getElementById('gameCompleteContinueBtn');
     btn.textContent = continueLabel || 'Continue';
     const newBtn = btn.cloneNode(true);

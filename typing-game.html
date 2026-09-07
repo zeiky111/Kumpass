@@ -668,6 +668,10 @@
         let answered = false;
         let countdown = null;
         let advanceTimer = null;
+        // Missed questions for this playthrough, shown only on the final
+        // "Game Complete" screen -- never revealed inline, so a wrong guess
+        // doesn't hand the player the answer for next time.
+        let missedQuestions = [];
 
         function updateLevelTag() {
             const levelTag = document.getElementById('randomLevelTag');
@@ -767,7 +771,9 @@
                         title: '🏆 Game Complete!',
                         message: 'You completed every difficulty. Restarting at Easy so you can play again.',
                         continueLabel: 'Play Again',
+                        reviewItems: missedQuestions,
                         onContinue: () => {
+                            missedQuestions = [];
                             engine.setDifficulty('easy', true);
                             startLevel(false);
                         },
@@ -841,9 +847,8 @@
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');
-                feedbackDiv.textContent = timedOut
-                    ? `⏱ Time's up! The correct answer is: ${question.answers[0]}`
-                    : `✗ Incorrect. The correct answer is: ${question.answers[0]}`;
+                feedbackDiv.textContent = timedOut ? "⏱ Time's up!" : '✗ Incorrect. Keep practicing!';
+                missedQuestions.push({ question: 'Sign shown', correctAnswer: question.answers[0] });
             }
 
             updateScores();

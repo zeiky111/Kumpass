@@ -709,6 +709,11 @@
         let currentIndex = 0;
         let answered = false;
         let advanceTimer = null;
+        // Missed questions for this playthrough of Easy->Medium->Hard, shown
+        // only on the final "Game Complete" screen (see submitAnswer/nextQuestion)
+        // -- never revealed inline, so a wrong guess doesn't hand the player
+        // the answer for the same question if they encounter it again.
+        let missedQuestions = [];
 
         function updateLevelTag() {
             const levelTag = document.getElementById('randomLevelTag');
@@ -785,7 +790,9 @@
                         title: '🏆 Game Complete!',
                         message: 'You completed every difficulty. Restarting at Easy so you can play again.',
                         continueLabel: 'Play Again',
+                        reviewItems: missedQuestions,
                         onContinue: () => {
+                            missedQuestions = [];
                             engine.setDifficulty('easy', true);
                             startLevel(false);
                         },
@@ -852,7 +859,8 @@
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');
-                feedbackDiv.textContent = `✗ Incorrect. The correct answer is: ${question.label}`;
+                feedbackDiv.textContent = '✗ Incorrect. Keep practicing!';
+                missedQuestions.push({ question: 'Sign shown', correctAnswer: question.label });
             }
 
             updateScores();
