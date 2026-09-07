@@ -720,9 +720,14 @@
             const existing = getCookie('csrftoken');
             if (existing) return existing;
             try {
-                await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
-            } catch (_) {}
-            return getCookie('csrftoken');
+                const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+                const cookieToken = getCookie('csrftoken');
+                if (cookieToken) return cookieToken;
+                const data = await response.json().catch(() => ({}));
+                return data.csrfToken || '';
+            } catch (_) {
+                return '';
+            }
         }
 
         async function requestJson(path, options = {}) {

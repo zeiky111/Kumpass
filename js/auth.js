@@ -17,15 +17,22 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
     }
 
     try {
-        await fetch(`${base}/auth/csrf/`, {
+        const response = await fetch(`${base}/auth/csrf/`, {
             method: 'GET',
             credentials: 'include'
         });
+        // Some browsers (Safari ITP, cross-site cookie blocking) drop the
+        // csrftoken cookie even though the request succeeds, so fall back to
+        // the token in the JSON body -- the backend returns both for this reason.
+        const cookieToken = getCookie('csrftoken');
+        if (cookieToken) {
+            return cookieToken;
+        }
+        const data = await response.json().catch(() => ({}));
+        return data.csrfToken || '';
     } catch (_) {
         return '';
     }
-
-    return getCookie('csrftoken');
 }
 
 // Check if user is authenticated with the backend
