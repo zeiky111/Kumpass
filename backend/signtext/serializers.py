@@ -147,9 +147,6 @@ class SignVideoSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         request = self.context.get("request")
-        if obj.video_data:
-            path = f"/api/sign-videos/{obj.id}/data/"
-            return request.build_absolute_uri(path) if request else path
         if obj.video and hasattr(obj.video, "url"):
             if request:
                 return request.build_absolute_uri(obj.video.url)
@@ -177,9 +174,6 @@ class AdminSignVideoSerializer(serializers.ModelSerializer):
 
     def get_video_url(self, obj):
         request = self.context.get("request")
-        if obj.video_data:
-            path = f"/api/sign-videos/{obj.id}/data/"
-            return request.build_absolute_uri(path) if request else path
         if obj.video and hasattr(obj.video, "url"):
             if request:
                 return request.build_absolute_uri(obj.video.url)

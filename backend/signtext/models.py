@@ -322,13 +322,7 @@ class SignVideo(models.Model):
     key = models.CharField(max_length=120, unique=True, db_index=True)
     word = models.CharField(max_length=150)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_PHRASES)
-    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/", blank=True)
-    # Raw video bytes stored directly in the row (like FSL105Clip.video_data),
-    # so playback doesn't depend on Render's ephemeral disk or an external
-    # file store being reachable. When set, this takes priority over `video`.
-    video_data = models.BinaryField(null=True, blank=True, editable=True)
-    video_content_type = models.CharField(max_length=100, blank=True, default="video/mp4")
-    video_filename = models.CharField(max_length=255, blank=True, default="")
+    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/")
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     # True for videos uploaded via the Admin "Sign Language Videos" manager --

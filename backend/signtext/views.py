@@ -9,7 +9,6 @@ from django.db import DatabaseError, IntegrityError, OperationalError
 from django.db.models import F, Q, Sum
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -1261,6 +1260,10 @@ def student_content(request: Any) -> Response:
     start = (page - 1) * limit
     end = start + limit
     modules = list(modules_qs[start:end])
+    attempts_by_module = {
+        attempt.module_id: attempt
+        for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at")
+    }
 
     serialized = []
     for module in modules:
@@ -1271,6 +1274,14 @@ def student_content(request: Any) -> Response:
         questions = list(module.quiz_questions.all().order_by("order", "created_at"))
         module_data["quizCount"] = len(questions)
         module_data["quizzes"] = StudentQuizQuestionSerializer(questions, many=True).data
+
+        attempt = attempts_by_module.get(module.id)
+        module_data["quizAttempt"] = {
+            "score": attempt.score,
+            "total": attempt.total,
+            "submittedAt": attempt.created_at,
+        } if attempt is not None else None
+
         serialized.append(module_data)
 
     return Response({
@@ -1520,6 +1531,79 @@ def instructor_dashboard(request: Any) -> Response:
         }
 
     return Response(payload)
+
+
+QUIZ_PASSING_PERCENT = 75
+
+
+@api_view(["GET"])
+def instructor_quiz_reports(request: Any) -> Response:
+    """Per-module quiz summary (attempt count, average score, pass rate) plus
+    the individual student scores behind each module, for the instructor
+    Quiz Reports tab. A student passes a module quiz at >=75% correct."""
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    modules = list(
+        LearningModule.objects
+        .filter(status=LearningModule.STATUS_PUBLISHED, quiz_questions__isnull=False)
+        .distinct()
+        .order_by("sort_order", "title")
+    )
+    attempts = list(
+        QuizAttempt.objects
+        .filter(module__in=modules)
+        .select_related("user", "user__profile", "module")
+        .order_by("-created_at")
+    )
+
+    attempts_by_module: dict[int, list[QuizAttempt]] = {module.id: [] for module in modules}
+    for attempt in attempts:
+        attempts_by_module.setdefault(attempt.module_id, []).append(attempt)
+
+    reports = []
+    for module in modules:
+        module_attempts = attempts_by_module.get(module.id, [])
+        attempt_count = len(module_attempts)
+        percentages = [
+            (attempt.score / attempt.total * 100) if attempt.total else 0
+            for attempt in module_attempts
+        ]
+        passed_count = sum(1 for pct in percentages if pct >= QUIZ_PASSING_PERCENT)
+
+        reports.append({
+            "moduleId": module.id,
+            "moduleKey": module.module_key,
+            "title": module.title,
+            "yearLevel": module.year_level,
+            "quizCount": module.quiz_questions.count(),
+            "attemptCount": attempt_count,
+            "passedCount": passed_count,
+            "passRate": round(passed_count / attempt_count * 100) if attempt_count else 0,
+            "averageScorePercent": round(sum(percentages) / attempt_count) if attempt_count else 0,
+            "students": [
+                {
+                    "name": (
+                        getattr(getattr(attempt.user, "profile", None), "full_name", "")
+                        or attempt.user.first_name
+                        or attempt.user.username
+                    ),
+                    "email": attempt.user.email,
+                    "score": attempt.score,
+                    "total": attempt.total,
+                    "percent": round((attempt.score / attempt.total * 100)) if attempt.total else 0,
+                    "passed": ((attempt.score / attempt.total * 100) if attempt.total else 0) >= QUIZ_PASSING_PERCENT,
+                    "submittedAt": attempt.created_at,
+                }
+                for attempt in module_attempts
+            ],
+        })
+
+    return Response({
+        "passingPercent": QUIZ_PASSING_PERCENT,
+        "modules": reports,
+    })
 
 
 @api_view(["GET", "POST"])
@@ -1887,6 +1971,15 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         module = LearningModule.objects.get(pk=module_id)
     except LearningModule.DoesNotExist:
         return Response({"error": "Module not found"}, status=404)
+
+    existing_attempt = QuizAttempt.objects.filter(user=user, module=module).order_by("-created_at").first()
+    if existing_attempt is not None:
+        return Response({
+            "error": "You have already completed this quiz. Each quiz can only be taken once.",
+            "alreadyCompleted": True,
+            "score": existing_attempt.score,
+            "total": existing_attempt.total,
+        }, status=409)
 
     # Build lookup of correct answers
     questions = list(QuizQuestion.objects.filter(module=module).all())
@@ -2428,21 +2521,6 @@ def sign_videos(request: Any) -> Response:
     if scope == "games":
         videos = videos.exclude(text_to_sign_only=True)
     return Response(SignVideoSerializer(videos, many=True, context={"request": request}).data)
-
-
-@api_view(["GET"])
-def sign_video_data(request: Any, video_id: int) -> Response:
-    """Streams the raw video bytes for a SignVideo stored in the database
-    (video_data), rather than an external file/storage URL."""
-    video = get_object_or_404(SignVideo, pk=video_id)
-    if not video.video_data:
-        return Response({"error": "No video data for this sign"}, status=404)
-
-    content_type = video.video_content_type or "video/mp4"
-    response = HttpResponse(bytes(video.video_data), content_type=content_type)
-    response["Content-Disposition"] = f'inline; filename="{video.video_filename or f"{video.key}.mp4"}"'
-    response["Cache-Control"] = "public, max-age=86400"
-    return response
 
 
 def _key_for_word(word: str) -> str:
