@@ -9,6 +9,7 @@ from django.db import DatabaseError, IntegrityError, OperationalError
 from django.db.models import F, Q, Sum
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -26,7 +27,7 @@ from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
-from .certificates import award_certificate_if_earned, send_certificate_email_async
+from .certificates import award_certificate_if_earned, award_module_certificate_if_earned, send_certificate_email_async
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
     Achievement,
@@ -1751,13 +1752,20 @@ def instructor_modules(request: Any) -> Response:
     elif LearningModule.objects.filter(module_key=module_key).exists():
         return Response({"error": "Module key already exists"}, status=409)
 
+    status_value = str(payload.get("status") or LearningModule.STATUS_DRAFT).strip()
+    if status_value == LearningModule.STATUS_PUBLISHED:
+        return Response(
+            {"error": "Add at least one quiz question before publishing this module. Save it as a draft first, then use Add Quiz."},
+            status=400,
+        )
+
     serializer = LearningModuleSerializer(data={
         "module_key": module_key,
         "title": title,
         "year_level": str(payload.get("year_level") or payload.get("yearLevel") or "1").strip(),
         "description": str(payload.get("description") or "").strip(),
         "activities_count": _safe_int(payload.get("activities_count") or payload.get("activitiesCount") or 0),
-        "status": str(payload.get("status") or LearningModule.STATUS_DRAFT).strip(),
+        "status": status_value,
         "sort_order": _safe_int(payload.get("sort_order") or payload.get("sortOrder") or 0),
     })
     if not serializer.is_valid():
@@ -1810,6 +1818,12 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     }
     if update_data["module_key"] != module.module_key and LearningModule.objects.exclude(pk=module.pk).filter(module_key=update_data["module_key"]).exists():
         return Response({"error": "Module key already exists"}, status=409)
+
+    if update_data["status"] == LearningModule.STATUS_PUBLISHED and module.quiz_questions.count() == 0:
+        return Response(
+            {"error": "Add at least one quiz question before publishing this module."},
+            status=400,
+        )
 
     serializer = LearningModuleSerializer(module, data=update_data, partial=True)
     if not serializer.is_valid():
@@ -1914,6 +1928,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     # the student's progress/recent-activity state authoritatively here so
     # completion is guaranteed correct even if the client never re-syncs.
     updated_state = None
+    certificate_payload = None
     try:
         QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
 
@@ -1932,6 +1947,21 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             "text": f"Completed quiz: {module.title}",
             "meta": f"{score}/{total} correct",
         })
+
+        user_certificate = award_module_certificate_if_earned(user, module)
+        if user_certificate is not None:
+            send_certificate_email_async(user_certificate)
+            recent_activity.insert(0, {
+                "icon": "🏆",
+                "text": f"Earned the {user_certificate.certificate.title} certificate",
+                "meta": "Certificate unlocked",
+            })
+            certificate_payload = {
+                "title": user_certificate.certificate.title,
+                "issuedAt": user_certificate.issued_at,
+                "downloadUrl": request.build_absolute_uri(user_certificate.file.url),
+            }
+
         state["recentActivity"] = recent_activity[:10]
 
         state["performance"] = _skill_breakdown_for_user(user)
@@ -1943,7 +1973,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except Exception:
         logger.exception("Failed to persist quiz completion state for %s / module %s", user.username, module_id)
 
-    return Response({"score": score, "total": total, "details": details, "state": updated_state})
+    return Response({"score": score, "total": total, "details": details, "state": updated_state, "certificate": certificate_payload})
 
 
 @api_view(["PATCH", "DELETE"])
@@ -2398,6 +2428,21 @@ def sign_videos(request: Any) -> Response:
     if scope == "games":
         videos = videos.exclude(text_to_sign_only=True)
     return Response(SignVideoSerializer(videos, many=True, context={"request": request}).data)
+
+
+@api_view(["GET"])
+def sign_video_data(request: Any, video_id: int) -> Response:
+    """Streams the raw video bytes for a SignVideo stored in the database
+    (video_data), rather than an external file/storage URL."""
+    video = get_object_or_404(SignVideo, pk=video_id)
+    if not video.video_data:
+        return Response({"error": "No video data for this sign"}, status=404)
+
+    content_type = video.video_content_type or "video/mp4"
+    response = HttpResponse(bytes(video.video_data), content_type=content_type)
+    response["Content-Disposition"] = f'inline; filename="{video.video_filename or f"{video.key}.mp4"}"'
+    response["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 def _key_for_word(word: str) -> str:

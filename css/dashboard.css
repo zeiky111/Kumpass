@@ -20,6 +20,21 @@ body {
   background: transparent;
 }
 
+@media (min-width: 901px) {
+  /* Bound the layout row to exactly the viewport (minus the navbar) so the
+     sidebar -- pinned via position: sticky + align-self: stretch below --
+     fills the full row height instead of stopping at its own short content
+     and leaving a bare gap next to tall page content. .dashboard-main's own
+     overflow-y: auto scrolls long page content inside the content column. */
+  .dashboard-layout {
+    min-height: calc(100vh - 72px);
+  }
+
+  .dashboard-main {
+    max-height: calc(100vh - 72px);
+  }
+}
+
 /* SIDEBAR */
 .dashboard-sidebar {
   background: #ffffff;
@@ -31,7 +46,7 @@ body {
   border-right: 1px solid rgba(148, 163, 184, 0.18);
   position: sticky;
   top: 72px;
-  align-self: flex-start;
+  align-self: stretch;
   max-height: calc(100vh - 72px);
 }
 

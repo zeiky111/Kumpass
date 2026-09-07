@@ -269,9 +269,19 @@
         }
 
         async function requestJson(path, options = {}) {
+            const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+            const method = (options.method || 'GET').toUpperCase();
+            if (method !== 'GET' && typeof ensureCsrfToken === 'function') {
+                try {
+                    const csrfToken = await ensureCsrfToken(API_BASE);
+                    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                } catch (_) {}
+            }
+
             const response = await fetch(`${API_BASE}${path}`, {
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 ...options,
+                headers,
             });
 
             let data = {};

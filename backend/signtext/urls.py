@@ -40,6 +40,7 @@ from .views import (
     resend_verification,
     reset_password,
     verify_email,
+    sign_video_data,
     sign_videos,
     student_content,
     profile_photo,
@@ -94,4 +95,5 @@ urlpatterns = [
     path("sign/word-sequence/", predict_word_sequence, name="predict-word-sequence"),
     path("sign/recent/", recent_predictions, name="recent-predictions"),
     path("sign-videos/", sign_videos, name="sign-videos"),
+    path("sign-videos/<int:video_id>/data/", sign_video_data, name="sign-video-data"),
 ]

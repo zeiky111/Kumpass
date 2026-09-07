@@ -684,6 +684,7 @@
           const score = Number(result.score || 0);
           const total = Number(result.total || 0);
           const details = Array.isArray(result.details) ? result.details : [];
+          const certificate = result.certificate && typeof result.certificate === 'object' ? result.certificate : null;
 
           if (result.state && typeof result.state === 'object') {
             hydratedState = mergeState(result.state);
@@ -703,6 +704,12 @@
                   </div>
                 `).join('')}
               </div>
+              ${certificate ? `
+                <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
+                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 Certificate earned!</div>
+                  <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
+                </div>
+              ` : ''}
             </div>`;
           submitButton.style.display = 'none';
 

@@ -1,5 +1,20 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
+
+# Non-image uploads (module attachments, generated certificate PDFs) must not
+# use the default MediaCloudinaryStorage, which uploads everything as
+# resource_type="image" -- Cloudinary silently mishandles PDFs/DOCX/PPTX
+# uploaded that way, so opening them in production 404s or errors out even
+# though the same field works fine locally (plain filesystem storage, no
+# resource_type concept). Only import/construct the raw storage when
+# Cloudinary is actually configured, since the package raises
+# ImproperlyConfigured at import time otherwise.
+if getattr(settings, "CLOUDINARY_URL", ""):
+    from cloudinary_storage.storage import RawMediaCloudinaryStorage
+    RAW_FILE_STORAGE = RawMediaCloudinaryStorage()
+else:
+    RAW_FILE_STORAGE = None
 
 
 class SignPredictionLog(models.Model):
@@ -160,7 +175,7 @@ class ModuleFile(models.Model):
         related_name="files",
     )
     file_name = models.CharField(max_length=255)
-    file = models.FileField(upload_to="module_files/%Y/%m/%d/")
+    file = models.FileField(upload_to="module_files/%Y/%m/%d/", storage=RAW_FILE_STORAGE)
     file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, default="document")
     file_size = models.PositiveIntegerField(default=0)  # in bytes
     description = models.CharField(max_length=255, blank=True, default="")
@@ -307,7 +322,13 @@ class SignVideo(models.Model):
     key = models.CharField(max_length=120, unique=True, db_index=True)
     word = models.CharField(max_length=150)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_PHRASES)
-    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/")
+    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/", blank=True)
+    # Raw video bytes stored directly in the row (like FSL105Clip.video_data),
+    # so playback doesn't depend on Render's ephemeral disk or an external
+    # file store being reachable. When set, this takes priority over `video`.
+    video_data = models.BinaryField(null=True, blank=True, editable=True)
+    video_content_type = models.CharField(max_length=100, blank=True, default="video/mp4")
+    video_filename = models.CharField(max_length=255, blank=True, default="")
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     # True for videos uploaded via the Admin "Sign Language Videos" manager --
@@ -408,8 +429,16 @@ class UserAchievement(models.Model):
 
 
 class Certificate(models.Model):
-    """Certificate catalog entry: one row per game, defining its template."""
-    game_key = models.CharField(max_length=20, choices=GameLevel.GAME_CHOICES, unique=True)
+    """Certificate catalog entry: one row per game OR per learning module,
+    defining its template. Exactly one of game_key / module is set."""
+    game_key = models.CharField(max_length=20, choices=GameLevel.GAME_CHOICES, unique=True, null=True, blank=True)
+    module = models.OneToOneField(
+        LearningModule,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="certificate",
+    )
     title = models.CharField(max_length=150)
     template_path = models.CharField(max_length=255)
 
@@ -422,7 +451,7 @@ class UserCertificate(models.Model):
     generated PDF, personalized with the student's name at issue time."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="certificates")
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE, related_name="unlocks")
-    file = models.FileField(upload_to="certificates/%Y/%m/")
+    file = models.FileField(upload_to="certificates/%Y/%m/", storage=RAW_FILE_STORAGE)
     student_name = models.CharField(max_length=150)
     issued_at = models.DateTimeField(auto_now_add=True)
     emailed = models.BooleanField(default=False)

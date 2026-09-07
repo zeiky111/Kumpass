@@ -436,11 +436,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
-                    <select id="moduleStatus" class="form-input" required>
+                    <select id="moduleStatus" class="form-input" required onchange="updateModuleStatusHint()">
                         <option value="draft">Draft</option>
                         <option value="published">Published</option>
                         <option value="archived">Archived</option>
                     </select>
+                    <small id="moduleStatusQuizHint" style="display:none; color:#b45309; margin-top:6px;"></small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Sort Order</label>
@@ -1000,6 +1001,21 @@
             document.getElementById('moduleStatus').value = module ? module.status || 'draft' : 'draft';
             document.getElementById('moduleSortOrder').value = module ? module.sort_order || 0 : 0;
             document.getElementById('moduleDescription').value = module ? module.description || '' : '';
+            window.__currentModuleQuizCount = module ? Number(module.quizCount || 0) : 0;
+            updateModuleStatusHint();
+        }
+
+        function updateModuleStatusHint() {
+            const statusSelect = document.getElementById('moduleStatus');
+            const hint = document.getElementById('moduleStatusQuizHint');
+            if (!statusSelect || !hint) return;
+            const quizCount = Number(window.__currentModuleQuizCount || 0);
+            if (statusSelect.value === 'published' && quizCount === 0) {
+                hint.style.display = 'block';
+                hint.textContent = 'This module has no quiz questions yet. Add at least one quiz question before you can publish it.';
+            } else {
+                hint.style.display = 'none';
+            }
         }
 
         function populateAnnouncementForm(announcement) {
@@ -1181,6 +1197,14 @@
             if (moduleError) {
                 alert(moduleError);
                 return;
+            }
+
+            if (payload.status === 'published') {
+                const quizCount = Number(window.__currentModuleQuizCount || 0);
+                if (!moduleId || quizCount === 0) {
+                    alert('Add at least one quiz question before publishing this module. Save it as a draft first, then use "Add Quiz".');
+                    return;
+                }
             }
 
             if (!payload.actorEmail) {
