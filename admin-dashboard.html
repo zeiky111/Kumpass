@@ -245,12 +245,21 @@
                                 <select id="signVideoCategoryFilter" class="form-input" style="width:180px;" onchange="onSignVideoFilterChange()">
                                     <option value="">All Categories</option>
                                     <option value="alphabet">Alphabet</option>
+                                    <option value="calendar">Calendar</option>
+                                    <option value="colors">Colors</option>
+                                    <option value="days">Days</option>
+                                    <option value="drink">Drink</option>
                                     <option value="emotions">Emotions</option>
                                     <option value="everyday_words">Everyday Words</option>
                                     <option value="expressions">Expressions</option>
+                                    <option value="family">Family</option>
+                                    <option value="food">Food</option>
                                     <option value="greetings">Greetings</option>
+                                    <option value="numbers">Numbers</option>
                                     <option value="phrases">Phrases</option>
+                                    <option value="relationships">Relationships</option>
                                     <option value="responses">Responses</option>
+                                    <option value="survival">Survival</option>
                                 </select>
                             </div>
                             <div id="signVideoForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px; background-color:#f9fafb;">
@@ -260,12 +269,21 @@
                                     <input id="signVideoWord" class="form-input" placeholder="Word / phrase (e.g. Hello)" style="width:220px;" />
                                     <select id="signVideoCategory" class="form-input" style="width:180px;">
                                         <option value="alphabet">Alphabet</option>
+                                        <option value="calendar">Calendar</option>
+                                        <option value="colors">Colors</option>
+                                        <option value="days">Days</option>
+                                        <option value="drink">Drink</option>
                                         <option value="emotions">Emotions</option>
                                         <option value="everyday_words">Everyday Words</option>
                                         <option value="expressions">Expressions</option>
+                                        <option value="family">Family</option>
+                                        <option value="food">Food</option>
                                         <option value="greetings">Greetings</option>
+                                        <option value="numbers">Numbers</option>
                                         <option value="phrases" selected>Phrases</option>
+                                        <option value="relationships">Relationships</option>
                                         <option value="responses">Responses</option>
+                                        <option value="survival">Survival</option>
                                     </select>
                                     <input id="signVideoOrder" type="number" class="form-input" placeholder="Order" style="width:100px;" value="0" />
                                     <label style="display:flex; align-items:center; gap:6px;">
@@ -289,7 +307,6 @@
                                             <th>Preview</th>
                                             <th>Word / Phrase</th>
                                             <th>Category</th>
-                                            <th>Order</th>
                                             <th>Published</th>
                                             <th>Actions</th>
                                         </tr>
@@ -838,12 +855,21 @@
 
         const SIGN_VIDEO_CATEGORY_LABELS = {
             alphabet: 'Alphabet',
+            calendar: 'Calendar',
+            colors: 'Colors',
+            days: 'Days',
+            drink: 'Drink',
             emotions: 'Emotions',
             everyday_words: 'Everyday Words',
             expressions: 'Expressions',
+            family: 'Family',
+            food: 'Food',
             greetings: 'Greetings',
+            numbers: 'Numbers',
             phrases: 'Phrases',
+            relationships: 'Relationships',
             responses: 'Responses',
+            survival: 'Survival',
         };
 
         let signVideosCache = [];
@@ -863,15 +889,14 @@
                         </td>
                         <td>${safeText(video.word)}</td>
                         <td>${safeText(SIGN_VIDEO_CATEGORY_LABELS[video.category] || video.category)}</td>
-                        <td>${Number(video.order || 0)}</td>
                         <td><span style="color:${video.is_published ? '#10b981' : '#ef4444'};">${video.is_published ? 'Published' : 'Hidden'}</span></td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-info" onclick="openEditSignVideoForm(${Number(video.id)})" style="margin-right:4px;">Edit</button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSignVideo(${Number(video.id)})">Delete</button>
+                            <button type="button" class="btn btn-sm btn-info sign-video-edit-btn" data-video-id="${Number(video.id)}" style="margin-right:4px;">Edit</button>
+                            <button type="button" class="btn btn-sm btn-danger sign-video-delete-btn" data-video-id="${Number(video.id)}">Delete</button>
                         </td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No sign language videos found.</td></tr>';
+                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No sign language videos found.</td></tr>';
         }
 
         function renderSignVideosPagination(pageInfo) {
@@ -1130,6 +1155,21 @@
                 roleFilter.addEventListener('change', function () {
                     setAdminUsersPage(1);
                     void refreshAdminDashboard();
+                });
+            }
+
+            const signVideosTable = document.getElementById('signVideosTable');
+            if (signVideosTable) {
+                signVideosTable.addEventListener('click', function (event) {
+                    const editBtn = event.target.closest('.sign-video-edit-btn');
+                    if (editBtn) {
+                        openEditSignVideoForm(Number(editBtn.dataset.videoId));
+                        return;
+                    }
+                    const deleteBtn = event.target.closest('.sign-video-delete-btn');
+                    if (deleteBtn) {
+                        deleteSignVideo(Number(deleteBtn.dataset.videoId));
+                    }
                 });
             }
 
