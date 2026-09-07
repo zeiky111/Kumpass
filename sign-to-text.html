@@ -123,11 +123,12 @@
             <!-- Results Section -->
             <section class="results-section">
                 <div class="results-panel">
-                    <h2>📜 Detection History</h2>
+                    <h2>🔤 Word Builder</h2>
+                    <div id="wordInProgress" class="word-in-progress">–</div>
                     <div id="detectionHistory" class="detection-history">
-                        <p class="detection-history-empty">No signs detected yet.</p>
+                        <p class="detection-history-empty">No words yet.</p>
                     </div>
-                    <p id="detectionTotal" class="detection-total">Total signs: 0</p>
+                    <p id="detectionTotal" class="detection-total">Total words: 0</p>
                 </div>
             </section>
 
@@ -269,11 +270,25 @@
             flex: 1;
         }
 
+        .word-in-progress {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 0.9rem;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 1.6rem;
+            letter-spacing: 0.12em;
+            color: #a5b4fc;
+            min-height: 1.6em;
+        }
+
         .detection-history {
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            max-height: 420px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
@@ -1370,11 +1385,11 @@
         function renderDetectionHistory() {
             const container = document.getElementById('detectionHistory');
             const totalEl = document.getElementById('detectionTotal');
-            if (totalEl) totalEl.textContent = `Total signs: ${detectionHistoryEntries.length}`;
+            if (totalEl) totalEl.textContent = `Total words: ${detectionHistoryEntries.length}`;
             if (!container) return;
 
             if (!detectionHistoryEntries.length) {
-                container.innerHTML = '<p class="detection-history-empty">No signs detected yet.</p>';
+                container.innerHTML = '<p class="detection-history-empty">No words yet.</p>';
                 return;
             }
 
@@ -1476,6 +1491,13 @@
                 transcript.value += handState.previewLetter;
                 transcript.scrollTop = transcript.scrollHeight;
             }
+
+            updateWordInProgress(handState.currentWord);
+        }
+
+        function updateWordInProgress(word) {
+            const el = document.getElementById('wordInProgress');
+            if (el) el.textContent = word || '–';
         }
 
         function removeLastLetter(handedness) {
@@ -1483,6 +1505,7 @@
             if (!handState.currentWord) return;
             handState.currentWord = handState.currentWord.slice(0, -1);
             handState.previewLetter = handState.currentWord.slice(-1) || '';
+            updateWordInProgress(handState.currentWord);
         }
 
         function commitCurrentWord(handedness) {
@@ -1493,6 +1516,7 @@
             handState.stableLetter = '';
             handState.stableLetterSince = 0;
             handState.previewLetter = '';
+            updateWordInProgress('');
         }
 
         function pushHandWordFrame(handedness, landmarks) {
