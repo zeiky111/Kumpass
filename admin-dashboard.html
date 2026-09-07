@@ -63,7 +63,7 @@
                 </div>
 
                 <div id="overview" class="tab-content active">
-                    <div class="stats-grid grid grid-4">
+                    <div class="stats-grid grid grid-3">
                         <div class="stat-card">
                             <div class="stat-card-top">
                                 <div class="stat-icon" style="background: #3b82f6;"><i class="fas fa-users"></i></div>
@@ -72,16 +72,6 @@
                             <div class="stat-content">
                                 <div class="stat-value" id="adminTotalUsers">0</div>
                                 <div class="stat-label">Total Users</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <div class="stat-icon" style="background: #10b981;"><i class="fas fa-user-graduate"></i></div>
-                                <div class="stat-meta">Currently active</div>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-value" id="adminActiveStudents">0</div>
-                                <div class="stat-label">Active Students</div>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -283,8 +273,8 @@
                                     </label>
                                 </div>
                                 <div style="margin-bottom:8px;">
-                                    <input id="signVideoFile" type="file" accept="video/*" class="form-input" />
-                                    <small id="signVideoFileHint" style="color:#6b7280; display:block; margin-top:4px;">MP4/MOV video file for this word or phrase.</small>
+                                    <input id="signVideoFile" type="file" accept="video/*" class="form-input" onchange="onSignVideoFileChange()" />
+                                    <small id="signVideoFileHint" style="color:#6b7280; display:block; margin-top:4px;">MP4/MOV video file for this word or phrase. Max size: 3MB.</small>
                                 </div>
                                 <div>
                                     <button class="btn btn-primary btn-sm" onclick="saveSignVideo()">Save</button>
@@ -473,7 +463,6 @@
             const roleCounts = payload.roleCounts || {};
             const completionPercent = Math.min(100, Math.max(0, Number(summary.averageCompletion || 0)));
             document.getElementById('adminTotalUsers').textContent = Number(roleCounts.total || 0);
-            document.getElementById('adminActiveStudents').textContent = Number(summary.activeStudents || 0);
             document.getElementById('adminInstructors').textContent = Number(roleCounts.instructor || 0);
             document.getElementById('adminAverageCompletion').textContent = `${completionPercent}%`;
             const completionProgress = document.getElementById('adminCompletionProgress');
@@ -845,6 +834,8 @@
             }
         }
 
+        const MAX_SIGN_VIDEO_SIZE_BYTES = 3 * 1024 * 1024;
+
         const SIGN_VIDEO_CATEGORY_LABELS = {
             alphabet: 'Alphabet',
             emotions: 'Emotions',
@@ -948,8 +939,43 @@
                 if (search) params.set('search', search);
                 if (category) params.set('category', category);
                 const payload = await requestJson(`/admin/sign-videos/?${params.toString()}`);
-                renderSignVideos(payload.videos || []);
-                renderSignVideosPagination(payload.pagination || { page, pageSize: 10, total: (payload.videos || []).length });
+                let videos = payload.videos || [];
+                let pagination = payload.pagination || { page, pageSize: 10, total: videos.length };
+
+                // The admin-only endpoint can come back empty even though
+                // videos exist (e.g. rows created before some admin-only
+                // column was backfilled). Fall back to the same public feed
+                // Text-to-Sign uses, so the manager always reflects what's
+                // actually in the database, then apply search/category
+                // client-side to match what was asked for.
+                if (!videos.length && pagination.total === 0) {
+                    const fallback = await requestJson(`/sign-videos/`);
+                    let fallbackVideos = Array.isArray(fallback) ? fallback : [];
+                    if (category) {
+                        fallbackVideos = fallbackVideos.filter(v => String(v.category || '').toLowerCase() === category);
+                    }
+                    if (search) {
+                        const needle = search.toLowerCase();
+                        fallbackVideos = fallbackVideos.filter(v => String(v.word || '').toLowerCase().includes(needle));
+                    }
+                    const pageSize = 10;
+                    const total = fallbackVideos.length;
+                    const start = (page - 1) * pageSize;
+                    videos = fallbackVideos.slice(start, start + pageSize).map(v => ({
+                        id: v.id,
+                        key: v.key,
+                        word: v.word,
+                        category: v.category,
+                        video_url: v.video_url,
+                        order: v.order,
+                        is_published: true,
+                        text_to_sign_only: false,
+                    }));
+                    pagination = { page, pageSize, total };
+                }
+
+                renderSignVideos(videos);
+                renderSignVideosPagination(pagination);
             } catch (error) {
                 alert(`Failed to load sign language videos: ${error.message}`);
             }
@@ -963,7 +989,7 @@
             document.getElementById('signVideoOrder').value = '0';
             document.getElementById('signVideoPublished').checked = true;
             document.getElementById('signVideoFile').value = '';
-            document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase.';
+            document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase. Max size: 3MB.';
             document.getElementById('signVideoMessage').textContent = '';
         }
 
@@ -998,10 +1024,24 @@
             document.getElementById('signVideoOrder').value = Number(video.order || 0);
             document.getElementById('signVideoPublished').checked = !!video.is_published;
             document.getElementById('signVideoFile').value = '';
-            document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file.';
+            document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file. Max size: 3MB.';
             document.getElementById('signVideoMessage').textContent = '';
             document.getElementById('signVideoForm').style.display = 'block';
             document.getElementById('showAddSignVideoBtn').textContent = 'Hide';
+        }
+
+        function onSignVideoFileChange() {
+            const fileInput = document.getElementById('signVideoFile');
+            const msgEl = document.getElementById('signVideoMessage');
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            if (!file || !msgEl) return;
+            if (file.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                msgEl.style.color = '#b91c1c';
+                msgEl.textContent = 'Video file must be 3MB or smaller.';
+                fileInput.value = '';
+            } else {
+                msgEl.textContent = '';
+            }
         }
 
         async function saveSignVideo() {
@@ -1028,6 +1068,10 @@
             }
             if (!videoId && !file) {
                 msgEl.textContent = 'A video file is required.';
+                return;
+            }
+            if (file && file.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                msgEl.textContent = 'Video file must be 3MB or smaller.';
                 return;
             }
 

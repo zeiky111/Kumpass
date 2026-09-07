@@ -425,6 +425,15 @@ def _safe_bool(value: Any, default: bool = False) -> bool:
     return default
 
 
+MAX_SIGN_VIDEO_SIZE_BYTES = 3 * 1024 * 1024
+
+
+def _sign_video_size_error(uploaded_file: Any) -> Any:
+    if uploaded_file.size > MAX_SIGN_VIDEO_SIZE_BYTES:
+        return Response({"error": "Video file must be 3MB or smaller"}, status=400)
+    return None
+
+
 def _skill_breakdown_for_user(user: User) -> list:
     """Per-module quiz accuracy, derived from real QuizAttempt rows.
 
@@ -2422,6 +2431,10 @@ def instructor_upload_sign_video(request: Any) -> Response:
     if "video" not in request.FILES:
         return Response({"error": "No video file provided"}, status=400)
 
+    size_error = _sign_video_size_error(request.FILES["video"])
+    if size_error:
+        return size_error
+
     category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
     valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
     if category not in valid_categories:
@@ -2539,7 +2552,32 @@ def admin_sign_videos(request: Any) -> Response:
         category = str(request.query_params.get("category") or "").strip().lower()
         if category:
             videos = videos.filter(category=category)
-        return Response(AdminSignVideoSerializer(videos, many=True, context={"request": request}).data)
+        search = str(request.query_params.get("search") or "").strip()
+        if search:
+            videos = videos.filter(word__icontains=search)
+
+        try:
+            page = max(1, int(request.query_params.get("page") or 1))
+        except Exception:
+            page = 1
+        try:
+            page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
+        except Exception:
+            page_size = 10
+
+        total = videos.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_videos = videos[start:end]
+        return Response({
+            "videos": AdminSignVideoSerializer(page_videos, many=True, context={"request": request}).data,
+            "pagination": {
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": max(1, (total + page_size - 1) // page_size),
+            },
+        })
 
     # POST - upload a new video. Always scoped to Text-to-Sign only.
     word = str(request.data.get("word") or "").strip()
@@ -2548,6 +2586,10 @@ def admin_sign_videos(request: Any) -> Response:
 
     if "video" not in request.FILES:
         return Response({"error": "No video file provided"}, status=400)
+
+    size_error = _sign_video_size_error(request.FILES["video"])
+    if size_error:
+        return size_error
 
     category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
     valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
@@ -2614,6 +2656,9 @@ def admin_sign_video_detail(request: Any, video_id: int) -> Response:
         video.is_published = _safe_bool(request.data.get("is_published"), video.is_published)
 
     if "video" in request.FILES:
+        size_error = _sign_video_size_error(request.FILES["video"])
+        if size_error:
+            return size_error
         if video.video:
             video.video.delete(save=False)
         video.video = request.FILES["video"]

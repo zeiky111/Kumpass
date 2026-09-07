@@ -1935,6 +1935,7 @@
                     <div id="picker-upload-${uid}" style="display:none; margin-top:8px; padding:10px; background:#f3f4f6; border-radius:4px;">
                         <input type="text" id="picker-word-${uid}" class="form-input" placeholder="Word / phrase for this video" value="${safeAttr(selectedWord)}" style="margin-bottom:6px;">
                         <input type="file" id="picker-file-${uid}" class="form-input" accept=".mp4,.mov,.webm,.avi,.mkv" style="margin-bottom:6px;">
+                        <small style="color:#6b7280; display:block; margin-bottom:6px;">Max size: 3MB.</small>
                         <button type="button" class="btn btn-sm btn-primary" onclick="uploadVideoForPicker('${uid}')">Upload &amp; Use</button>
                     </div>
                     <input type="hidden" id="picker-video-${uid}" value="${safeAttr(selectedUrl)}">
@@ -1968,11 +1969,16 @@
                 alert('Choose a video file to upload.');
                 return;
             }
+            const selectedFile = fileInput.files[0];
+            if (selectedFile.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                alert('Video file must be 3MB or smaller.');
+                return;
+            }
 
             const formData = new FormData();
             formData.append('word', word);
             formData.append('actorEmail', await getInstructorActorIdentifier());
-            formData.append('video', fileInput.files[0]);
+            formData.append('video', selectedFile);
 
             try {
                 const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', body: formData });

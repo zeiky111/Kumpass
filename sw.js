@@ -1,5 +1,9 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v1';
+var CACHE_NAME = 'kumpas-cache-v2';
+// auth.js and main.js are deliberately excluded: they drive login/redirect
+// logic, and a stale cache-first copy of either can silently break login
+// (a bug fix ships but the old cached script keeps running) with no way
+// for the user to recover short of manually clearing site data.
 var PRECACHE_URLS = [
   'css/style.css',
   'css/dashboard.css',
@@ -7,13 +11,12 @@ var PRECACHE_URLS = [
   'css/pages.css',
   'css/quiz.css',
   'css/bg-orbs.css',
-  'js/main.js',
   'js/theme.js',
-  'js/auth.js',
   'js/portal.js',
   'images/kumpas_logo.png',
   'images/kumpas_logo1.png'
 ];
+var NETWORK_ONLY_SCRIPTS = /\/js\/(auth|main)\.js$/;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
@@ -57,7 +60,7 @@ self.addEventListener('fetch', function (event) {
   }
 
   var isStaticAsset = /\.(?:css|js|png|jpg|jpeg|svg|gif|webp|woff2?)$/.test(url.pathname);
-  if (!isStaticAsset) {
+  if (!isStaticAsset || NETWORK_ONLY_SCRIPTS.test(url.pathname)) {
     return;
   }
 
