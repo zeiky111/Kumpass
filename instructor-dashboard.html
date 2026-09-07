@@ -264,6 +264,7 @@
                 <li><a href="#overview" class="sidebar-link active" onclick="switchTab('overview')"><i class="fas fa-chart-line"></i> Overview</a></li>
                 <li><a href="#modules" class="sidebar-link" onclick="switchTab('modules')"><i class="fas fa-book"></i> Manage Modules</a></li>
                 <li><a href="#students" class="sidebar-link" onclick="switchTab('students')"><i class="fas fa-users"></i> Monitor Students</a></li>
+                <li><a href="#quiz-reports" class="sidebar-link" onclick="switchTab('quiz-reports')"><i class="fas fa-clipboard-check"></i> Quiz Reports</a></li>
                 <li><a href="#announcements" class="sidebar-link" onclick="switchTab('announcements')"><i class="fas fa-bell"></i> Announcements</a></li>
                 <li><a href="#game-levels" class="sidebar-link" onclick="switchTab('game-levels')"><i class="fas fa-layer-group"></i> Game Levels</a></li>
                 <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
@@ -375,6 +376,34 @@
                             </table>
                         </div>
                         <div id="studentPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Quiz Reports Tab -->
+                <div id="quiz-reports" class="tab-content" style="display: none;">
+                    <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Quiz Reports</h3>
+                        <span style="color:#6b7280;font-size:0.85rem;">Passing score: 75% and up</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>Year Level</th>
+                                        <th>Attempts</th>
+                                        <th>Passed</th>
+                                        <th>Pass Rate</th>
+                                        <th>Average Score</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quizReportsTable"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 </div>
@@ -530,6 +559,28 @@
                         <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('moduleMaterialsModal')">Close</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quizReportDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 760px; width: 94%;">
+            <div class="modal-header">
+                <h2 id="quizReportDetailTitle">Quiz Results</h2>
+                <button class="modal-close" onclick="closeModal('quizReportDetailModal')">&times;</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Score</th>
+                            <th>Result</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quizReportDetailTable"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1023,6 +1074,69 @@
             }
         }
 
+        async function loadQuizReports() {
+            const tableBody = document.getElementById('quizReportsTable');
+            if (!tableBody) return;
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;">Loading…</td></tr>';
+
+            try {
+                const actorEmail = await getInstructorActorIdentifier();
+                const data = await requestJson(`/instructor/quiz-reports/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                window.__quizReports = Array.isArray(data.modules) ? data.modules : [];
+                renderQuizReportsTable(window.__quizReports);
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Failed to load quiz reports: ${safeText(error.message)}</td></tr>`;
+            }
+        }
+
+        function renderQuizReportsTable(reports) {
+            const tableBody = document.getElementById('quizReportsTable');
+            if (!tableBody) return;
+
+            if (!reports.length) {
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;">No published modules with quizzes yet.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = reports.map(report => `
+                <tr>
+                    <td>${safeText(report.title)}</td>
+                    <td>${safeText(formatYearLabel(report.yearLevel))}</td>
+                    <td>${Number(report.attemptCount || 0)}</td>
+                    <td>${Number(report.passedCount || 0)} / ${Number(report.attemptCount || 0)}</td>
+                    <td>${Number(report.passRate || 0)}%</td>
+                    <td>${Number(report.averageScorePercent || 0)}%</td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="openQuizReportDetail(${Number(report.moduleId)})" ${report.attemptCount ? '' : 'disabled'}>View Details</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function openQuizReportDetail(moduleId) {
+            const reports = window.__quizReports || [];
+            const report = reports.find(item => Number(item.moduleId) === Number(moduleId));
+            if (!report) {
+                alert('Report not found. Refresh and try again.');
+                return;
+            }
+
+            document.getElementById('quizReportDetailTitle').textContent = `Quiz Results — ${report.title}`;
+            const tableBody = document.getElementById('quizReportDetailTable');
+            const students = Array.isArray(report.students) ? report.students : [];
+
+            tableBody.innerHTML = students.length
+                ? students.map(student => `
+                    <tr>
+                        <td>${safeText(student.name)}<br><small style="color:#6b7280;">${safeText(student.email)}</small></td>
+                        <td>${Number(student.score)} / ${Number(student.total)} (${Number(student.percent)}%)</td>
+                        <td>${student.passed ? '<span style="color:#065f46;font-weight:600;">Passed</span>' : '<span style="color:#b45309;font-weight:600;">Failed</span>'}</td>
+                        <td>${safeText(formatDateTime(student.submittedAt))}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="4" style="text-align:center;color:#6b7280;">No submissions yet.</td></tr>';
+
+            openModal('quizReportDetailModal');
+        }
+
         function populateAnnouncementForm(announcement) {
             document.getElementById('announcementId').value = announcement ? announcement.id : '';
             document.getElementById('announcementTitle').value = announcement ? announcement.title || '' : '';
@@ -1098,6 +1212,9 @@
 
             if (tab === 'game-levels') {
                 loadGameLevels();
+            }
+            if (tab === 'quiz-reports') {
+                loadQuizReports();
             }
         }
 

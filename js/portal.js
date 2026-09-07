@@ -124,6 +124,12 @@
     const files = Array.isArray(module && module.files) ? module.files : [];
     const quizCount = Number((module && (module.quizCount || module.quiz_count)) || 0);
     const quizzes = Array.isArray(module && module.quizzes) ? module.quizzes : [];
+    const quizAttemptRaw = module && module.quizAttempt;
+    const quizAttempt = quizAttemptRaw && typeof quizAttemptRaw === 'object' ? {
+      score: Number(quizAttemptRaw.score || 0),
+      total: Number(quizAttemptRaw.total || 0),
+      submittedAt: quizAttemptRaw.submittedAt || null,
+    } : null;
 
     const numericId = Number(module && module.id);
 
@@ -142,7 +148,8 @@
       filesCount: files.length,
       quizCount: Number.isFinite(quizCount) ? quizCount : 0
       ,
-      quizzes: quizzes
+      quizzes: quizzes,
+      quizAttempt: quizAttempt
     };
   }
 
@@ -549,6 +556,7 @@
         }
         if (openQuizBtn) {
           openQuizBtn.style.display = module && (Number(module.quizCount || 0) > 0) ? 'inline-flex' : 'none';
+          openQuizBtn.textContent = module && module.quizAttempt ? 'View Quiz Results' : 'Open Quiz';
           openQuizBtn.onclick = (e) => { e.stopPropagation(); openQuiz(module.id); };
         }
       } catch (e) {
@@ -593,6 +601,18 @@
     const moduleQuizzes = Array.isArray(module.quizzes) ? module.quizzes : [];
     if (!moduleQuizzes.length) {
       body.innerHTML = '<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No quizzes available for this module.</div>';
+      modal.classList.add('active');
+      return;
+    }
+
+    if (module.quizAttempt) {
+      const { score, total, submittedAt } = module.quizAttempt;
+      const submittedLabel = submittedAt ? new Date(submittedAt).toLocaleString() : '';
+      body.innerHTML = `
+        <div class="quiz-results">
+          <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
+          <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}</div>
+        </div>`;
       modal.classList.add('active');
       return;
     }
@@ -675,6 +695,14 @@
           });
           if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
+            if (err && err.alreadyCompleted) {
+              body.innerHTML = `
+                <div class="quiz-results">
+                  <div class="quiz-results-score">Score: <strong>${Number(err.score || 0)}</strong> / ${Number(err.total || 0)}</div>
+                  <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once.</div>
+                </div>`;
+              return;
+            }
             alert(err && err.error ? `Quiz submission failed: ${err.error}` : 'Quiz submission failed');
             submitButton.disabled = false;
             submitButton.textContent = 'Submit Quiz';
