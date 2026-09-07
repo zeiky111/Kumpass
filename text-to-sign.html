@@ -72,9 +72,24 @@
         <section class="browse-section">
             <div class="browse-header">
                 <h2><i class="fas fa-list"></i> Browse All Signs</h2>
-                <div class="browse-search-row">
-                    <i class="fas fa-search browse-search-icon"></i>
-                    <input type="text" id="wordBrowseSearch" class="browse-search-input" placeholder="Search sign words…" autocomplete="off">
+                <div class="browse-header-controls">
+                    <select id="browseCategorySelect" class="browse-category-select">
+                        <option value="all">All Categories</option>
+                        <option value="greetings">Greetings</option>
+                        <option value="everyday">Everyday Words</option>
+                        <option value="family">Family</option>
+                        <option value="numbers">Numbers</option>
+                        <option value="emotions">Emotions</option>
+                        <option value="school">School</option>
+                        <option value="calendar">Calendar</option>
+                        <option value="colors">Colors</option>
+                        <option value="food_drink">Food &amp; Drink</option>
+                        <option value="survival">Survival</option>
+                    </select>
+                    <div class="browse-search-row">
+                        <i class="fas fa-search browse-search-icon"></i>
+                        <input type="text" id="wordBrowseSearch" class="browse-search-input" placeholder="Search sign words…" autocomplete="off">
+                    </div>
                 </div>
             </div>
             <div class="word-browse-grid" id="wordBrowseGrid"></div>
@@ -388,6 +403,32 @@
             font-weight: 700;
         }
 
+        .browse-header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .browse-category-select {
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .browse-category-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+
         .browse-search-row {
             position: relative;
             flex: 1;
@@ -483,6 +524,12 @@
         }
 
         :root[data-theme="dark"] .browse-search-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .browse-category-select {
             background: var(--input-bg);
             border-color: var(--input-border);
             color: var(--text-body);
@@ -699,6 +746,7 @@
         }
 
         const wordBrowseSearch = document.getElementById('wordBrowseSearch');
+        const browseCategorySelect = document.getElementById('browseCategorySelect');
         const wordBrowseGrid = document.getElementById('wordBrowseGrid');
         const wordBrowsePagination = document.getElementById('wordBrowsePagination');
         const WORDS_PER_PAGE = 24;
@@ -732,7 +780,9 @@
             }
 
             const query = wordBrowseSearch ? wordBrowseSearch.value.trim().toLowerCase() : '';
+            const category = browseCategorySelect ? browseCategorySelect.value : 'all';
             const allWords = Object.values(signLibrary)
+                .filter(sign => category === 'all' || sign.category === category)
                 .filter(sign => !query || sign.label.toLowerCase().includes(query))
                 .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -767,6 +817,13 @@
 
         if (wordBrowseSearch) {
             wordBrowseSearch.addEventListener('input', () => {
+                wordBrowsePage = 1;
+                renderWordBrowse();
+            });
+        }
+
+        if (browseCategorySelect) {
+            browseCategorySelect.addEventListener('change', () => {
                 wordBrowsePage = 1;
                 renderWordBrowse();
             });
