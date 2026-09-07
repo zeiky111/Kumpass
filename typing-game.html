@@ -911,8 +911,10 @@
                         `On Hard difficulty, you have ${HARD_TIME_LIMIT_SECONDS} seconds to answer each question before time runs out.`,
                     ],
                     scoring: [
-                        'Correct answers earn points based on your difficulty and current level.',
-                        'Harder difficulties and higher levels are worth more points.',
+                        'Easy correct answer = 8 points',
+                        'Medium correct answer = 10 points',
+                        'Hard correct answer = 12 points',
+                        'Incorrect or timed-out answer = 0 points',
                     ],
                     levelCounts,
                     onStart: () => startLevel(true),

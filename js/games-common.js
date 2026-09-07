@@ -392,9 +392,12 @@
       return Math.max(2, opts.choiceCounts[state.difficulty] || 4);
     }
 
+    // Flat points per correct answer for the CURRENT difficulty -- no
+    // level-number bonus, so the score always matches what's stated in the
+    // "How to Play" instructions (e.g. "Easy = 10 pts") regardless of which
+    // level/question the player happens to be on.
     function getPointValue() {
-      const base = opts.pointBase[state.difficulty] || 10;
-      return base + currentLevelNumber();
+      return opts.pointBase[state.difficulty] || 10;
     }
 
     function canSelectDifficulty(level) {

@@ -1192,8 +1192,10 @@
                         `On Hard difficulty, you have ${HARD_TIME_LIMIT_SECONDS} seconds per sentence.`,
                     ],
                     scoring: [
-                        'Correct sentences earn points based on your difficulty and current level.',
-                        'Harder difficulties and higher levels are worth more points.',
+                        'Easy correct sentence = 15 points',
+                        'Medium correct sentence = 20 points',
+                        'Hard correct sentence = 25 points',
+                        'Incorrect or timed-out sentence = 0 points',
                     ],
                     levelCounts,
                     onStart: () => startLevel(true),
