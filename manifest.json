@@ -1,0 +1,25 @@
+{
+  "name": "Kumpas - Interactive Sign Language Learning System",
+  "short_name": "Kumpas",
+  "description": "Learn Filipino Sign Language with interactive games, translation tools, and progress tracking.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f3f4f6",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "images/kumpas_logo.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/kumpas_logo.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

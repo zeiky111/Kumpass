@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Instructor Dashboard - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
@@ -236,7 +239,7 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="instructor-dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
@@ -388,6 +391,9 @@
                         <span style="color:#6b7280;font-size:0.85rem;">Passing score: 75% and up</span>
                     </div>
                     <div class="card-body">
+                        <div style="margin-bottom:14px;">
+                            <input id="quizReportsSearch" class="form-input" placeholder="Search module title..." style="width:240px;" oninput="renderQuizReportsTable(window.__quizReports || [])" />
+                        </div>
                         <div class="table-responsive">
                             <table>
                                 <thead>
@@ -582,6 +588,7 @@
                     <tbody id="quizReportDetailTable"></tbody>
                 </table>
             </div>
+            <div id="quizReportDetailPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;padding:0 20px 16px;"></div>
         </div>
     </div>
 
@@ -1093,12 +1100,18 @@
             const tableBody = document.getElementById('quizReportsTable');
             if (!tableBody) return;
 
-            if (!reports.length) {
-                tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;">No published modules with quizzes yet.</td></tr>';
+            const searchInput = document.getElementById('quizReportsSearch');
+            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const filtered = searchQuery
+                ? reports.filter(report => String(report.title || '').toLowerCase().includes(searchQuery))
+                : reports;
+
+            if (!filtered.length) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#6b7280;">${searchQuery ? 'No modules match your search.' : 'No published modules with quizzes yet.'}</td></tr>`;
                 return;
             }
 
-            tableBody.innerHTML = reports.map(report => `
+            tableBody.innerHTML = filtered.map(report => `
                 <tr>
                     <td>${safeText(report.title)}</td>
                     <td>${safeText(formatYearLabel(report.yearLevel))}</td>
@@ -1111,6 +1124,8 @@
             `).join('');
         }
 
+        const QUIZ_REPORT_DETAIL_PAGE_SIZE = 10;
+
         function openQuizReportDetail(moduleId) {
             const reports = window.__quizReports || [];
             const report = reports.find(item => Number(item.moduleId) === Number(moduleId));
@@ -1120,11 +1135,28 @@
             }
 
             document.getElementById('quizReportDetailTitle').textContent = `Quiz Results — ${report.title}`;
-            const tableBody = document.getElementById('quizReportDetailTable');
-            const students = Array.isArray(report.students) ? report.students : [];
+            window.__quizReportDetailStudents = Array.isArray(report.students) ? report.students : [];
+            window.__quizReportDetailPage = 1;
+            renderQuizReportDetailPage();
 
-            tableBody.innerHTML = students.length
-                ? students.map(student => `
+            openModal('quizReportDetailModal');
+        }
+
+        function renderQuizReportDetailPage() {
+            const tableBody = document.getElementById('quizReportDetailTable');
+            const pagination = document.getElementById('quizReportDetailPagination');
+            const students = window.__quizReportDetailStudents || [];
+            const total = students.length;
+            const pageSize = QUIZ_REPORT_DETAIL_PAGE_SIZE;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(Math.max(1, Number(window.__quizReportDetailPage || 1)), totalPages);
+            window.__quizReportDetailPage = page;
+
+            const start = (page - 1) * pageSize;
+            const pageStudents = students.slice(start, start + pageSize);
+
+            tableBody.innerHTML = pageStudents.length
+                ? pageStudents.map(student => `
                     <tr>
                         <td>${safeText(student.name)}<br><small style="color:#6b7280;">${safeText(student.email)}</small></td>
                         <td>${Number(student.score)} / ${Number(student.total)} (${Number(student.percent)}%)</td>
@@ -1134,7 +1166,25 @@
                 `).join('')
                 : '<tr><td colspan="4" style="text-align:center;color:#6b7280;">No submissions yet.</td></tr>';
 
-            openModal('quizReportDetailModal');
+            if (pagination) {
+                const shownStart = total ? start + 1 : 0;
+                const shownEnd = total ? Math.min(start + pageSize, total) : 0;
+                pagination.innerHTML = total > pageSize || total > 0
+                    ? `
+                        <span style="color:#6b7280;">${total ? `Showing ${shownStart}-${shownEnd} of ${total}` : 'No records to show'}</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeQuizReportDetailPage(${page - 1})">Prev</button>
+                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeQuizReportDetailPage(${page + 1})">Next</button>
+                        </div>
+                    `
+                    : '';
+            }
+        }
+
+        function changeQuizReportDetailPage(page) {
+            window.__quizReportDetailPage = Math.max(1, Number(page || 1));
+            renderQuizReportDetailPage();
         }
 
         function populateAnnouncementForm(announcement) {
@@ -2312,5 +2362,6 @@
         }
     })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>

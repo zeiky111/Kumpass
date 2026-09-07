@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Admin Dashboard - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260731">
     <link rel="stylesheet" href="css/pages.css?v=20260731">
@@ -18,7 +21,7 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="admin-dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
@@ -247,6 +250,19 @@
                         </div>
                         <div class="card-body">
                             <p style="color:#6b7280; margin-top:-6px; margin-bottom:16px;">Videos uploaded here are stored in the database and power the Text-to-Sign module only.</p>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                                <input id="signVideoSearch" class="form-input" placeholder="Search word / phrase..." style="width:220px;" oninput="onSignVideoSearchInput()" />
+                                <select id="signVideoCategoryFilter" class="form-input" style="width:180px;" onchange="onSignVideoFilterChange()">
+                                    <option value="">All Categories</option>
+                                    <option value="alphabet">Alphabet</option>
+                                    <option value="emotions">Emotions</option>
+                                    <option value="everyday_words">Everyday Words</option>
+                                    <option value="expressions">Expressions</option>
+                                    <option value="greetings">Greetings</option>
+                                    <option value="phrases">Phrases</option>
+                                    <option value="responses">Responses</option>
+                                </select>
+                            </div>
                             <div id="signVideoForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px; background-color:#f9fafb;">
                                 <h4 id="signVideoFormTitle">Add Sign Language Video</h4>
                                 <input id="signVideoId" type="hidden" />
@@ -291,6 +307,7 @@
                                     <tbody id="signVideosTable"></tbody>
                                 </table>
                             </div>
+                            <div id="signVideosPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
                 </div>
@@ -839,6 +856,7 @@
         };
 
         let signVideosCache = [];
+        let signVideoSearchDebounce = null;
 
         function renderSignVideos(videos) {
             signVideosCache = Array.isArray(videos) ? videos : [];
@@ -862,7 +880,53 @@
                         </td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No sign language videos uploaded yet.</td></tr>';
+                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No sign language videos found.</td></tr>';
+        }
+
+        function renderSignVideosPagination(pageInfo) {
+            const pagination = document.getElementById('signVideosPagination');
+            if (!pagination) return;
+            const info = pageInfo || {};
+            const page = Number(info.page || 1);
+            const pageSize = Number(info.pageSize || 10);
+            const total = Number(info.total || 0);
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const start = total ? ((page - 1) * pageSize) + 1 : 0;
+            const end = total ? Math.min(page * pageSize, total) : 0;
+            pagination.innerHTML = `
+                <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeSignVideosPage(${page - 1})">Prev</button>
+                    <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                    <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeSignVideosPage(${page + 1})">Next</button>
+                </div>
+            `;
+        }
+
+        function getSignVideosPage() {
+            return Number(window.__signVideosPage || 1);
+        }
+
+        function setSignVideosPage(page) {
+            window.__signVideosPage = Math.max(1, Number(page || 1));
+        }
+
+        async function changeSignVideosPage(page) {
+            setSignVideosPage(page);
+            await refreshSignVideos();
+        }
+
+        function onSignVideoFilterChange() {
+            setSignVideosPage(1);
+            refreshSignVideos();
+        }
+
+        function onSignVideoSearchInput() {
+            setSignVideosPage(1);
+            if (signVideoSearchDebounce) clearTimeout(signVideoSearchDebounce);
+            signVideoSearchDebounce = setTimeout(() => {
+                refreshSignVideos();
+            }, 300);
         }
 
         async function refreshSignVideos() {
@@ -872,9 +936,20 @@
                 window.location.href = 'login.html';
                 return;
             }
+            const search = String((document.getElementById('signVideoSearch') || {}).value || '').trim();
+            const category = String((document.getElementById('signVideoCategoryFilter') || {}).value || '');
+            const page = getSignVideosPage();
             try {
-                const videos = await requestJson(`/admin/sign-videos/?adminEmail=${encodeURIComponent(actorId)}`);
-                renderSignVideos(videos);
+                const params = new URLSearchParams({
+                    adminEmail: actorId,
+                    page: String(page),
+                    pageSize: '10',
+                });
+                if (search) params.set('search', search);
+                if (category) params.set('category', category);
+                const payload = await requestJson(`/admin/sign-videos/?${params.toString()}`);
+                renderSignVideos(payload.videos || []);
+                renderSignVideosPagination(payload.pagination || { page, pageSize: 10, total: (payload.videos || []).length });
             } catch (error) {
                 alert(`Failed to load sign language videos: ${error.message}`);
             }
@@ -1048,5 +1123,6 @@
         });
     })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
