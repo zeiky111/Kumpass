@@ -656,6 +656,39 @@
         const { videoMimeType } = KumpasGames;
         const HARD_TIME_LIMIT_SECONDS = 15;
 
+        // Accepted alternate answers (Filipino/Tagalog translations and common
+        // English synonyms) per word/phrase, keyed by the exact GameLevelItem
+        // prompt as authored. The player only needs to get the MEANING right --
+        // e.g. typing "Mad" or "Galit" for a sign meaning "Angry" should count.
+        // Single alphabet letters (Easy) have no synonyms, so they're omitted.
+        const ANSWER_ALTERNATES = {
+            'Happy': ['masaya', 'saya', 'glad', 'joyful'],
+            'Sad': ['malungkot', 'lungkot', 'unhappy'],
+            'Angry': ['galit', 'mad', 'furious'],
+            'Afraid': ['takot', 'natatakot', 'scared', 'fearful'],
+            'Excited': ['tuwang-tuwa', 'excited na', 'thrilled'],
+            'Tired': ['pagod', 'napagod', 'exhausted'],
+            'Love': ['mahal', 'pagmamahal', 'in love'],
+            'How are you': ['kumusta ka', 'kumusta', 'how are you doing'],
+            "I'm fine": ['ok lang ako', 'mabuti naman ako', 'fine', 'i am fine', 'im fine', 'okay lang ako'],
+            'What is your name': ['ano ang pangalan mo', 'anong pangalan mo', 'whats your name', "what's your name"],
+            'My name is': ['ang pangalan ko ay', 'ako si', 'my name'],
+            'Nice to meet you': ['ikinagagalak kong makilala ka', 'ikinagalak kong makilala ka', 'pleased to meet you', 'glad to meet you'],
+            'I need help': ['kailangan ko ng tulong', 'tulungan mo ako', 'i need assistance'],
+            'Can you repeat that': ['pakiulit', 'ulitin mo nga', 'can you say that again', 'say that again', 'paki ulit'],
+            'Yes': ['oo', 'opo', 'sige', 'yeah', 'yep'],
+            'Hello': ['kumusta', 'hi', 'hey'],
+            'Good morning': ['magandang umaga'],
+            'Good afternoon': ['magandang hapon'],
+            'Good evening': ['magandang gabi'],
+            'Goodbye': ['paalam', 'bye', 'bye bye', 'see you'],
+            'Welcome': ['maligayang pagdating', 'walang anuman'],
+            'Please': ['pakiusap', 'paki'],
+            'Thank you': ['salamat', 'maraming salamat', 'thanks'],
+            'Sorry': ['patawad', 'pasensya na', 'paumanhin', 'my bad'],
+            'Excuse me': ['makikiraan', 'pasensya po', 'pasintabi'],
+        };
+
         // Typing has no multiple-choice options, so choiceCounts isn't used for
         // rendering; kept for API symmetry with the other games' engine config.
         const engine = KumpasGames.createGameEngine({
@@ -892,9 +925,12 @@
             .then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
-                    item => (item.media_url && item.prompt)
-                        ? { video: item.media_url, answers: [String(item.prompt || '').toLowerCase()] }
-                        : null
+                    item => {
+                        if (!item.media_url || !item.prompt) return null;
+                        const prompt = String(item.prompt || '');
+                        const alternates = ANSWER_ALTERNATES[prompt] || [];
+                        return { video: item.media_url, answers: [prompt.toLowerCase(), ...alternates.map(a => a.toLowerCase())] };
+                    }
                 );
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
