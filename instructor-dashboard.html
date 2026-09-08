@@ -1435,12 +1435,16 @@
                 return;
             }
 
-            await requestJson(`/instructor/modules/${moduleId}/files/${fileId}/`, {
-                method: 'DELETE',
-                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
-            });
-            await refreshInstructorDashboard();
-            openModuleMaterialsModal(moduleId);
+            try {
+                await requestJson(`/instructor/modules/${moduleId}/files/${fileId}/`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+                });
+                await refreshInstructorDashboard();
+                openModuleMaterialsModal(moduleId);
+            } catch (error) {
+                alert(`Failed to delete material: ${error.message}`);
+            }
         }
 
         async function saveAnnouncement(event) {
@@ -1473,11 +1477,15 @@
                 return;
             }
 
-            await requestJson(`/instructor/modules/${moduleId}/`, {
-                method: 'DELETE',
-                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
-            });
-            await refreshInstructorDashboard();
+            try {
+                await requestJson(`/instructor/modules/${moduleId}/`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+                });
+                await refreshInstructorDashboard();
+            } catch (error) {
+                alert(`Failed to delete module: ${error.message}`);
+            }
         }
 
         async function handleModuleQuizButton() {
@@ -1554,11 +1562,15 @@
                 return;
             }
 
-            await requestJson(`/instructor/announcements/${announcementId}/`, {
-                method: 'DELETE',
-                body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
-            });
-            await refreshInstructorDashboard();
+            try {
+                await requestJson(`/instructor/announcements/${announcementId}/`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
+                });
+                await refreshInstructorDashboard();
+            } catch (error) {
+                alert(`Failed to delete announcement: ${error.message}`);
+            }
         }
 
         const GAME_LABELS = {
