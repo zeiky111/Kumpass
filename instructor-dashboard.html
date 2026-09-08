@@ -1222,9 +1222,7 @@
             }
         }
 
-        function openModuleModal(moduleId = '') {
-            const currentModules = window.__instructorModules || [];
-            const module = moduleId ? currentModules.find(item => Number(item.id) === Number(moduleId)) : null;
+        function applyModuleModalState(module) {
             populateModuleForm(module || null);
             const title = document.getElementById('moduleModalTitle');
             if (title) {
@@ -1251,6 +1249,32 @@
                 }
             }
             openModal('moduleModal');
+        }
+
+        async function openModuleModal(moduleId = '') {
+            if (!moduleId) {
+                applyModuleModalState(null);
+                return;
+            }
+
+            const currentModules = window.__instructorModules || [];
+            let module = currentModules.find(item => Number(item.id) === Number(moduleId));
+
+            // Not in the currently loaded page/filter of the modules list
+            // (e.g. returning from the quiz builder for a module that isn't
+            // on page 1) -- fetch it directly instead of silently falling
+            // back to "Add New Module".
+            if (!module) {
+                try {
+                    const actorEmail = await getInstructorActorIdentifier();
+                    module = await requestJson(`/instructor/modules/${moduleId}/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                } catch (error) {
+                    alert(`Could not load module: ${error.message}`);
+                    return;
+                }
+            }
+
+            applyModuleModalState(module);
         }
 
         function openAnnouncementModal(announcementId = '') {
@@ -2362,7 +2386,14 @@
             } catch (error) {
                 alert(`Failed to load instructor dashboard: ${error.message}`);
             }
-            switchTab('overview');
+
+            const returnModuleId = new URLSearchParams(window.location.search).get('module');
+            if (returnModuleId) {
+                switchTab('modules');
+                await openModuleModal(returnModuleId);
+            } else {
+                switchTab('overview');
+            }
         });
     </script>
     <script>

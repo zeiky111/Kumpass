@@ -193,7 +193,7 @@
                     <h1 id="moduleQuizTitle">Quiz Builder</h1>
                     <p id="moduleQuizSubtitle">Manage quiz questions for your selected module.</p>
                 </div>
-                <a href="instructor-dashboard.html" class="btn btn-secondary" style="white-space:nowrap;">&larr; Back to Module</a>
+                <a href="instructor-dashboard.html" id="backToModuleLink" class="btn btn-secondary" style="white-space:nowrap;">&larr; Back to Module</a>
             </div>
 
             <div class="quiz-summary" id="quizSummary"></div>
@@ -242,6 +242,11 @@
         const moduleId = new URLSearchParams(window.location.search).get('module');
         let currentQuizQuestions = [];
         let editingQuestionId = '';
+
+        if (moduleId) {
+            const backLink = document.getElementById('backToModuleLink');
+            if (backLink) backLink.href = `instructor-dashboard.html?module=${encodeURIComponent(moduleId)}`;
+        }
 
         function getCurrentUser() {
             if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
