@@ -1894,7 +1894,11 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
         return Response(data)
 
     if request.method == "DELETE":
-        module.delete()
+        try:
+            module.delete()
+        except (DatabaseError, IntegrityError, OperationalError) as exc:
+            logger.exception("Failed to delete module %s", module_id)
+            return Response({"error": f"Could not delete module: {exc}"}, status=500)
         return Response({"message": "Module deleted"})
 
     was_published = module.status == LearningModule.STATUS_PUBLISHED
