@@ -3,6 +3,44 @@
   const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
   const DEFAULT_USER_NAME = 'Learner';
   const DEFAULT_USER_EMAIL = '';
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  async function ensureCsrfToken() {
+    const existing = getCookie('csrftoken');
+    if (existing) return existing;
+    try {
+      const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+      const cookieToken = getCookie('csrftoken');
+      if (cookieToken) return cookieToken;
+      const data = await response.json().catch(() => ({}));
+      return data.csrfToken || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // Adds the session cookie and CSRF header every mutating request needs,
+  // so callers can just `await window.fetchWithAuth(url, options)` the same
+  // way they'd call fetch().
+  window.fetchWithAuth = async function fetchWithAuth(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const headers = { ...(options.headers || {}) };
+    if (method !== 'GET' && method !== 'HEAD') {
+      const csrfToken = await ensureCsrfToken();
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+    }
+    return fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers,
+    });
+  };
   let hydratedState = null;
   let studentContentCache = null;
   let currentUserCache = null;
