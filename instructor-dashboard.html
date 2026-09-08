@@ -361,6 +361,7 @@
                         <div class="card-body">
                             <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
                             <div id="instructorGameLevelsList"></div>
+                            <div id="gameLevelsPagination" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;"></div>
                         </div>
                     </div>
                 </div>
@@ -1600,14 +1601,36 @@
             `).join('');
         }
 
+        const GAME_LEVELS_PAGE_SIZE = 5;
+
+        function getGameLevelsPage() {
+            return Number(window.__gameLevelsPage || 1);
+        }
+
+        function changeGameLevelsPage(page) {
+            window.__gameLevelsPage = Math.max(1, Number(page || 1));
+            renderGameLevels();
+        }
+
         function renderGameLevels() {
             const target = document.getElementById('instructorGameLevelsList');
+            const pagination = document.getElementById('gameLevelsPagination');
             if (!target) return;
             const activeGame = getGameLevelsFilter();
-            const levels = (window.__gameLevels || []).filter(level => level.game_key === activeGame);
+            const allLevels = (window.__gameLevels || []).filter(level => level.game_key === activeGame);
+
+            const total = allLevels.length;
+            const pageSize = GAME_LEVELS_PAGE_SIZE;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(Math.max(1, getGameLevelsPage()), totalPages);
+            window.__gameLevelsPage = page;
+
+            const start = (page - 1) * pageSize;
+            const levels = allLevels.slice(start, start + pageSize);
 
             if (!levels.length) {
                 target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
+                if (pagination) pagination.innerHTML = '';
                 return;
             }
 
@@ -1626,10 +1649,26 @@
                     </div>
                 </div>
             `).join('');
+
+            if (pagination) {
+                const shownStart = total ? start + 1 : 0;
+                const shownEnd = total ? Math.min(start + pageSize, total) : 0;
+                pagination.innerHTML = totalPages > 1
+                    ? `
+                        <span style="color:#6b7280;">Showing ${shownStart}-${shownEnd} of ${total}</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeGameLevelsPage(${page - 1})">Prev</button>
+                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeGameLevelsPage(${page + 1})">Next</button>
+                        </div>
+                    `
+                    : '';
+            }
         }
 
         function switchGameLevelsGame(gameKey) {
             window.__gameLevelsFilter = gameKey;
+            window.__gameLevelsPage = 1;
             renderGameLevelTabs();
             renderGameLevels();
             if (document.getElementById('levelModal')?.classList.contains('active')) {
