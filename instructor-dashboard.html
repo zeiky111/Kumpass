@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
     <style>
         .tab-content {
             animation: fadeIn 0.3s ease-in;
@@ -391,6 +392,9 @@
                         <span style="color:#6b7280;font-size:0.85rem;">Passing score: 75% and up</span>
                     </div>
                     <div class="card-body">
+                        <div id="quizReportsChartWrap" style="position:relative; height:280px; margin-bottom:22px; display:none;">
+                            <canvas id="quizReportsChart"></canvas>
+                        </div>
                         <div style="margin-bottom:14px;">
                             <input id="quizReportsSearch" class="form-input" placeholder="Search module title..." style="width:240px;" oninput="renderQuizReportsTable(window.__quizReports || [])" />
                         </div>
@@ -1091,6 +1095,7 @@
                 const data = await requestJson(`/instructor/quiz-reports/?actorEmail=${encodeURIComponent(actorEmail)}`);
                 window.__quizReports = Array.isArray(data.modules) ? data.modules : [];
                 renderQuizReportsTable(window.__quizReports);
+                renderQuizReportsChart(window.__quizReports);
             } catch (error) {
                 tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Failed to load quiz reports: ${safeText(error.message)}</td></tr>`;
             }
@@ -1122,6 +1127,58 @@
                     <td><button class="btn btn-sm btn-secondary" onclick="openQuizReportDetail(${Number(report.moduleId)})" ${report.attemptCount ? '' : 'disabled'}>View Details</button></td>
                 </tr>
             `).join('');
+        }
+
+        let quizReportsChartInstance = null;
+
+        function renderQuizReportsChart(reports) {
+            const wrap = document.getElementById('quizReportsChartWrap');
+            const canvas = document.getElementById('quizReportsChart');
+            if (!wrap || !canvas) return;
+
+            const withAttempts = (reports || []).filter(report => Number(report.attemptCount || 0) > 0);
+            if (!withAttempts.length) {
+                wrap.style.display = 'none';
+                if (quizReportsChartInstance) {
+                    quizReportsChartInstance.destroy();
+                    quizReportsChartInstance = null;
+                }
+                return;
+            }
+
+            wrap.style.display = 'block';
+            const labels = withAttempts.map(r => r.title);
+            const passRates = withAttempts.map(r => Number(r.passRate || 0));
+            const avgScores = withAttempts.map(r => Number(r.averageScorePercent || 0));
+
+            if (quizReportsChartInstance) {
+                quizReportsChartInstance.data.labels = labels;
+                quizReportsChartInstance.data.datasets[0].data = passRates;
+                quizReportsChartInstance.data.datasets[1].data = avgScores;
+                quizReportsChartInstance.update();
+                return;
+            }
+
+            quizReportsChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Pass Rate %', data: passRates, backgroundColor: '#10b981' },
+                        { label: 'Average Score %', data: avgScores, backgroundColor: '#3b82f6' },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 },
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                    },
+                },
+            });
         }
 
         const QUIZ_REPORT_DETAIL_PAGE_SIZE = 10;
