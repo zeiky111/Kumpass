@@ -1323,7 +1323,13 @@
 
             if (payload.status === 'published') {
                 const quizCount = Number(window.__currentModuleQuizCount || 0);
-                if (!moduleId || quizCount === 0) {
+                if (!moduleId) {
+                    // Brand-new module: it can't have a quiz yet, and the
+                    // backend always rejects a new module published outright.
+                    // Save it as a draft instead and let the quiz builder
+                    // (opened right after) be where it actually gets published.
+                    payload.status = 'draft';
+                } else if (quizCount === 0) {
                     alert('Add at least one quiz question before publishing this module. Save it as a draft first, then use "Add Quiz".');
                     return;
                 }
@@ -1384,6 +1390,7 @@
                 try {
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
+                        credentials: 'include',
                         body: formData,
                     });
 
@@ -1970,7 +1977,7 @@
             formData.append('video', selectedFile);
 
             try {
-                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', body: formData });
+                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', credentials: 'include', body: formData });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${response.status})`);
