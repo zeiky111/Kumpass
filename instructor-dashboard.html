@@ -970,8 +970,9 @@
             const statusSelect = document.getElementById('moduleStatus');
             const hint = document.getElementById('moduleStatusQuizHint');
             if (!statusSelect || !hint) return;
+            const moduleId = document.getElementById('moduleId').value;
             const quizCount = Number(window.__currentModuleQuizCount || 0);
-            if (statusSelect.value === 'published' && quizCount === 0) {
+            if (moduleId && statusSelect.value === 'published' && quizCount === 0) {
                 hint.style.display = 'block';
                 hint.textContent = 'This module has no quiz questions yet. Add at least one quiz question before you can publish it.';
             } else {
@@ -1379,6 +1380,7 @@
             }
 
             const errors = [];
+            const csrfToken = await ensureCsrfToken();
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -1391,6 +1393,7 @@
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
                         credentials: 'include',
+                        headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
                         body: formData,
                     });
 
@@ -1977,7 +1980,13 @@
             formData.append('video', selectedFile);
 
             try {
-                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, { method: 'POST', credentials: 'include', body: formData });
+                const csrfToken = await ensureCsrfToken();
+                const response = await fetch(`${API_BASE}/instructor/sign-videos/`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+                    body: formData,
+                });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${response.status})`);
