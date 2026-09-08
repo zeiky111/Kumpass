@@ -201,26 +201,27 @@
 
             <div class="quiz-form" id="quizFormArea" style="display:none;">
                 <div class="form-group">
-                    <label for="quizQuestionText">Question</label>
-                    <textarea id="quizQuestionText" placeholder="Enter the question text" required></textarea>
-                </div>
-                <div class="form-group">
                     <label for="quizQuestionType">Question Type</label>
                     <select id="quizQuestionType">
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="identification">Identification</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="quizQuestionText">Question</label>
+                    <textarea id="quizQuestionText" placeholder="Enter the question text" required></textarea>
+                </div>
                 <div class="form-group" id="quizChoicesGroup">
-                    <label for="quizQuestionChoices">Choices (one per line)</label>
-                    <textarea id="quizQuestionChoices" placeholder="Enter each answer choice on its own line"></textarea>
+                    <label>Choices</label>
+                    <div id="quizChoicesList" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="addChoiceBtn" style="align-self:flex-start; margin-top:0.25rem;">+ Add Choice</button>
                 </div>
                 <div class="form-group">
                     <label for="quizQuestionAnswer">Correct Answer</label>
                     <input id="quizQuestionAnswer" type="text" placeholder="Enter the correct answer" required />
                 </div>
                 <div class="quiz-actions">
-                    <button class="btn btn-primary" id="saveQuizQuestionBtn">Save Question</button>
+                    <button class="btn btn-primary" id="saveQuizQuestionBtn" type="button">Save Question</button>
                     <button class="btn btn-secondary" id="cancelQuizEditBtn" type="button">Cancel</button>
                 </div>
             </div>
@@ -325,6 +326,47 @@
             }
         }
 
+        function renderChoiceInputs(values) {
+            const list = document.getElementById('quizChoicesList');
+            if (!list) return;
+            const initial = (Array.isArray(values) && values.length ? values : ['', '']);
+            list.innerHTML = initial.map(value => `
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" class="quiz-choice-input" placeholder="Enter an answer choice" value="${String(value == null ? '' : value).replace(/"/g, '&quot;')}" style="flex:1;" />
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeChoiceInput(this)">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function addChoiceInput() {
+            const list = document.getElementById('quizChoicesList');
+            if (!list) return;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; gap:0.5rem; align-items:center;';
+            row.innerHTML = `
+                <input type="text" class="quiz-choice-input" placeholder="Enter an answer choice" style="flex:1;" />
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeChoiceInput(this)">Remove</button>
+            `;
+            list.appendChild(row);
+            row.querySelector('input').focus();
+        }
+
+        function removeChoiceInput(button) {
+            const list = document.getElementById('quizChoicesList');
+            if (!list) return;
+            const row = button.closest('div');
+            if (row) row.remove();
+            if (!list.children.length) {
+                renderChoiceInputs([]);
+            }
+        }
+
+        function getChoiceInputValues() {
+            return Array.from(document.querySelectorAll('#quizChoicesList .quiz-choice-input'))
+                .map(input => sanitizeInstructorInput(input.value))
+                .filter(Boolean);
+        }
+
         function toggleQuizForm(show) {
             const quizFormArea = document.getElementById('quizFormArea');
             if (quizFormArea) {
@@ -334,9 +376,9 @@
 
         function resetQuizForm() {
             editingQuestionId = '';
-            document.getElementById('quizQuestionText').value = '';
             document.getElementById('quizQuestionType').value = 'multiple_choice';
-            document.getElementById('quizQuestionChoices').value = '';
+            document.getElementById('quizQuestionText').value = '';
+            renderChoiceInputs([]);
             document.getElementById('quizQuestionAnswer').value = '';
             document.getElementById('saveQuizQuestionBtn').textContent = 'Save Question';
             document.getElementById('moduleQuizTitle').textContent = 'Quiz Builder';
@@ -398,9 +440,9 @@
 
         function populateQuizForm(question) {
             editingQuestionId = String(question.id || '');
-            document.getElementById('quizQuestionText').value = question.question_text || '';
             document.getElementById('quizQuestionType').value = question.question_type || 'multiple_choice';
-            document.getElementById('quizQuestionChoices').value = Array.isArray(question.choices) ? question.choices.join('\n') : '';
+            document.getElementById('quizQuestionText').value = question.question_text || '';
+            renderChoiceInputs(Array.isArray(question.choices) ? question.choices : []);
             document.getElementById('quizQuestionAnswer').value = question.correct_answer || '';
             document.getElementById('saveQuizQuestionBtn').textContent = 'Update Question';
             document.getElementById('moduleQuizTitle').textContent = 'Editing Question';
@@ -450,9 +492,8 @@
         async function saveQuizQuestion(event) {
             event.preventDefault();
             const actorEmail = await getInstructorActorIdentifier();
-            const questionText = sanitizeInstructorInput(document.getElementById('quizQuestionText').value);
             const questionType = document.getElementById('quizQuestionType').value;
-            const rawChoices = document.getElementById('quizQuestionChoices').value;
+            const questionText = sanitizeInstructorInput(document.getElementById('quizQuestionText').value);
             const correctAnswer = sanitizeInstructorInput(document.getElementById('quizQuestionAnswer').value);
 
             if (!questionText) {
@@ -466,7 +507,7 @@
 
             let choices = [];
             if (questionType === 'multiple_choice') {
-                choices = rawChoices.split('\n').map(item => sanitizeInstructorInput(item)).filter(Boolean);
+                choices = getChoiceInputValues();
                 if (choices.length < 2) {
                     alert('Multiple choice questions require at least two answer options.');
                     return;
@@ -496,6 +537,8 @@
                 });
                 resetQuizForm();
                 await refreshQuizQuestions();
+                const list = document.getElementById('quizQuestionsList');
+                if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (error) {
                 alert(`Could not save question: ${error.message}`);
             }
@@ -536,6 +579,7 @@
                 resetQuizForm();
             });
             document.getElementById('addQuizQuestionBtn').addEventListener('click', openQuizForm);
+            document.getElementById('addChoiceBtn').addEventListener('click', addChoiceInput);
             resetQuizForm();
             await loadModuleAndQuestions();
         });
