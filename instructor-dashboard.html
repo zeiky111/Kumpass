@@ -1343,15 +1343,28 @@
                 const path = moduleId ? `/instructor/modules/${moduleId}/` : '/instructor/modules/';
                 const method = moduleId ? 'PATCH' : 'POST';
                 const moduleResponse = await requestJson(path, { method, body: JSON.stringify(payload) });
-                
+
                 // Upload files if any were selected
                 const fileInput = document.getElementById('moduleFile');
                 if (fileInput && fileInput.files.length > 0) {
                     const finalModuleId = moduleResponse.id || moduleId;
                     await uploadModuleFiles(finalModuleId, fileInput.files);
                 }
-                
+
                 closeModal('moduleModal');
+
+                // New modules have no quiz yet -- go straight into the quiz
+                // builder so instructors add questions right after creating
+                // the module, instead of having to find the "Quiz" button
+                // again from the modules table.
+                if (!moduleId) {
+                    const newModuleId = moduleResponse.id;
+                    if (newModuleId) {
+                        openModuleQuizBuilder(newModuleId);
+                        return;
+                    }
+                }
+
                 await refreshInstructorDashboard();
             } catch (error) {
                 alert(`Failed to save module: ${error.message}`);
