@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.min.js"></script>
     <style>
         .tab-content {
             animation: fadeIn 0.3s ease-in;
@@ -1134,7 +1134,7 @@
         function renderQuizReportsChart(reports) {
             const wrap = document.getElementById('quizReportsChartWrap');
             const canvas = document.getElementById('quizReportsChart');
-            if (!wrap || !canvas) return;
+            if (!wrap || !canvas || typeof Chart === 'undefined') return;
 
             const withAttempts = (reports || []).filter(report => Number(report.attemptCount || 0) > 0);
             if (!withAttempts.length) {
