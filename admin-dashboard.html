@@ -317,10 +317,6 @@
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Order</label>
-                <input id="signVideoOrder" type="number" class="form-input" value="0" />
-            </div>
-            <div class="form-group">
                 <label class="checkbox" style="display:flex;align-items:center;gap:10px;">
                     <input id="signVideoPublished" type="checkbox" checked />
                     Published
@@ -1038,7 +1034,6 @@
             document.getElementById('signVideoId').value = '';
             document.getElementById('signVideoWord').value = '';
             document.getElementById('signVideoCategory').value = 'phrases';
-            document.getElementById('signVideoOrder').value = '0';
             document.getElementById('signVideoPublished').checked = true;
             document.getElementById('signVideoFile').value = '';
             document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase. Max size: 3MB.';
@@ -1062,7 +1057,6 @@
             document.getElementById('signVideoId').value = video.id;
             document.getElementById('signVideoWord').value = video.word || '';
             document.getElementById('signVideoCategory').value = video.category || 'phrases';
-            document.getElementById('signVideoOrder').value = Number(video.order || 0);
             document.getElementById('signVideoPublished').checked = !!video.is_published;
             document.getElementById('signVideoFile').value = '';
             document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file. Max size: 3MB.';
@@ -1097,7 +1091,6 @@
             const videoId = Number(document.getElementById('signVideoId').value || 0);
             const word = sanitizeAdminInput(document.getElementById('signVideoWord').value);
             const category = String(document.getElementById('signVideoCategory').value || 'phrases');
-            const order = Number(document.getElementById('signVideoOrder').value || 0);
             const isPublished = document.getElementById('signVideoPublished').checked;
             const fileInput = document.getElementById('signVideoFile');
             const file = fileInput && fileInput.files ? fileInput.files[0] : null;
@@ -1119,7 +1112,6 @@
             formData.append('actorEmail', actorId);
             formData.append('word', word);
             formData.append('category', category);
-            formData.append('order', String(order));
             formData.append('is_published', isPublished ? 'true' : 'false');
             if (file) {
                 formData.append('video', file);
