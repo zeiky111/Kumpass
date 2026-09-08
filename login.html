@@ -3,28 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Login - Kumpas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
 </head>
-<body>
+<body class="login-page">
     <div class="auth-page">
         <div class="auth-container">
             <!-- Sidebar -->
             <div class="auth-sidebar">
                 <div class="logo auth-brand">
-                    <img src="images/kumpas_logo.png" alt="Kumpas logo" class="auth-brand-logo" loading="lazy">
-                    <div class="auth-brand-text">
-                        <span>Kumpas</span>
-                        <small>Sign Language Learning System</small>
-                    </div>
+                    <img src="images/kumpas_logo.png" alt="Kumpas logo" class="auth-brand-logo">
                 </div>
                 <h2>Welcome Back!</h2>
-                <p>Continue your Filipino Sign Language learning journey. Log in to access your personalized dashboard, track your progress, and unlock new activities.</p>
+                <p>Sign in to continue your journey with KUMPAS sign language learning platform</p>
                 <div class="auth-illustration">
                     <i class="fas fa-hand-peace"></i>
                 </div>
@@ -33,7 +26,7 @@
             <!-- Login Form -->
             <div class="auth-form-container">
                 <div class="auth-header">
-                    <h1>Sign In</h1>
+                    <h1>Login to KUMPAS</h1>
                     <p>Enter your credentials to access your account</p>
                 </div>
 
@@ -47,7 +40,7 @@
                         <label for="password" class="form-label">Password</label>
                         <div class="password-input-wrapper">
                             <input type="password" id="password" class="form-input" required>
-                            <button type="button" class="password-toggle" aria-label="Show password">
+                            <button type="button" class="password-toggle" placeholder="Enter a password" aria-label="Show password">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -60,7 +53,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
-                        <i class="fas fa-sign-in-alt"></i> Sign In
+                         Sign In <i class="fas fa-sign-in-alt"></i>
                     </button>
                 </form>
 
@@ -74,6 +67,5 @@
 
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/pwa.js"></script>
 </body>
 </html>
