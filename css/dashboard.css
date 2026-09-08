@@ -641,6 +641,11 @@ tbody tr:nth-child(even) {
   gap: 10px;
 }
 
+.chart-body:has(canvas) {
+  position: relative;
+  height: 260px;
+}
+
 .chart-bar-row {
   display: grid;
   grid-template-columns: 1fr auto;

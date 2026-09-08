@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/dashboard.css?v=20260731">
     <link rel="stylesheet" href="css/dashboard-pro.css?v=20260731">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body class="pro-dashboard admin-theme">
     <script src="js/auth.js"></script>
@@ -106,14 +107,14 @@
                                 <h3>Role Distribution</h3>
                                 <p class="chart-card-copy">Quick breakdown of all active accounts by role.</p>
                             </div>
-                            <div id="overviewRoleChart" class="chart-body"></div>
+                            <div class="chart-body"><canvas id="overviewRoleChart"></canvas></div>
                         </div>
                         <div class="chart-card">
                             <div class="chart-card-header">
                                 <h3>Completion Insight</h3>
                                 <p class="chart-card-copy">Average course completion across students.</p>
                             </div>
-                            <div id="overviewCompletionChart" class="chart-body"></div>
+                            <div class="chart-body"><canvas id="overviewCompletionChart"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -203,7 +204,7 @@
                                 <div class="chart-card-header">
                                     <h4>Role Breakdown</h4>
                                 </div>
-                                <div id="adminRoleChart" class="chart-body"></div>
+                                <div class="chart-body"><canvas id="adminRoleChart"></canvas></div>
                             </div>
                             <div class="table-responsive">
                                 <table>
@@ -486,6 +487,11 @@
             links.forEach(link => link.classList.remove('active'));
             const activeLink = document.querySelector(`.sidebar-link[onclick="switchTab('${tab}')"]`);
             if (activeLink) activeLink.classList.add('active');
+
+            // Charts created while their tab was hidden (display:none) paint at
+            // 0x0 and never recover their size on their own -- nudge Chart.js
+            // to remeasure now that the canvas is actually visible.
+            Object.values(chartInstances).forEach(chart => chart.resize());
         }
 
         function openModal(modalId) {
@@ -496,6 +502,92 @@
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) modal.classList.remove('active');
+        }
+
+        const chartInstances = {};
+
+        function renderRoleDistributionChart(canvasId, roleCounts) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const entries = [
+                { label: 'Students', value: Number(roleCounts.student || 0), color: '#3b82f6' },
+                { label: 'Instructors', value: Number(roleCounts.instructor || 0), color: '#10b981' },
+                { label: 'Admins', value: Number(roleCounts.admin || 0), color: '#f59e0b' },
+                { label: 'Inactive', value: Number(roleCounts.inactive || 0), color: '#ef4444' },
+            ];
+
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].data.datasets[0].data = entries.map(e => e.value);
+                chartInstances[canvasId].update();
+                return;
+            }
+
+            chartInstances[canvasId] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: entries.map(e => e.label),
+                    datasets: [{
+                        data: entries.map(e => e.value),
+                        backgroundColor: entries.map(e => e.color),
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                    },
+                },
+            });
+        }
+
+        function renderCompletionChart(canvasId, value) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const percent = Math.min(100, Math.max(0, Number(value || 0)));
+
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].data.datasets[0].data = [percent, 100 - percent];
+                chartInstances[canvasId].update();
+                return;
+            }
+
+            chartInstances[canvasId] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'Remaining'],
+                    datasets: [{
+                        data: [percent, 100 - percent],
+                        backgroundColor: ['#8b5cf6', '#e5e7eb'],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false },
+                    },
+                },
+                plugins: [{
+                    id: 'centerText',
+                    afterDraw(chart) {
+                        const { ctx, chartArea } = chart;
+                        const centerX = (chartArea.left + chartArea.right) / 2;
+                        const centerY = (chartArea.top + chartArea.bottom) / 2;
+                        ctx.save();
+                        ctx.font = '700 22px Poppins, Inter, sans-serif';
+                        ctx.fillStyle = '#111827';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`${percent}%`, centerX, centerY);
+                        ctx.restore();
+                    },
+                }],
+            });
         }
 
         function renderOverview(payload) {
@@ -509,46 +601,8 @@
             if (completionProgress) {
                 completionProgress.style.width = `${completionPercent}%`;
             }
-            document.getElementById('overviewRoleChart').innerHTML = renderRoleDistributionChart(roleCounts);
-            document.getElementById('overviewCompletionChart').innerHTML = renderCompletionMetric(completionPercent);
-        }
-
-        function renderRoleDistributionChart(roleCounts) {
-            const total = Number(roleCounts.total || 0) || 1;
-            const entries = [
-                { label: 'Students', value: Number(roleCounts.student || 0), color: '#3b82f6' },
-                { label: 'Instructors', value: Number(roleCounts.instructor || 0), color: '#10b981' },
-                { label: 'Admins', value: Number(roleCounts.admin || 0), color: '#f59e0b' },
-                { label: 'Inactive', value: Number(roleCounts.inactive || 0), color: '#ef4444' },
-            ];
-            return entries.map(entry => {
-                const percent = Math.round((entry.value / total) * 100);
-                return `
-                    <div class="chart-bar-row">
-                        <div class="chart-bar-label">
-                            <span>${entry.label}</span>
-                            <strong>${entry.value}</strong>
-                        </div>
-                        <div class="chart-bar-track">
-                            <div class="chart-bar-fill" style="width:${percent}%; background:${entry.color};"></div>
-                        </div>
-                        <div class="chart-bar-percent">${percent}%</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderCompletionMetric(value) {
-            const percent = Math.min(100, Math.max(0, Number(value || 0)));
-            return `
-                <div class="completion-metric">
-                    <div class="completion-number">${percent}%</div>
-                    <div class="completion-label">Average completion across students</div>
-                    <div class="completion-bar">
-                        <div class="completion-fill" style="width: ${percent}%;"></div>
-                    </div>
-                </div>
-            `;
+            renderRoleDistributionChart('overviewRoleChart', roleCounts);
+            renderCompletionChart('overviewCompletionChart', completionPercent);
         }
 
         function renderUsers(payload) {
@@ -604,8 +658,7 @@
         function renderRoles(payload) {
             const roleCounts = payload.roleCounts || {};
             const target = document.getElementById('adminRoleDistributionTable');
-            const chartTarget = document.getElementById('adminRoleChart');
-            chartTarget.innerHTML = renderRoleDistributionChart(roleCounts);
+            renderRoleDistributionChart('adminRoleChart', roleCounts);
             target.innerHTML = `
                 <tr><td>Student</td><td>${Number(roleCounts.student || 0)}</td></tr>
                 <tr><td>Instructor</td><td>${Number(roleCounts.instructor || 0)}</td></tr>
