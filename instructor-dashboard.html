@@ -1580,27 +1580,6 @@
             scenario: 'Scenario-Based Game',
         };
         const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-        const GAME_PAGES = {
-            sign_match: 'sign-match-game.html',
-            typing: 'typing-game.html',
-            sentence: 'sentence-game.html',
-            scenario: 'scenario-game.html',
-        };
-
-        async function previewLevel(levelId) {
-            const currentLevels = window.__gameLevels || [];
-            const level = currentLevels.find(item => Number(item.id) === Number(levelId));
-            if (!level) return;
-            const page = GAME_PAGES[level.game_key];
-            if (!page) return;
-            if (!Number(level.items_count || 0)) {
-                alert('This level has no content yet. Add content before previewing.');
-                return;
-            }
-            const actorId = await getInstructorActorIdentifier();
-            const url = `${page}?previewLevelId=${encodeURIComponent(levelId)}&previewActor=${encodeURIComponent(actorId)}`;
-            window.open(url, '_blank');
-        }
 
         function getGameLevelsFilter() {
             return window.__gameLevelsFilter || 'sign_match';
@@ -1641,7 +1620,6 @@
                     </h4>
                     <p>${Number(level.items_count || 0)} content item(s)</p>
                     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
-                        <button class="btn btn-sm btn-info" onclick="previewLevel(${Number(level.id)})">Preview as Student</button>
                         <button class="btn btn-sm btn-secondary" onclick="openLevelItemsModal(${Number(level.id)})">Manage Content</button>
                         <button class="btn btn-sm btn-secondary" onclick="openLevelModal(${Number(level.id)})">Edit</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteLevel(${Number(level.id)})">Delete</button>
