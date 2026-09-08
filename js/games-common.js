@@ -161,11 +161,32 @@
   // Groups raw GameLevel records (with .items) into { easy: [GameLevel...], ... }
   // ordered by level_number, mapping each item through mapItem(item) and
   // dropping levels that end up with no usable content.
+  //
+  // Pooling: a GameLevelItem can carry extra_data.pool -- a list of raw
+  // alternative items ({prompt, media_url, extra_data}) sharing the same
+  // shape as a GameLevelItem. Each pool entry is mapped through mapItem() up
+  // front (here) and attached to the mapped item as `_pool`, so the level
+  // *slot* itself doesn't change (same level_number/title/count), but which
+  // WORD fills that slot can be redrawn from the pool on each playthrough --
+  // see createGameEngine's buildQuestionsForCurrentLevel/pickFromPool.
   function buildLevelsByDifficulty(levels, mapItem) {
     const byDifficulty = { easy: [], medium: [], hard: [] };
     levels.forEach(level => {
       const items = (level.items || [])
-        .map(mapItem)
+        .map(rawItem => {
+          const mapped = mapItem(rawItem);
+          if (mapped == null) return null;
+          const rawPool = (rawItem.extra_data && Array.isArray(rawItem.extra_data.pool))
+            ? rawItem.extra_data.pool
+            : null;
+          if (rawPool && rawPool.length) {
+            const mappedPool = rawPool
+              .map(mapItem)
+              .filter(entry => entry != null);
+            if (mappedPool.length) mapped._pool = mappedPool;
+          }
+          return mapped;
+        })
         .filter(item => item != null);
       if (!items.length) return;
       if (!byDifficulty[level.difficulty]) byDifficulty[level.difficulty] = [];
@@ -426,8 +447,18 @@
     // Builds the question set for the CURRENT level within the active
     // difficulty (teacher-level content used in full, in the order authored;
     // shuffled only if the level has more items than the difficulty needs).
+    // Redraws each item from its pool (if any) so the SAME level slot can
+    // surface a different word on each playthrough. An item without a
+    // `_pool` (or an empty one) always plays its own authored content, so
+    // this is a no-op for levels that were never given extra alternatives.
+    function drawFromPool(item) {
+      if (!item || !Array.isArray(item._pool) || !item._pool.length) return item;
+      const candidates = [item, ...item._pool];
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
     function buildQuestionsForCurrentLevel() {
-      const pool = getActivePool().slice();
+      const pool = getActivePool().map(drawFromPool);
       return shuffle(pool).slice(0, Math.max(1, pool.length));
     }
 
