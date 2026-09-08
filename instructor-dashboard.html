@@ -972,9 +972,11 @@
             if (!statusSelect || !hint) return;
             const moduleId = document.getElementById('moduleId').value;
             const quizCount = Number(window.__currentModuleQuizCount || 0);
-            if (moduleId && statusSelect.value === 'published' && quizCount === 0) {
+            if (statusSelect.value === 'published' && quizCount === 0) {
                 hint.style.display = 'block';
-                hint.textContent = 'This module has no quiz questions yet. Add at least one quiz question before you can publish it.';
+                hint.textContent = moduleId
+                    ? 'This module has no quiz questions yet. Add at least one quiz question before you can publish it.'
+                    : 'This module has no quiz questions yet. Save it and you will be directed to the quiz builder to add questions, then you can publish it.';
             } else {
                 hint.style.display = 'none';
             }
