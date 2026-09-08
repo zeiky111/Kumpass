@@ -322,7 +322,10 @@ class SignVideo(models.Model):
     key = models.CharField(max_length=120, unique=True, db_index=True)
     word = models.CharField(max_length=150)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_PHRASES)
-    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/")
+    # Same reasoning as ModuleFile/UserCertificate above: Render's disk is
+    # ephemeral, so these must land in Cloudinary (raw, not the default
+    # image-typed storage) to survive a deploy/restart instead of 404ing.
+    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/", storage=RAW_FILE_STORAGE)
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     # True for videos uploaded via the Admin "Sign Language Videos" manager --
