@@ -64,83 +64,8 @@
             margin-top: 4px;
         }
 
-        .module-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 18px;
-        }
-
-        .module-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .module-card-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .module-card-header > div {
-            min-width: 0;
-        }
-
-        .module-card-title {
-            margin: 0;
-            font-size: 1.05rem;
-            color: #111827;
-            line-height: 1.35;
-            overflow-wrap: break-word;
-            word-break: break-word;
-        }
-
-        .module-card-description {
-            margin: 0;
-            color: #6b7280;
-            line-height: 1.55;
-            font-size: 0.95rem;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-
-        .module-card-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .module-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .module-card-files {
-            border-top: 1px solid #eef2f7;
-            padding-top: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .module-card-files h4 {
-            margin: 0;
-            font-size: 0.88rem;
-            color: #111827;
+        .module-row:hover {
+            background: #f8fafc;
         }
 
         .module-file-item {
@@ -168,25 +93,6 @@
             color: #6b7280;
         }
 
-        .module-card-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: auto;
-        }
-
-        .module-card-quiz-hint {
-            color: #475569;
-            font-size: 0.88rem;
-            line-height: 1.4;
-            margin-top: 6px;
-            max-width: 100%;
-        }
-
-        .module-card-actions .btn-sm {
-            flex: 1 1 120px;
-        }
-
         .materials-list {
             display: flex;
             flex-direction: column;
@@ -204,12 +110,6 @@
 
         .materials-list a:hover {
             text-decoration: underline;
-        }
-
-        @media (max-width: 1024px) {
-            .module-card-actions .btn-sm {
-                flex: 1 1 100%;
-            }
         }
 
         @media (max-width: 768px) {
@@ -352,7 +252,23 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="instructorModulesGrid" class="module-grid"></div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Module</th>
+                                            <th>Year</th>
+                                            <th>Status</th>
+                                            <th>Students</th>
+                                            <th>Activities</th>
+                                            <th>Materials</th>
+                                            <th>Quiz Items</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="instructorModulesGrid"></tbody>
+                                </table>
+                            </div>
                             <div id="modulePagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
@@ -933,49 +849,30 @@
                 ? modules.map(module => {
                     const files = Array.isArray(module.files) ? module.files : [];
                     const filesCount = files.length;
-                    const previewFiles = files.slice(0, 3);
                     return `
-                        <article class="module-card" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0">
-                            <div class="module-card-header">
-                                <div>
-                                    <div class="module-card-meta" style="margin-bottom: 10px;">
-                                        <span class="module-chip">${safeText(formatYearLabel(module.year_level))}</span>
-                                        ${getStatusBadge(module.status)}
-                                    </div>
-                                    <h4 class="module-card-title">${safeText(module.title)}</h4>
+                        <tr class="module-row" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" style="cursor:pointer;">
+                            <td>
+                                <div style="font-weight:600;color:#111827;">${safeText(module.title)}</div>
+                                <small style="color:#6b7280;">${safeText(module.description || 'No module description yet.')}</small>
+                            </td>
+                            <td>${safeText(formatYearLabel(module.year_level))}</td>
+                            <td>${getStatusBadge(module.status)}</td>
+                            <td>${Number(module.studentCount || 0)}</td>
+                            <td>${Number(module.activities_count || 0)}</td>
+                            <td>${filesCount}</td>
+                            <td>${Number(module.quizCount || 0)}</td>
+                            <td onclick="event.stopPropagation();">
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
+                                    <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
                                 </div>
-                                <span class="module-chip" style="background:#ecfeff;color:#0f766e;">${Number(module.studentCount || 0)} students</span>
-                            </div>
-                            <p class="module-card-description">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</p>
-                            <div class="module-card-meta">
-                                <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
-                                <span class="module-chip">📎 ${filesCount} materials</span>
-                                <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
-                            </div>
-                            <div class="module-card-files">
-                                <h4>Recent materials</h4>
-                                ${filesCount
-                                    ? previewFiles.map(file => `
-                                        <div class="module-file-item">
-                                            <div>
-                                                <div style="font-weight:600;color:#111827;">${safeText(file.file_name)}</div>
-                                                <small>${safeText(file.file_type || 'file')} • ${safeText(file.description || 'No description')}</small>
-                                            </div>
-                                            <span style="color:#2563eb;font-size:0.85rem;font-weight:600;">Open</span>
-                                        </div>
-                                    `).join('')
-                                    : '<div style="color:#6b7280;font-size:0.9rem;">No materials uploaded yet.</div>'}
-                            </div>
-                            <div class="module-card-actions" onclick="event.stopPropagation();">
-                                <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
-                                <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
-                                <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
-                            </div>
-                        </article>
+                            </td>
+                        </tr>
                     `;
                 }).join('')
-                : '<div style="padding: 18px; color: #6b7280;">No modules found in the database.</div>';
+                : '<tr><td colspan="8" style="padding: 18px; color: #6b7280;">No modules found in the database.</td></tr>';
 
             if (pagination) {
                 const pageInfo = window.__modulePagination || {};
