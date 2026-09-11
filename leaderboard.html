@@ -408,7 +408,13 @@
 
         .podium-section {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            /* repeat(3, 1fr) always reserved 3 equal columns even with
+               fewer than 3 players, leaving large empty tracks beside a
+               single podium card. auto-fit collapses unused tracks, and
+               capping the max (instead of 1fr) plus centering keeps cards
+               from stretching to fill the leftover width instead. */
+            grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
+            justify-content: center;
             gap: 1.5rem;
             padding: 2rem;
             background: linear-gradient(135deg, #eef4ff 0%, #e8eefc 100%);

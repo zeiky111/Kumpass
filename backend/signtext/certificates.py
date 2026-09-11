@@ -17,7 +17,7 @@ from django.core.mail import EmailMessage
 from django.core.files.base import ContentFile
 from PIL import Image, ImageDraw, ImageFont
 
-from .models import Certificate, UserCertificate
+from .models import Certificate, Quiz, UserCertificate
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,29 @@ def award_certificate_if_earned(user: User, game_key: str) -> UserCertificate | 
 
     user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
     file_name = f"{certificate.game_key}-{user.id}.pdf"
+    user_certificate.file.save(file_name, ContentFile(pdf_bytes), save=False)
+    user_certificate.save()
+    return user_certificate
+
+
+def award_certificate_if_earned_for_quiz(user: User, quiz: Quiz) -> UserCertificate | None:
+    """Quiz-based counterpart to award_certificate_if_earned: idempotently
+    issues the certificate linked to `quiz` (if an instructor configured
+    one) to `user`. Returns the newly-created UserCertificate, or None if
+    no certificate is linked to this quiz or the user already earned it."""
+    try:
+        certificate = Certificate.objects.get(quiz=quiz)
+    except Certificate.DoesNotExist:
+        return None
+
+    if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
+        return None
+
+    student_name = _student_name_for_user(user)
+    pdf_bytes = _generate_certificate_pdf(certificate.template_path, student_name)
+
+    user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
+    file_name = f"quiz-{quiz.id}-{user.id}.pdf"
     user_certificate.file.save(file_name, ContentFile(pdf_bytes), save=False)
     user_certificate.save()
     return user_certificate

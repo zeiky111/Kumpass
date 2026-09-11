@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Module Quiz Builder - Kumpas</title>
+    <title>Quiz Builder - Kumpas</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/pages.css" />
     <link rel="stylesheet" href="css/dashboard-pro.css" />
@@ -13,13 +13,9 @@
             max-width: 1180px;
             margin: 0 auto;
             padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.5rem) clamp(2rem, 5vw, 4rem);
-            display: grid;
-            grid-template-columns: 1.4fr 0.8fr;
-            gap: 1.75rem;
         }
 
-        .quiz-panel,
-        .quiz-sidebar {
+        .quiz-panel {
             background: #ffffff;
             border-radius: 18px;
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
@@ -74,7 +70,7 @@
         }
 
         .quiz-form textarea {
-            min-height: 120px;
+            min-height: 100px;
             resize: vertical;
         }
 
@@ -125,6 +121,16 @@
             font-size: 0.82rem;
         }
 
+        .quiz-card-meta span.status-published {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .quiz-card-meta span.status-draft {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
         .quiz-card-actions {
             display: flex;
             gap: 0.5rem;
@@ -136,18 +142,112 @@
             font-size: 0.85rem;
         }
 
-        .quiz-help {
+        /* Two-pane Question Bank picker */
+        .quiz-bank-layout {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .quiz-bank-pane,
+        .quiz-selected-pane {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem;
+            background: #f9fafb;
+        }
+
+        .quiz-bank-pane h3,
+        .quiz-selected-pane h3 {
+            margin: 0 0 0.75rem;
             font-size: 0.95rem;
-            line-height: 1.6;
-            color: #475569;
         }
 
-        .quiz-help strong {
-            color: #111827;
+        .quiz-bank-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
         }
 
-        @media (max-width: 1024px) {
-            .quiz-builder-container {
+        .quiz-bank-filters input {
+            grid-column: 1 / -1;
+        }
+
+        .quiz-bank-filters input,
+        .quiz-bank-filters select {
+            min-height: 38px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0.5rem 0.65rem;
+            font-size: 0.85rem;
+            background: #ffffff;
+        }
+
+        .bank-question-list,
+        .selected-question-list {
+            display: grid;
+            gap: 0.5rem;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .bank-question-item,
+        .selected-question-item {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+        }
+
+        .bank-question-item .q-text,
+        .selected-question-item .q-text {
+            flex: 1;
+            color: #1f2937;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bank-question-item .q-type,
+        .selected-question-item .q-type {
+            font-size: 0.72rem;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        .bank-question-item button,
+        .selected-question-item button {
+            border: none;
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .selected-question-item .remove-btn {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty-hint {
+            padding: 16px;
+            color: #6b7280;
+            background: #f8fafc;
+            border-radius: 12px;
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 900px) {
+            .quiz-bank-layout {
                 grid-template-columns: 1fr;
             }
         }
@@ -187,58 +287,103 @@
         <section class="quiz-panel">
             <div class="page-heading">
                 <h1 id="moduleQuizTitle">Quiz Builder</h1>
-                <p id="moduleQuizSubtitle">Manage quiz questions for your selected module.</p>
+                <p id="moduleQuizSubtitle">Manage quizzes for this module.</p>
             </div>
 
             <div class="quiz-summary" id="quizSummary"></div>
 
-            <div style="display:flex; justify-content:flex-end; margin-bottom:1.25rem;">
-                <button class="btn btn-primary" id="addQuizQuestionBtn" type="button">Add Question</button>
-            </div>
-
-            <div class="quiz-form" id="quizFormArea" style="display:none;">
-                <div class="form-group">
-                    <label for="quizQuestionText">Question</label>
-                    <textarea id="quizQuestionText" placeholder="Enter the question text" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="quizQuestionType">Question Type</label>
-                    <select id="quizQuestionType">
-                        <option value="multiple_choice">Multiple Choice</option>
-                        <option value="identification">Identification</option>
-                    </select>
-                </div>
-                <div class="form-group" id="quizChoicesGroup">
-                    <label for="quizQuestionChoices">Choices (one per line)</label>
-                    <textarea id="quizQuestionChoices" placeholder="Enter each answer choice on its own line"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="quizQuestionAnswer">Correct Answer</label>
-                    <input id="quizQuestionAnswer" type="text" placeholder="Enter the correct answer" required />
-                </div>
-                <div class="form-group">
-                    <label for="quizQuestionOrder">Display Order</label>
-                    <input id="quizQuestionOrder" type="number" min="0" value="0" />
-                </div>
-                <div class="quiz-actions">
-                    <button class="btn btn-primary" id="saveQuizQuestionBtn">Save Question</button>
-                    <button class="btn btn-secondary" id="cancelQuizEditBtn" type="button">Cancel</button>
-                </div>
-            </div>
-
             <div class="quiz-list-area">
-                <h2 id="quizQuestionListTitle">Existing Questions</h2>
-                <div id="quizQuestionsList" class="quiz-list"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="margin:0;">Quizzes for this Module</h2>
+                    <button class="btn btn-primary btn-sm" id="newQuizBtn" type="button">+ New Quiz</button>
+                </div>
+                <div id="moduleQuizzesList" class="quiz-list"></div>
+            </div>
+
+            <hr style="margin:1.75rem 0;border:none;border-top:1px solid #e5e7eb;">
+
+            <div id="quizEditorArea" style="display:none;">
+                <h2 id="quizEditorHeading">New Quiz</h2>
+                <div class="quiz-form" style="margin-bottom:0.5rem;">
+                    <div class="form-group">
+                        <label for="quizTitleInput">Quiz Title</label>
+                        <input id="quizTitleInput" type="text" placeholder="e.g. Lesson 1 Quiz" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="quizPassingScoreInput">Passing Score (%)</label>
+                        <input id="quizPassingScoreInput" type="number" min="0" max="100" value="70" />
+                    </div>
+                </div>
+
+                <div class="quiz-bank-layout">
+                    <div class="quiz-bank-pane">
+                        <h3><i class="fas fa-layer-group"></i> Question Bank</h3>
+                        <div class="quiz-bank-filters">
+                            <input id="bankSearchInput" type="text" placeholder="Search questions..." />
+                            <select id="bankModuleFilter"></select>
+                            <select id="bankTypeFilter">
+                                <option value="">All types</option>
+                                <option value="multiple_choice">Multiple Choice</option>
+                                <option value="identification">Identification</option>
+                            </select>
+                        </div>
+                        <div id="bankQuestionsList" class="bank-question-list"></div>
+
+                        <button class="btn btn-secondary btn-sm" id="showNewQuestionFormBtn" type="button" style="margin-top:1rem;width:100%;">+ Author New Question</button>
+                        <div class="quiz-form" id="newQuestionFormArea" style="display:none;margin-top:1rem;">
+                            <div class="form-group">
+                                <label for="newQuestionText">Question</label>
+                                <textarea id="newQuestionText" placeholder="Enter the question text"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="newQuestionType">Question Type</label>
+                                <select id="newQuestionType">
+                                    <option value="multiple_choice">Multiple Choice</option>
+                                    <option value="identification">Identification</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="newQuestionChoicesGroup">
+                                <label for="newQuestionChoices">Choices (one per line)</label>
+                                <textarea id="newQuestionChoices" placeholder="Enter each answer choice on its own line"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="newQuestionAnswer">Correct Answer</label>
+                                <input id="newQuestionAnswer" type="text" placeholder="Enter the correct answer" />
+                            </div>
+                            <div class="quiz-actions">
+                                <button class="btn btn-primary btn-sm" id="saveNewQuestionBtn" type="button">Add to Bank &amp; Quiz</button>
+                                <button class="btn btn-secondary btn-sm" id="cancelNewQuestionBtn" type="button">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quiz-selected-pane">
+                        <h3><i class="fas fa-list-check"></i> This Quiz (<span id="selectedCount">0</span> question<span id="selectedCountPlural">s</span>)</h3>
+                        <div id="selectedQuestionsList" class="selected-question-list"></div>
+                    </div>
+                </div>
+
+                <div class="quiz-actions" style="margin-top:1.5rem;">
+                    <button class="btn btn-danger" id="deleteQuizBtn" type="button" style="display:none;margin-right:auto;">Delete Quiz</button>
+                    <button class="btn btn-secondary" id="unpublishQuizBtn" type="button" style="display:none;">Unpublish</button>
+                    <button class="btn btn-secondary" id="saveDraftBtn" type="button">Save Draft</button>
+                    <button class="btn btn-primary" id="publishQuizBtn" type="button">Publish Quiz</button>
+                </div>
+                <p class="quiz-help" style="margin-top:0.75rem;">Only one quiz per module can be published at a time -- students only ever see the published one. Unpublish it first to switch to a different quiz.</p>
             </div>
         </section>
-
     </main>
 
     <script>
         const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
         const moduleId = new URLSearchParams(window.location.search).get('module');
-        let currentQuizQuestions = [];
-        let editingQuestionId = '';
+
+        let currentModule = null;
+        let existingQuizzes = [];
+        let currentQuizId = null;
+        let currentQuizPublished = false;
+        let selectedQuestions = []; // ordered array of question objects in the quiz being edited
+        let bankQuestions = [];
 
         function getCurrentUser() {
             if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
@@ -251,7 +396,6 @@
         }
 
         async function getInstructorActorIdentifier() {
-            // Prefer session-backed user (may be async)
             if (window.KumpasSession && typeof window.KumpasSession.ensureCurrentUser === 'function') {
                 const u = await window.KumpasSession.ensureCurrentUser().catch(() => null);
                 if (u && (u.email || u.username)) return u.email || u.username || '';
@@ -268,10 +412,33 @@
             return String(value == null ? '' : value).trim();
         }
 
+        function escapeHtml(value) {
+            return sanitizeInstructorInput(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         async function requestJson(path, options = {}) {
-            const response = await fetch(`${API_BASE}${path}`, {
-                headers: { 'Content-Type': 'application/json' },
+            const actorEmail = await getInstructorActorIdentifier();
+            const separator = path.includes('?') ? '&' : '?';
+            const url = actorEmail ? `${API_BASE}${path}${separator}actorEmail=${encodeURIComponent(actorEmail)}` : `${API_BASE}${path}`;
+
+            const method = (options.method || 'GET').toUpperCase();
+            const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+            // Session auth is a cookie -- API_BASE is a different origin/port
+            // than this page, so it's sent only with credentials:'include'.
+            // Non-GET requests also need the CSRF token (ensureCsrfToken,
+            // from js/auth.js, already loaded by this page for requireAuth).
+            if (method !== 'GET' && typeof ensureCsrfToken === 'function') {
+                const csrfToken = await ensureCsrfToken(API_BASE);
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+            }
+
+            const response = await fetch(url, {
+                credentials: 'include',
                 ...options,
+                headers,
             });
 
             let data = {};
@@ -290,167 +457,220 @@
             return data;
         }
 
-        function setStatusMessage(count) {
-            const summary = document.getElementById('quizSummary');
-            if (!summary) return;
-            summary.innerHTML = `
-                <span>Module ID: ${moduleId}</span>
-                <span>${count} question${count === 1 ? '' : 's'}</span>
-            `;
-        }
-
-        function clearStatusMessage() {
-            const summary = document.getElementById('quizSummary');
-            if (!summary) return;
-            summary.innerHTML = '';
-        }
-
         function formatQuestionType(type) {
             return type === 'identification' ? 'Identification' : 'Multiple Choice';
         }
 
-        function updateChoiceVisibility() {
-            const questionType = document.getElementById('quizQuestionType').value;
-            const choicesGroup = document.getElementById('quizChoicesGroup');
-            if (questionType === 'multiple_choice') {
-                choicesGroup.style.display = 'block';
-            } else {
-                choicesGroup.style.display = 'none';
-            }
+        // ---------- Module header + quiz list ----------
+
+        function setStatusMessage() {
+            const summary = document.getElementById('quizSummary');
+            if (!summary) return;
+            summary.innerHTML = `
+                <span>Module ID: ${moduleId}</span>
+                <span>${existingQuizzes.length} quiz${existingQuizzes.length === 1 ? '' : 'zes'}</span>
+            `;
         }
 
-        function toggleQuizForm(show) {
-            const quizFormArea = document.getElementById('quizFormArea');
-            if (quizFormArea) {
-                quizFormArea.style.display = show ? 'grid' : 'none';
-            }
-        }
+        function renderQuizzesList() {
+            const target = document.getElementById('moduleQuizzesList');
+            if (!target) return;
 
-        function resetQuizForm() {
-            editingQuestionId = '';
-            document.getElementById('quizQuestionText').value = '';
-            document.getElementById('quizQuestionType').value = 'multiple_choice';
-            document.getElementById('quizQuestionChoices').value = '';
-            document.getElementById('quizQuestionAnswer').value = '';
-            document.getElementById('quizQuestionOrder').value = '0';
-            document.getElementById('saveQuizQuestionBtn').textContent = 'Save Question';
-            document.getElementById('moduleQuizTitle').textContent = 'Quiz Builder';
-            document.getElementById('moduleQuizSubtitle').textContent = 'Manage quiz questions for your selected module.';
-            updateChoiceVisibility();
-            toggleQuizForm(false);
-        }
-
-        function openQuizForm() {
-            resetQuizForm();
-            document.getElementById('moduleQuizTitle').textContent = 'Add New Question';
-            document.getElementById('moduleQuizSubtitle').textContent = 'Enter the question details below and click Save Question.';
-            toggleQuizForm(true);
-            document.getElementById('quizQuestionText').focus();
-        }
-
-        function renderQuizQuestions(questions) {
-            currentQuizQuestions = Array.isArray(questions) ? questions : [];
-            setStatusMessage(currentQuizQuestions.length);
-
-            const listTarget = document.getElementById('quizQuestionsList');
-            if (!listTarget) return;
-
-            if (!currentQuizQuestions.length) {
-                listTarget.innerHTML = '<div style="padding: 16px; color: #6b7280; background: #f8fafc; border-radius: 12px;">No questions yet. Add one using the form above.</div>';
+            if (!existingQuizzes.length) {
+                target.innerHTML = '<div class="empty-hint">No quizzes yet for this module. Click "+ New Quiz" to build one from the Question Bank.</div>';
                 return;
             }
 
-            listTarget.innerHTML = currentQuizQuestions.map((question, index) => `
+            target.innerHTML = existingQuizzes.map(quiz => `
                 <div class="quiz-card">
                     <div class="quiz-card-header">
                         <div>
-                            <h3>Question ${index + 1}</h3>
+                            <h3>${escapeHtml(quiz.title)}</h3>
                             <div class="quiz-card-meta">
-                                <span>${formatQuestionType(question.question_type)}</span>
-                                <span>Order ${Number(question.order || 0)}</span>
+                                <span class="${quiz.is_published ? 'status-published' : 'status-draft'}">${quiz.is_published ? 'Published' : 'Draft'}</span>
+                                <span>${quiz.questionCount} question${quiz.questionCount === 1 ? '' : 's'}</span>
+                                <span>Passing score: ${quiz.passing_score}%</span>
                             </div>
                         </div>
                         <div class="quiz-card-actions">
-                            <button class="btn btn-secondary btn-sm" type="button" onclick="editQuizQuestion(${question.id})">Edit</button>
-                            <button class="btn btn-danger btn-sm" type="button" onclick="deleteQuizQuestion(${question.id})">Delete</button>
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="editQuiz(${quiz.id})">Edit</button>
                         </div>
-                    </div>
-                    <p style="margin: 0.5rem 0 0; color: #334155;">${sanitizeInstructorInput(question.question_text)}</p>
-                    ${question.question_type === 'multiple_choice' ? `
-                        <div style="margin-top: 0.9rem;">
-                            <strong>Choices:</strong>
-                            <ul style="margin: 0.5rem 0 0 1.25rem; color: #475569;">
-                                ${Array.isArray(question.choices) ? question.choices.map(choice => `<li>${sanitizeInstructorInput(choice)}</li>`).join('') : ''}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    <div style="margin-top: 0.75rem;">
-                        <span style="font-weight:600;">Answer:</span> ${sanitizeInstructorInput(question.correct_answer)}
                     </div>
                 </div>
             `).join('');
         }
 
-        function populateQuizForm(question) {
-            editingQuestionId = String(question.id || '');
-            document.getElementById('quizQuestionText').value = question.question_text || '';
-            document.getElementById('quizQuestionType').value = question.question_type || 'multiple_choice';
-            document.getElementById('quizQuestionChoices').value = Array.isArray(question.choices) ? question.choices.join('\n') : '';
-            document.getElementById('quizQuestionAnswer').value = question.correct_answer || '';
-            document.getElementById('quizQuestionOrder').value = question.order || 0;
-            document.getElementById('saveQuizQuestionBtn').textContent = 'Update Question';
-            document.getElementById('moduleQuizTitle').textContent = 'Editing Question';
-            document.getElementById('moduleQuizSubtitle').textContent = 'Update the question or click cancel to choose another one.';
-            updateChoiceVisibility();
-            toggleQuizForm(true);
-            document.getElementById('quizQuestionText').focus();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        async function loadModuleAndQuestions() {
-            clearStatusMessage();
+        async function loadModuleAndQuizzes() {
             if (!moduleId) {
                 document.getElementById('moduleQuizTitle').textContent = 'Module not selected';
                 document.getElementById('moduleQuizSubtitle').textContent = 'Please open the quiz builder from the instructor dashboard.';
                 return;
             }
 
-            const actorEmail = await getInstructorActorIdentifier();
-            if (!actorEmail) {
-                alert('Please sign in as an instructor to use the quiz builder.');
-                return;
-            }
-
             try {
-                const moduleData = await requestJson(`/instructor/modules/${moduleId}/?actorEmail=${encodeURIComponent(actorEmail)}`);
-                document.getElementById('moduleQuizTitle').textContent = `Quiz Builder — ${moduleData.title || 'Module'}`;
-                document.getElementById('moduleQuizSubtitle').textContent = moduleData.description || 'Build questions for this module.';
-                await refreshQuizQuestions();
+                currentModule = await requestJson(`/instructor/modules/${moduleId}/`);
+                document.getElementById('moduleQuizTitle').textContent = `Quiz Builder — ${currentModule.title || 'Module'}`;
+                document.getElementById('moduleQuizSubtitle').textContent = currentModule.description || 'Build a quiz for this module from the Question Bank.';
+
+                const bankModuleFilter = document.getElementById('bankModuleFilter');
+                bankModuleFilter.innerHTML = `
+                    <option value="${moduleId}">This module</option>
+                    <option value="">All modules</option>
+                `;
+
+                existingQuizzes = await requestJson(`/instructor/quizzes/?module=${moduleId}`);
+                setStatusMessage();
+                renderQuizzesList();
             } catch (error) {
                 alert(`Unable to load module details: ${error.message}`);
             }
         }
 
-        async function refreshQuizQuestions() {
-            const actorEmail = await getInstructorActorIdentifier();
-            if (!actorEmail) return;
+        // ---------- Quiz editor ----------
 
+        function showEditor() {
+            document.getElementById('quizEditorArea').style.display = 'block';
+        }
+
+        function startNewQuiz() {
+            currentQuizId = null;
+            currentQuizPublished = false;
+            selectedQuestions = [];
+            document.getElementById('quizEditorHeading').textContent = 'New Quiz';
+            document.getElementById('quizTitleInput').value = currentModule ? `${currentModule.title} Quiz` : '';
+            document.getElementById('quizPassingScoreInput').value = '70';
+            document.getElementById('deleteQuizBtn').style.display = 'none';
+            document.getElementById('unpublishQuizBtn').style.display = 'none';
+            renderSelectedList();
+            showEditor();
+            refreshBankQuestions();
+            window.scrollTo({ top: document.getElementById('quizEditorArea').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        async function editQuiz(quizId) {
             try {
-                const questions = await requestJson(`/instructor/modules/${moduleId}/quiz/?actorEmail=${encodeURIComponent(actorEmail)}`);
-                renderQuizQuestions(questions);
+                const quiz = await requestJson(`/instructor/quizzes/${quizId}/`);
+                currentQuizId = quiz.id;
+                currentQuizPublished = !!quiz.is_published;
+                selectedQuestions = Array.isArray(quiz.questions) ? quiz.questions.slice() : [];
+                document.getElementById('quizEditorHeading').textContent = `Editing: ${quiz.title}`;
+                document.getElementById('quizTitleInput').value = quiz.title || '';
+                document.getElementById('quizPassingScoreInput').value = quiz.passing_score ?? 70;
+                document.getElementById('deleteQuizBtn').style.display = '';
+                document.getElementById('unpublishQuizBtn').style.display = currentQuizPublished ? '' : 'none';
+                renderSelectedList();
+                showEditor();
+                refreshBankQuestions();
+                window.scrollTo({ top: document.getElementById('quizEditorArea').offsetTop - 20, behavior: 'smooth' });
             } catch (error) {
-                alert(`Unable to load quiz questions: ${error.message}`);
+                alert(`Unable to load quiz: ${error.message}`);
             }
         }
 
-        async function saveQuizQuestion(event) {
-            event.preventDefault();
-            const actorEmail = await getInstructorActorIdentifier();
-            const questionText = sanitizeInstructorInput(document.getElementById('quizQuestionText').value);
-            const questionType = document.getElementById('quizQuestionType').value;
-            const rawChoices = document.getElementById('quizQuestionChoices').value;
-            const correctAnswer = sanitizeInstructorInput(document.getElementById('quizQuestionAnswer').value);
-            const order = Number(document.getElementById('quizQuestionOrder').value || 0);
+        function renderSelectedList() {
+            const target = document.getElementById('selectedQuestionsList');
+            document.getElementById('selectedCount').textContent = selectedQuestions.length;
+            document.getElementById('selectedCountPlural').textContent = selectedQuestions.length === 1 ? '' : 's';
+            if (!target) return;
+
+            if (!selectedQuestions.length) {
+                target.innerHTML = '<div class="empty-hint">No questions yet. Add some from the Question Bank on the left.</div>';
+                return;
+            }
+
+            target.innerHTML = selectedQuestions.map((question, index) => `
+                <div class="selected-question-item">
+                    <span class="q-text" title="${escapeHtml(question.question_text)}">${index + 1}. ${escapeHtml(question.question_text)}</span>
+                    <span class="q-type">${formatQuestionType(question.question_type)}</span>
+                    <button type="button" title="Move up" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
+                    <button type="button" title="Move down" onclick="moveQuestion(${index}, 1)" ${index === selectedQuestions.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
+                    <button type="button" class="remove-btn" title="Remove from quiz" onclick="removeSelectedQuestion(${question.id})"><i class="fas fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function moveQuestion(index, direction) {
+            const target = index + direction;
+            if (target < 0 || target >= selectedQuestions.length) return;
+            const [item] = selectedQuestions.splice(index, 1);
+            selectedQuestions.splice(target, 0, item);
+            renderSelectedList();
+        }
+
+        function removeSelectedQuestion(questionId) {
+            selectedQuestions = selectedQuestions.filter(q => q.id !== questionId);
+            renderSelectedList();
+            renderBankList();
+        }
+
+        function addQuestionToQuiz(question) {
+            if (selectedQuestions.some(q => q.id === question.id)) return;
+            selectedQuestions.push(question);
+            renderSelectedList();
+            renderBankList();
+        }
+
+        // ---------- Question Bank (left pane) ----------
+
+        function renderBankList() {
+            const target = document.getElementById('bankQuestionsList');
+            if (!target) return;
+
+            const selectedIds = new Set(selectedQuestions.map(q => q.id));
+            const available = bankQuestions.filter(q => !selectedIds.has(q.id));
+
+            if (!available.length) {
+                target.innerHTML = '<div class="empty-hint">No matching bank questions. Try a different search, or author a new one below.</div>';
+                return;
+            }
+
+            target.innerHTML = available.map(question => `
+                <div class="bank-question-item">
+                    <span class="q-text" title="${escapeHtml(question.question_text)}">${escapeHtml(question.question_text)}</span>
+                    <span class="q-type">${formatQuestionType(question.question_type)}</span>
+                    <button type="button" title="Add to this quiz" onclick="addBankQuestionById(${question.id})"><i class="fas fa-plus"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addBankQuestionById(questionId) {
+            const question = bankQuestions.find(q => q.id === questionId);
+            if (question) addQuestionToQuiz(question);
+        }
+
+        let bankRefreshTimer = null;
+        function scheduleRefreshBankQuestions() {
+            clearTimeout(bankRefreshTimer);
+            bankRefreshTimer = setTimeout(refreshBankQuestions, 250);
+        }
+
+        async function refreshBankQuestions() {
+            const search = sanitizeInstructorInput(document.getElementById('bankSearchInput').value);
+            const moduleFilter = document.getElementById('bankModuleFilter').value;
+            const typeFilter = document.getElementById('bankTypeFilter').value;
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (moduleFilter) params.set('module', moduleFilter);
+            if (typeFilter) params.set('question_type', typeFilter);
+
+            try {
+                bankQuestions = await requestJson(`/instructor/question-bank/?${params.toString()}`);
+                renderBankList();
+            } catch (error) {
+                alert(`Unable to load the question bank: ${error.message}`);
+            }
+        }
+
+        function updateNewQuestionChoiceVisibility() {
+            const type = document.getElementById('newQuestionType').value;
+            document.getElementById('newQuestionChoicesGroup').style.display = type === 'multiple_choice' ? 'flex' : 'none';
+        }
+
+        async function saveNewQuestion() {
+            const questionText = sanitizeInstructorInput(document.getElementById('newQuestionText').value);
+            const questionType = document.getElementById('newQuestionType').value;
+            const rawChoices = document.getElementById('newQuestionChoices').value;
+            const correctAnswer = sanitizeInstructorInput(document.getElementById('newQuestionAnswer').value);
 
             if (!questionText) {
                 alert('Please enter the question text.');
@@ -474,68 +694,135 @@
                 }
             }
 
-            const payload = {
-                actorEmail,
-                question_text: questionText,
-                question_type: questionType,
-                choices,
-                correct_answer: correctAnswer,
-                order,
-            };
-
             try {
-                const path = editingQuestionId
-                    ? `/instructor/modules/${moduleId}/quiz/${editingQuestionId}/`
-                    : `/instructor/modules/${moduleId}/quiz/`;
-                const method = editingQuestionId ? 'PATCH' : 'POST';
-                await requestJson(path + `?actorEmail=${encodeURIComponent(actorEmail)}`, {
-                    method,
-                    body: JSON.stringify(payload),
+                const question = await requestJson('/instructor/question-bank/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        module: moduleId,
+                        question_text: questionText,
+                        question_type: questionType,
+                        choices,
+                        correct_answer: correctAnswer,
+                    }),
                 });
-                resetQuizForm();
-                await refreshQuizQuestions();
+                addQuestionToQuiz(question);
+                document.getElementById('newQuestionText').value = '';
+                document.getElementById('newQuestionChoices').value = '';
+                document.getElementById('newQuestionAnswer').value = '';
+                document.getElementById('newQuestionFormArea').style.display = 'none';
+                await refreshBankQuestions();
             } catch (error) {
                 alert(`Could not save question: ${error.message}`);
             }
         }
 
-        function editQuizQuestion(questionId) {
-            const question = currentQuizQuestions.find(item => Number(item.id) === Number(questionId));
-            if (!question) {
-                alert('Question not found.');
-                return;
-            }
-            populateQuizForm(question);
+        // ---------- Save / publish / delete ----------
+
+        function buildQuizPayload() {
+            const title = sanitizeInstructorInput(document.getElementById('quizTitleInput').value);
+            const passingScore = Number(document.getElementById('quizPassingScoreInput').value);
+            return {
+                module: moduleId,
+                title: title || (currentModule ? `${currentModule.title} Quiz` : 'Quiz'),
+                passing_score: Number.isFinite(passingScore) ? Math.max(0, Math.min(100, passingScore)) : 70,
+                questions: selectedQuestions.map(q => ({ question_id: q.id })),
+            };
         }
 
-        async function deleteQuizQuestion(questionId) {
-            if (!confirm('Delete this question?')) {
+        async function saveQuiz(publish) {
+            if (publish && selectedQuestions.length === 0) {
+                alert('Add at least one question before publishing.');
                 return;
             }
-            const actorEmail = await getInstructorActorIdentifier();
+
+            const payload = buildQuizPayload();
             try {
-                await requestJson(`/instructor/modules/${moduleId}/quiz/${questionId}/?actorEmail=${encodeURIComponent(actorEmail)}`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ actorEmail }),
-                });
-                if (editingQuestionId === String(questionId)) {
-                    resetQuizForm();
+                let quiz;
+                if (currentQuizId) {
+                    quiz = await requestJson(`/instructor/quizzes/${currentQuizId}/`, {
+                        method: 'PATCH',
+                        body: JSON.stringify(payload),
+                    });
+                } else {
+                    quiz = await requestJson('/instructor/quizzes/', {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                    });
                 }
-                await refreshQuizQuestions();
+                currentQuizId = quiz.id;
+
+                if (publish) {
+                    quiz = await requestJson(`/instructor/quizzes/${currentQuizId}/publish/`, {
+                        method: 'POST',
+                        body: JSON.stringify({ publish: true }),
+                    });
+                }
+                currentQuizPublished = !!quiz.is_published;
+                document.getElementById('quizEditorHeading').textContent = `Editing: ${quiz.title}`;
+                document.getElementById('unpublishQuizBtn').style.display = currentQuizPublished ? '' : 'none';
+                document.getElementById('deleteQuizBtn').style.display = '';
+
+                existingQuizzes = await requestJson(`/instructor/quizzes/?module=${moduleId}`);
+                setStatusMessage();
+                renderQuizzesList();
+                alert(publish ? 'Quiz published! Students can now see it.' : 'Draft saved.');
             } catch (error) {
-                alert(`Unable to delete question: ${error.message}`);
+                alert(`Could not save quiz: ${error.message}`);
+            }
+        }
+
+        async function unpublishQuiz() {
+            if (!currentQuizId) return;
+            try {
+                const quiz = await requestJson(`/instructor/quizzes/${currentQuizId}/publish/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ publish: false }),
+                });
+                currentQuizPublished = !!quiz.is_published;
+                document.getElementById('unpublishQuizBtn').style.display = 'none';
+                existingQuizzes = await requestJson(`/instructor/quizzes/?module=${moduleId}`);
+                setStatusMessage();
+                renderQuizzesList();
+            } catch (error) {
+                alert(`Could not unpublish quiz: ${error.message}`);
+            }
+        }
+
+        async function deleteQuiz() {
+            if (!currentQuizId) return;
+            if (!confirm('Delete this quiz? Its bank questions stay in the Question Bank.')) return;
+            try {
+                await requestJson(`/instructor/quizzes/${currentQuizId}/`, { method: 'DELETE' });
+                document.getElementById('quizEditorArea').style.display = 'none';
+                currentQuizId = null;
+                existingQuizzes = await requestJson(`/instructor/quizzes/?module=${moduleId}`);
+                setStatusMessage();
+                renderQuizzesList();
+            } catch (error) {
+                alert(`Unable to delete quiz: ${error.message}`);
             }
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
-            document.getElementById('quizQuestionType').addEventListener('change', updateChoiceVisibility);
-            document.getElementById('saveQuizQuestionBtn').addEventListener('click', saveQuizQuestion);
-            document.getElementById('cancelQuizEditBtn').addEventListener('click', function () {
-                resetQuizForm();
+            document.getElementById('newQuizBtn').addEventListener('click', startNewQuiz);
+            document.getElementById('bankSearchInput').addEventListener('input', scheduleRefreshBankQuestions);
+            document.getElementById('bankModuleFilter').addEventListener('change', refreshBankQuestions);
+            document.getElementById('bankTypeFilter').addEventListener('change', refreshBankQuestions);
+            document.getElementById('newQuestionType').addEventListener('change', updateNewQuestionChoiceVisibility);
+            document.getElementById('showNewQuestionFormBtn').addEventListener('click', function () {
+                document.getElementById('newQuestionFormArea').style.display = 'grid';
+                updateNewQuestionChoiceVisibility();
             });
-            document.getElementById('addQuizQuestionBtn').addEventListener('click', openQuizForm);
-            resetQuizForm();
-            await loadModuleAndQuestions();
+            document.getElementById('cancelNewQuestionBtn').addEventListener('click', function () {
+                document.getElementById('newQuestionFormArea').style.display = 'none';
+            });
+            document.getElementById('saveNewQuestionBtn').addEventListener('click', saveNewQuestion);
+            document.getElementById('saveDraftBtn').addEventListener('click', () => saveQuiz(false));
+            document.getElementById('publishQuizBtn').addEventListener('click', () => saveQuiz(true));
+            document.getElementById('unpublishQuizBtn').addEventListener('click', unpublishQuiz);
+            document.getElementById('deleteQuizBtn').addEventListener('click', deleteQuiz);
+
+            await loadModuleAndQuizzes();
         });
     </script>
     <script src="js/main.js"></script>

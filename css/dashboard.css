@@ -328,6 +328,55 @@ body {
   font-weight: 700;
 }
 
+/* Grid rows pair a short list card (e.g. Top Learners) next to a taller
+   chart/content card (e.g. Weekly Activity). CSS Grid's default
+   align-items: stretch forces the short card to match the tall one's
+   height, leaving a large dead area below its content -- align to the
+   top instead so each card only takes the height it needs. */
+.dashboard-main .grid-2 {
+  align-items: start;
+}
+
+/* EMPTY-STATE FALLBACKS for widgets populated from live activity data
+   (module progress, achievements, skill breakdown). A student with no
+   activity yet -- or data still loading -- leaves these containers
+   genuinely empty, which otherwise renders as a blank stretched card
+   instead of a deliberate, compact placeholder. */
+#dashboardProgressList:empty,
+#dashboardAchievementsGrid:empty,
+#profileModuleProgress:empty,
+#profileSkillBreakdown:empty,
+#profileAchievementsList:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 10px;
+  color: var(--text-muted-2, #94a3b8);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+#dashboardProgressList:empty::after {
+  content: "Start a module to see your progress here.";
+}
+
+#dashboardAchievementsGrid:empty::after {
+  content: "Keep learning to unlock your first achievement.";
+}
+
+#profileModuleProgress:empty::after {
+  content: "No module progress yet.";
+}
+
+#profileSkillBreakdown:empty::after {
+  content: "Complete a quiz to see your skill breakdown.";
+}
+
+#profileAchievementsList:empty::after {
+  content: "No achievements unlocked yet.";
+}
+
 /* PROGRESS ITEMS */
 .progress-item {
   margin-bottom: 18px;

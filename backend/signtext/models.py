@@ -119,9 +119,16 @@ class QuizQuestion(models.Model):
         (QUESTION_TYPE_IDENTIFICATION, "Identification"),
     ]
 
+    # Nullable + SET_NULL (not CASCADE): a question is authored "under" a
+    # module for the bank-picker's filter, but Quiz/QuizQuestionLink is what
+    # actually attaches it to quizzes -- deleting the module it was authored
+    # under must not cascade-delete a question still reused by other
+    # modules' quizzes via the through table.
     module = models.ForeignKey(
         LearningModule,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="quiz_questions",
     )
     question_text = models.TextField()
@@ -140,7 +147,71 @@ class QuizQuestion(models.Model):
         ordering = ["order", "created_at"]
 
     def __str__(self) -> str:
-        return f"{self.question_text[:50]}... ({self.module.title})"
+        module_title = self.module.title if self.module else "Question Bank"
+        return f"{self.question_text[:50]}... ({module_title})"
+
+
+class Quiz(models.Model):
+    """A published/draft assessment for one module, built from reusable
+    QuizQuestion rows (the Question Bank) via QuizQuestionLink so the same
+    question can be attached to many quizzes across many modules."""
+    module = models.ForeignKey(
+        LearningModule,
+        on_delete=models.CASCADE,
+        related_name="quizzes",
+    )
+    title = models.CharField(max_length=180)
+    passing_score = models.PositiveIntegerField(default=70)  # percent, 0-100
+    is_published = models.BooleanField(default=False)
+    questions = models.ManyToManyField(
+        QuizQuestion,
+        through="QuizQuestionLink",
+        related_name="quizzes",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_quizzes",
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_quizzes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["module"],
+                condition=models.Q(is_published=True),
+                name="unique_published_quiz_per_module",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({'published' if self.is_published else 'draft'})"
+
+
+class QuizQuestionLink(models.Model):
+    """Through-table for Quiz<->QuizQuestion: order is quiz-specific, so it
+    can't live on QuizQuestion itself once questions are shared across quizzes."""
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="question_links")
+    question = models.ForeignKey(QuizQuestion, on_delete=models.CASCADE, related_name="quiz_links")
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+        unique_together = ("quiz", "question")
+
+    def __str__(self) -> str:
+        return f"{self.quiz.title} <- {self.question_id}"
 
 
 class ModuleFile(models.Model):
@@ -331,8 +402,18 @@ class QuizAttempt(models.Model):
     per-module accuracy (skill breakdown) and quiz-based achievements."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
     module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name="quiz_attempts")
+    # Nullable: an attempt should survive its quiz being deleted (history),
+    # and pre-existing attempts predate the Quiz model (backfilled by migration).
+    quiz = models.ForeignKey(
+        "Quiz",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attempts",
+    )
     score = models.PositiveIntegerField(default=0)
     total = models.PositiveIntegerField(default=0)
+    passed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -389,18 +470,37 @@ class UserAchievement(models.Model):
 
 
 class Certificate(models.Model):
-    """Certificate catalog entry: one row per game, defining its template."""
-    game_key = models.CharField(max_length=20, choices=GameLevel.GAME_CHOICES, unique=True)
+    """Certificate catalog entry: either one row per game, or one row per
+    quiz (for quiz-based Certificate Eligibility) -- exactly one of
+    game_key/quiz is set, enforced by the check constraint below."""
+    game_key = models.CharField(
+        max_length=20, choices=GameLevel.GAME_CHOICES, unique=True, null=True, blank=True
+    )
+    quiz = models.OneToOneField(
+        "Quiz", on_delete=models.CASCADE, null=True, blank=True, related_name="certificate"
+    )
     title = models.CharField(max_length=150)
     template_path = models.CharField(max_length=255)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(game_key__isnull=False, quiz__isnull=True)
+                    | models.Q(game_key__isnull=True, quiz__isnull=False)
+                ),
+                name="certificate_exactly_one_source",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.title
 
 
 class UserCertificate(models.Model):
-    """Records that a user earned a given game's certificate and stores the
-    generated PDF, personalized with the student's name at issue time."""
+    """Records that a user earned a given certificate (game- or quiz-based)
+    and stores the generated PDF, personalized with the student's name at
+    issue time."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="certificates")
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE, related_name="unlocks")
     file = models.FileField(upload_to="certificates/%Y/%m/")
@@ -413,4 +513,4 @@ class UserCertificate(models.Model):
         ordering = ["-issued_at"]
 
     def __str__(self) -> str:
-        return f"{self.user.username} earned {self.certificate.game_key}"
+        return f"{self.user.username} earned {self.certificate.title}"

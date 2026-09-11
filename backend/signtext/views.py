@@ -18,6 +18,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +28,11 @@ from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
-from .certificates import award_certificate_if_earned, send_certificate_email_async
+from .certificates import (
+    award_certificate_if_earned,
+    award_certificate_if_earned_for_quiz,
+    send_certificate_email_async,
+)
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
     Achievement,
@@ -36,8 +42,10 @@ from .models import (
     GameLevelItem,
     LearningModule,
     ModuleFile,
+    Quiz,
     QuizAttempt,
     QuizQuestion,
+    QuizQuestionLink,
     SignPredictionLog,
     SignVideo,
     UserAchievement,
@@ -55,6 +63,7 @@ from .serializers import (
     LearningStateSerializer,
     LoginSerializer,
     ModuleFileSerializer,
+    QuizSerializer,
     QuizQuestionSerializer,
     StudentQuizQuestionSerializer,
     SignPredictionLogSerializer,
@@ -969,6 +978,109 @@ def login(request: Any) -> Response:
 
 @csrf_exempt
 @api_view(["POST"])
+def google_auth(request: Any) -> Response:
+    """Sign in (or register) using a Google Identity Services ID token.
+
+    The frontend's "Continue with Google" button hands back a signed JWT
+    ("credential") straight from Google -- verify its signature/audience/
+    issuer server-side rather than trusting any profile data the client
+    might send, then find-or-create the matching account by email so a
+    Google login always resolves to the same account as an email/password
+    one instead of creating a duplicate.
+    """
+    credential = str(request.data.get("credential") or "").strip()
+    if not credential:
+        return Response({"error": "Missing Google credential"}, status=400)
+
+    client_id = getattr(settings, "GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return Response({"error": "Google sign-in is not configured on the server"}, status=500)
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            credential, google_auth_requests.Request(), client_id
+        )
+    except ValueError:
+        return Response({"error": "Invalid or expired Google credential"}, status=401)
+
+    if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        return Response({"error": "Invalid Google credential issuer"}, status=401)
+
+    email = str(idinfo.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Your Google account has no email address"}, status=400)
+    if not idinfo.get("email_verified"):
+        return Response({"error": "Your Google email address is not verified"}, status=400)
+
+    given_name = _normalize_name_part(idinfo.get("given_name") or "")
+    family_name = _normalize_name_part(idinfo.get("family_name") or "")
+
+    # Same identifier convention as signup(): username == email. Look up by
+    # either so a Google login lands on an existing email/password account
+    # instead of creating a duplicate.
+    user = User.objects.select_related("profile").filter(email__iexact=email).first()
+    if not user:
+        user = User.objects.select_related("profile").filter(username__iexact=email).first()
+
+    created = False
+    if not user:
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=given_name,
+            last_name=family_name,
+        )
+        # No password is ever set for a Google-only account -- the user can
+        # still add one later, but they can't be brute-forced via /auth/login/.
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+        created = True
+
+    # Google already verified this email address, so there's nothing left to
+    # gate an account on -- activate immediately instead of sending an OTP.
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        full_name = (
+            str(idinfo.get("name") or "").strip()
+            or " ".join(part for part in [given_name, family_name] if part)
+            or email.split("@")[0]
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            full_name=full_name,
+            first_name=given_name,
+            last_name=family_name,
+            # Public sign-in only ever creates student accounts, same as signup().
+            role="student",
+            year_level="",
+        )
+
+    # No password was checked (there may not be one), so authenticate() can't
+    # be used here -- tell django_login() which backend vouches for this user.
+    user.backend = "django.contrib.auth.backends.ModelBackend"
+    django_login(request, user)
+    _get_learning_state_for_user(user)
+
+    return Response({
+        "message": "Account created" if created else "Login successful",
+        "user": {
+            "id": user.id,
+            "name": profile.full_name or user.first_name or user.username.split("@")[0],
+            "email": user.email,
+            "username": user.username,
+            "yearLevel": profile.year_level,
+            "role": profile.role,
+        },
+        "redirect": _redirect_for_role(profile.role),
+    }, status=201 if created else 200)
+
+
+@csrf_exempt
+@api_view(["POST"])
 def verify_email(request: Any) -> Response:
     email = str(request.data.get("email") or request.query_params.get("email") or "").strip().lower()
     otp = str(request.data.get("otp") or request.query_params.get("otp") or "").strip()
@@ -1228,6 +1340,49 @@ def user_certificates(request: Any) -> Response:
     })
 
 
+def _published_quiz_for_module(module: LearningModule) -> "Quiz | None":
+    """Picks the module's published quiz out of an already-prefetched
+    `module.quizzes.all()` -- filtering in Python (not a fresh query) so
+    callers can prefetch once per page instead of once per module."""
+    for quiz in module.quizzes.all():
+        if quiz.is_published:
+            return quiz
+    return None
+
+
+def _ordered_quiz_questions(quiz: "Quiz") -> list[QuizQuestion]:
+    return [link.question for link in quiz.question_links.all().order_by("order", "id")]
+
+
+def _quiz_status_summary(module: LearningModule) -> dict:
+    """Instructor-facing module list chip: which quiz (if any) is published,
+    how many questions it has, and whether any draft quiz also exists."""
+    quizzes = list(module.quizzes.all())
+    published = next((quiz for quiz in quizzes if quiz.is_published), None)
+    has_draft = any(not quiz.is_published for quiz in quizzes)
+    if published:
+        status = "published"
+        question_count = published.question_links.count()
+    elif has_draft:
+        status = "draft"
+        question_count = 0
+    else:
+        status = "none"
+        question_count = 0
+    return {"quizStatus": status, "quizCount": question_count}
+
+
+def _serialize_quiz(quiz: "Quiz", for_student: bool) -> dict:
+    """Shared quiz payload for both the student-facing module list and the
+    instructor quiz builder. `for_student` strips correct answers."""
+    questions = _ordered_quiz_questions(quiz)
+    question_serializer = StudentQuizQuestionSerializer if for_student else QuizQuestionSerializer
+    payload = QuizSerializer(quiz).data
+    payload["questions"] = question_serializer(questions, many=True).data
+    payload["questionCount"] = len(questions)
+    return payload
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def student_content(request: Any) -> Response:
@@ -1250,7 +1405,7 @@ def student_content(request: Any) -> Response:
     modules_qs = (
         LearningModule.objects
         .select_related("created_by", "updated_by")
-        .prefetch_related("files", "quiz_questions")
+        .prefetch_related("files", "quizzes__question_links__question")
         .filter(status=LearningModule.STATUS_PUBLISHED)
         .order_by("year_level", "sort_order", "title")
     )
@@ -1266,10 +1421,9 @@ def student_content(request: Any) -> Response:
         module_data = LearningModuleSerializer(module).data
         module_files = list(module.files.all().order_by("-created_at"))
         module_data["files"] = ModuleFileSerializer(module_files, many=True, context={"request": request}).data
-        # include quiz count and student-safe quiz payload
-        questions = list(module.quiz_questions.all().order_by("order", "created_at"))
-        module_data["quizCount"] = len(questions)
-        module_data["quizzes"] = StudentQuizQuestionSerializer(questions, many=True).data
+        # Student-safe published quiz only -- null if none published yet.
+        published_quiz = _published_quiz_for_module(module)
+        module_data["quiz"] = _serialize_quiz(published_quiz, for_student=True) if published_quiz else None
         serialized.append(module_data)
 
     return Response({
@@ -1431,7 +1585,12 @@ def instructor_dashboard(request: Any) -> Response:
     search = str(request.query_params.get("search") or "").strip()
 
     try:
-        modules = list(LearningModule.objects.select_related("created_by", "updated_by").all())
+        modules = list(
+            LearningModule.objects
+            .select_related("created_by", "updated_by")
+            .prefetch_related("quizzes")
+            .all()
+        )
         announcements = list(Announcement.objects.select_related("created_by", "updated_by").all())
         student_profiles = list(
             UserProfile.objects.select_related("user")
@@ -1507,7 +1666,7 @@ def instructor_dashboard(request: Any) -> Response:
                     context={"request": request},
                 ).data,
                 "studentCount": module_counts.get(module.module_key, 0),
-                "quizCount": module.quiz_questions.count(),
+                **_quiz_status_summary(module),
             }
             for module in modules
         ],
@@ -1715,7 +1874,7 @@ def instructor_modules(request: Any) -> Response:
 
     if request.method == "GET":
         try:
-            modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quiz_questions").order_by("sort_order", "title").all()
+            modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quizzes").order_by("sort_order", "title").all()
             year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
             if year_level != "all":
                 modules_qs = modules_qs.filter(year_level=year_level)
@@ -1746,7 +1905,7 @@ def instructor_modules(request: Any) -> Response:
                             context={"request": request},
                         ).data,
                         "studentCount": module_counts.get(module.module_key, 0),
-                        "quizCount": module.quiz_questions.count(),
+                        **_quiz_status_summary(module),
                     }
                     for module in modules
                 ],
@@ -1849,20 +2008,32 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
 
 
 @api_view(["GET", "POST"])
-def module_quiz_questions(request: Any, module_id: int) -> Response:
+def question_bank_list(request: Any) -> Response:
+    """The Question Bank: reusable QuizQuestion rows, independent of any one
+    quiz. GET filters/searches it for the instructor picker; POST authors a
+    new bank question (optionally tagged to a module for filtering)."""
     actor, error_response = _get_instructor_actor(request)
     if error_response:
         return error_response
 
-    module = get_object_or_404(LearningModule, pk=module_id)
-
     if request.method == "GET":
-        questions = QuizQuestion.objects.filter(module=module).order_by("order", "created_at")
+        questions = QuizQuestion.objects.select_related("module").order_by("-created_at")
+        module_id = request.query_params.get("module")
+        if module_id:
+            questions = questions.filter(module_id=module_id)
+        question_type = str(request.query_params.get("question_type") or "").strip()
+        if question_type:
+            questions = questions.filter(question_type=question_type)
+        search = str(request.query_params.get("search") or "").strip()
+        if search:
+            questions = questions.filter(
+                Q(question_text__icontains=search) | Q(correct_answer__icontains=search)
+            )
         return Response(QuizQuestionSerializer(questions, many=True).data)
 
     payload = request.data.copy()
     serializer = QuizQuestionSerializer(data={
-        "module": module.id,
+        "module": payload.get("module") or None,
         "question_text": str(payload.get("question_text") or "").strip(),
         "question_type": str(payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE).strip(),
         "choices": payload.get("choices") or [],
@@ -1876,6 +2047,197 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
     return Response(QuizQuestionSerializer(question).data, status=201)
 
 
+@api_view(["PATCH", "DELETE"])
+def question_bank_detail(request: Any, question_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    question = get_object_or_404(QuizQuestion, pk=question_id)
+
+    if request.method == "DELETE":
+        # Deleting a bank question removes it from every quiz that uses it
+        # (QuizQuestionLink cascades) -- permanent, like every other delete
+        # in this app, but worth being explicit about here since it can
+        # silently shrink an already-published quiz's question count.
+        question.delete()
+        return Response({"message": "Question deleted"})
+
+    payload = request.data.copy()
+    update_data = {
+        "module": payload.get("module") if "module" in payload else question.module_id,
+        "question_text": str(payload.get("question_text") or question.question_text).strip(),
+        "question_type": str(payload.get("question_type") or question.question_type).strip(),
+        "choices": payload.get("choices") if payload.get("choices") is not None else question.choices,
+        "correct_answer": str(payload.get("correct_answer") or question.correct_answer).strip(),
+        "order": int(payload.get("order") or question.order),
+    }
+    serializer = QuizQuestionSerializer(question, data=update_data, partial=True)
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    question = serializer.save()
+    return Response(QuizQuestionSerializer(question).data)
+
+
+def _resolve_quiz_questions_payload(items: list, default_module: LearningModule) -> "list[QuizQuestion] | Response":
+    """Turns the ordered `questions` array from a quiz create/update payload
+    into an ordered list of QuizQuestion rows -- reusing existing bank
+    questions via {"question_id": N} and authoring new ones (added to the
+    bank AND this quiz in one call) via {"new": {...}}. Returns a Response
+    on validation failure so the caller can return it directly."""
+    resolved: list[QuizQuestion] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if item.get("question_id"):
+            try:
+                resolved.append(QuizQuestion.objects.get(pk=item["question_id"]))
+            except QuizQuestion.DoesNotExist:
+                return Response({"error": f"Question {item['question_id']} not found in the bank"}, status=400)
+            continue
+        new_payload = item.get("new")
+        if isinstance(new_payload, dict):
+            serializer = QuizQuestionSerializer(data={
+                "module": new_payload.get("module") or default_module.id,
+                "question_text": str(new_payload.get("question_text") or "").strip(),
+                "question_type": str(
+                    new_payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE
+                ).strip(),
+                "choices": new_payload.get("choices") or [],
+                "correct_answer": str(new_payload.get("correct_answer") or "").strip(),
+                "order": 0,
+            })
+            if not serializer.is_valid():
+                return Response({"error": serializer.errors}, status=400)
+            resolved.append(serializer.save())
+    return resolved
+
+
+@api_view(["GET", "POST"])
+def instructor_quizzes(request: Any) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    if request.method == "GET":
+        quizzes = Quiz.objects.select_related("module").prefetch_related("question_links").order_by("-updated_at")
+        module_id = request.query_params.get("module")
+        if module_id:
+            quizzes = quizzes.filter(module_id=module_id)
+        return Response([
+            {**QuizSerializer(quiz).data, "questionCount": quiz.question_links.count()}
+            for quiz in quizzes
+        ])
+
+    payload = request.data
+    try:
+        module = LearningModule.objects.get(pk=payload.get("module"))
+    except (LearningModule.DoesNotExist, TypeError, ValueError):
+        return Response({"error": "A valid module is required"}, status=400)
+
+    title = str(payload.get("title") or "").strip() or f"{module.title} Quiz"
+    try:
+        passing_score = max(0, min(100, int(payload.get("passing_score") or 70)))
+    except (TypeError, ValueError):
+        return Response({"error": "passing_score must be a number 0-100"}, status=400)
+
+    resolved = _resolve_quiz_questions_payload(payload.get("questions") or [], module)
+    if isinstance(resolved, Response):
+        return resolved
+
+    quiz = Quiz.objects.create(
+        module=module,
+        title=title,
+        passing_score=passing_score,
+        created_by=actor,
+        updated_by=actor,
+    )
+    QuizQuestionLink.objects.bulk_create([
+        QuizQuestionLink(quiz=quiz, question=question, order=index)
+        for index, question in enumerate(resolved)
+    ])
+    return Response(_serialize_quiz(quiz, for_student=False), status=201)
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+def instructor_quiz_detail(request: Any, quiz_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    quiz = get_object_or_404(Quiz, pk=quiz_id)
+
+    if request.method == "GET":
+        return Response(_serialize_quiz(quiz, for_student=False))
+
+    if request.method == "DELETE":
+        # A quiz's Certificate (and any already-issued UserCertificates) is
+        # CASCADE-linked to the quiz -- refuse to silently destroy earned
+        # certificate records instead of deleting through them.
+        certificate = getattr(quiz, "certificate", None)
+        if certificate and UserCertificate.objects.filter(certificate=certificate).exists():
+            return Response(
+                {"error": "Students have already earned a certificate for this quiz. Unlink the certificate before deleting the quiz."},
+                status=400,
+            )
+        quiz.delete()
+        return Response({"message": "Quiz deleted"})
+
+    payload = request.data
+    if "title" in payload:
+        quiz.title = str(payload.get("title") or quiz.title).strip()
+    if "passing_score" in payload:
+        try:
+            quiz.passing_score = max(0, min(100, int(payload.get("passing_score"))))
+        except (TypeError, ValueError):
+            return Response({"error": "passing_score must be a number 0-100"}, status=400)
+    quiz.updated_by = actor
+    quiz.save()
+
+    if "questions" in payload:
+        resolved = _resolve_quiz_questions_payload(payload.get("questions") or [], quiz.module)
+        if isinstance(resolved, Response):
+            return resolved
+        quiz.question_links.all().delete()
+        QuizQuestionLink.objects.bulk_create([
+            QuizQuestionLink(quiz=quiz, question=question, order=index)
+            for index, question in enumerate(resolved)
+        ])
+
+    return Response(_serialize_quiz(quiz, for_student=False))
+
+
+@api_view(["POST"])
+def instructor_quiz_publish(request: Any, quiz_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    quiz = get_object_or_404(Quiz, pk=quiz_id)
+    publish = bool(request.data.get("publish", True))
+
+    if not publish:
+        quiz.is_published = False
+        quiz.updated_by = actor
+        quiz.save(update_fields=["is_published", "updated_by", "updated_at"])
+        return Response(_serialize_quiz(quiz, for_student=False))
+
+    if quiz.question_links.count() == 0:
+        return Response({"error": "Add at least one question before publishing"}, status=400)
+
+    quiz.is_published = True
+    quiz.updated_by = actor
+    try:
+        quiz.save(update_fields=["is_published", "updated_by", "updated_at"])
+    except IntegrityError:
+        return Response(
+            {"error": "This module already has a published quiz. Unpublish it first."},
+            status=400,
+        )
+    return Response(_serialize_quiz(quiz, for_student=False))
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
@@ -1883,7 +2245,8 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     by the session (not a client-supplied email).
 
     Expects JSON: { "answers": [{"question_id": 1, "answer": "A"}, ...] }
-    Returns: { score: int, total: int, details: [{question_id, correct, expected, given}] }
+    Returns: { score, total, passed, passingScore, certificateEarned,
+               details: [{question_id, correct, expected, given}], state }
     """
     user = request.user
     answers = request.data.get("answers") or []
@@ -1893,8 +2256,12 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except LearningModule.DoesNotExist:
         return Response({"error": "Module not found"}, status=404)
 
+    quiz = Quiz.objects.filter(module=module, is_published=True).first()
+    if not quiz:
+        return Response({"error": "This module has no published quiz"}, status=404)
+
     # Build lookup of correct answers
-    questions = list(QuizQuestion.objects.filter(module=module).all())
+    questions = _ordered_quiz_questions(quiz)
     question_map = {q.id: q for q in questions}
 
     if not isinstance(answers, list):
@@ -1928,13 +2295,28 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
 
     total = len(questions)
     score = correct_count
+    passed = bool(total) and (score / total * 100) >= quiz.passing_score
+
+    # First attempt at THIS quiz only -- checked before creating the new
+    # attempt row -- so retaking a quiz can't farm points/completedActivities
+    # indefinitely. Rewarded on first attempt (not first pass): the prior
+    # behavior already rewarded effort regardless of correctness, so this is
+    # the smallest fix that kills the farming bug without changing that.
+    is_first_attempt = not QuizAttempt.objects.filter(user=user, quiz=quiz).exists()
 
     # Any submission completes the module, regardless of score, and updates
     # the student's progress/recent-activity state authoritatively here so
     # completion is guaranteed correct even if the client never re-syncs.
     updated_state = None
+    certificate_earned = False
     try:
-        QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
+        QuizAttempt.objects.create(user=user, module=module, quiz=quiz, score=score, total=total, passed=passed)
+
+        if passed:
+            new_certificate = award_certificate_if_earned_for_quiz(user, quiz)
+            if new_certificate:
+                send_certificate_email_async(new_certificate)
+            certificate_earned = UserCertificate.objects.filter(user=user, certificate__quiz=quiz).exists()
 
         learning_state = _get_learning_state_for_user(user)
         state = dict(learning_state.state or {})
@@ -1942,14 +2324,15 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         module_progress[module.module_key] = 100
         state["moduleProgress"] = module_progress
 
-        state["points"] = int(state.get("points") or 0) + 50
-        state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
+        if is_first_attempt:
+            state["points"] = int(state.get("points") or 0) + 50
+            state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
 
         recent_activity = list(state.get("recentActivity") or [])
         recent_activity.insert(0, {
             "icon": "📝",
             "text": f"Completed quiz: {module.title}",
-            "meta": f"{score}/{total} correct",
+            "meta": f"{score}/{total} correct" + (" -- passed" if passed else ""),
         })
         state["recentActivity"] = recent_activity[:10]
 
@@ -1962,36 +2345,15 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except Exception:
         logger.exception("Failed to persist quiz completion state for %s / module %s", user.username, module_id)
 
-    return Response({"score": score, "total": total, "details": details, "state": updated_state})
-
-
-@api_view(["PATCH", "DELETE"])
-def module_quiz_question_detail(request: Any, module_id: int, question_id: int) -> Response:
-    actor, error_response = _get_instructor_actor(request)
-    if error_response:
-        return error_response
-
-    module = get_object_or_404(LearningModule, pk=module_id)
-    question = get_object_or_404(QuizQuestion, pk=question_id, module=module)
-
-    if request.method == "DELETE":
-        question.delete()
-        return Response({"message": "Question deleted"})
-
-    payload = request.data.copy()
-    update_data = {
-        "question_text": str(payload.get("question_text") or question.question_text).strip(),
-        "question_type": str(payload.get("question_type") or question.question_type).strip(),
-        "choices": payload.get("choices") if payload.get("choices") is not None else question.choices,
-        "correct_answer": str(payload.get("correct_answer") or question.correct_answer).strip(),
-        "order": int(payload.get("order") or question.order),
-    }
-    serializer = QuizQuestionSerializer(question, data=update_data, partial=True)
-    if not serializer.is_valid():
-        return Response({"error": serializer.errors}, status=400)
-
-    question = serializer.save()
-    return Response(QuizQuestionSerializer(question).data)
+    return Response({
+        "score": score,
+        "total": total,
+        "passed": passed,
+        "passingScore": quiz.passing_score,
+        "certificateEarned": certificate_earned,
+        "details": details,
+        "state": updated_state,
+    })
 
 
 @api_view(["GET"])

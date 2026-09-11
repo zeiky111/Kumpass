@@ -559,6 +559,7 @@
         }
     </style>
 
+    <script src="js/auth.js"></script>
     <script src="js/portal.js"></script>
     <script>
         const queryParams = new URLSearchParams(window.location.search);
@@ -621,8 +622,9 @@
             const container = document.getElementById('activityQuizContainer');
             if (!container) return;
 
-            const questions = Array.isArray(module.quizzes) ? module.quizzes : [];
-            if (!questions.length) {
+            const quiz = module.quiz;
+            const questions = quiz && Array.isArray(quiz.questions) ? quiz.questions : [];
+            if (!quiz || !questions.length) {
                 container.innerHTML = '<p style="color:#6b7280;">No quiz has been added for this module yet.</p>';
                 return;
             }
@@ -653,7 +655,7 @@
 
             const submitBtn = document.getElementById('activitySubmitQuizBtn');
             if (submitBtn) {
-                submitBtn.addEventListener('click', () => submitActivityQuiz(module, questions));
+                submitBtn.addEventListener('click', () => submitActivityQuiz(module, quiz, questions));
             }
         }
 
@@ -666,7 +668,7 @@
                 .replace(/'/g, '&#39;');
         }
 
-        async function submitActivityQuiz(module, questions) {
+        async function submitActivityQuiz(module, quiz, questions) {
             const form = document.getElementById('activityQuizForm');
             const submitBtn = document.getElementById('activitySubmitQuizBtn');
             if (!form || !window.KumpasPortal) return;
@@ -693,10 +695,12 @@
             }
 
             try {
-                const response = await fetch(`${apiBase}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
+                // fetchWithAuth (js/auth.js) attaches the CSRF token this
+                // session-authenticated POST needs -- a plain fetch() here
+                // would silently 403 in a real cross-origin deployment.
+                const response = await window.fetchWithAuth(`${apiBase}/modules/${encodeURIComponent(quizModuleId)}/submit_quiz/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
                     body: JSON.stringify({ email: currentUser.email || '', answers })
                 });
 
@@ -709,16 +713,29 @@
                 const result = await response.json();
                 const score = Number(result.score || 0);
                 const total = Number(result.total || 0);
+                const passed = !!result.passed;
+                const passingScore = Number(result.passingScore || quiz.passingScore || 0);
+                const certificateEarned = !!result.certificateEarned;
+
+                if (result.state && typeof result.state === 'object') {
+                    window.KumpasPortal.hydrateState(result.state);
+                }
 
                 const scoreEl = document.getElementById('statQuizScore');
                 if (scoreEl) scoreEl.textContent = `${score}/${total}`;
 
                 const feedbackMessage = document.getElementById('feedbackMessage');
-                if (feedbackMessage) feedbackMessage.textContent = `You scored ${score} out of ${total} on this module's quiz.`;
+                if (feedbackMessage) {
+                    feedbackMessage.textContent = passed
+                        ? `You scored ${score} out of ${total} and passed (needed ${passingScore}%)!`
+                        : `You scored ${score} out of ${total}. You needed ${passingScore}% to pass -- try again.`;
+                }
 
                 const feedbackPoints = document.getElementById('feedbackPoints');
                 if (feedbackPoints && result.state && typeof result.state.points === 'number') {
-                    feedbackPoints.textContent = `Total points: ${result.state.points}`;
+                    feedbackPoints.textContent = certificateEarned
+                        ? `Total points: ${result.state.points} -- 🎓 Certificate earned!`
+                        : `Total points: ${result.state.points}`;
                 }
 
                 document.getElementById('feedbackSection').style.display = 'block';

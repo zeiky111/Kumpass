@@ -185,6 +185,13 @@
   height: 18px;
 }
 
+.google-signin-container {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  margin-bottom: 15px;
+}
+
 .divider {
   text-align: center;
   margin: 15px 0;

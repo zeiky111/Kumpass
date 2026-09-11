@@ -315,6 +315,14 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="card section-block" style="margin-top:20px;">
+                        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                            <h3 class="card-title"><i class="fas fa-bullhorn" style="margin-right:8px;"></i>Recent Announcements</h3>
+                            <a href="#announcements" onclick="switchTab('announcements')" style="font-size:13px;color:#3b82f6;text-decoration:none;font-weight:600;">View All</a>
+                        </div>
+                        <div id="overviewRecentAnnouncements"></div>
+                    </div>
                 </div>
 
                 <!-- Manage Modules Tab -->
@@ -835,6 +843,12 @@
             return '<span style="background:#fef3c7;color:#b45309;padding:4px 8px;border-radius:4px;font-size:0.85rem;">Draft</span>';
         }
 
+        function getQuizStatusLabel(quizStatus, quizCount) {
+            if (quizStatus === 'published') return `Published (${Number(quizCount || 0)} questions)`;
+            if (quizStatus === 'draft') return 'Draft quiz';
+            return 'No quiz yet';
+        }
+
         function setOverviewStats(summary) {
             document.getElementById('instructorTotalStudents').textContent = summary.totalStudents ?? 0;
             document.getElementById('instructorModulesCreated').textContent = summary.totalModules ?? 0;
@@ -975,7 +989,7 @@
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
                                     <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
                                     <span class="module-chip">📎 ${filesCount} materials</span>
-                                    <span class="module-chip">📝 ${Number(module.quizCount || 0)} quiz items</span>
+                                    <span class="module-chip">📝 ${getQuizStatusLabel(module.quizStatus, module.quizCount)}</span>
                                 </div>
                             </td>
                             <td>${safeText(formatYearLabel(module.year_level))}</td>
@@ -1101,6 +1115,22 @@
             }
         }
 
+        function renderOverviewAnnouncements(announcements) {
+            const target = document.getElementById('overviewRecentAnnouncements');
+            if (!target) return;
+
+            const items = Array.isArray(announcements) ? announcements.slice(0, 3) : [];
+            target.innerHTML = items.length
+                ? items.map(item => `
+                    <div class="announcement-item">
+                        <h4>${safeText(item.title)}</h4>
+                        <p>${safeText(item.message)}</p>
+                        <small>Updated: ${safeText(formatDateTime(item.updated_at) || formatDateTime(item.created_at))}</small>
+                    </div>
+                `).join('')
+                : `<div style="padding:16px;color:#6b7280;">No announcements posted yet -- post one from the Announcements tab.</div>`;
+        }
+
         function populateModuleForm(module) {
             document.getElementById('moduleId').value = module ? module.id : '';
             document.getElementById('moduleTitle').value = module ? module.title || '' : '';
@@ -1166,6 +1196,7 @@
                 renderModules(window.__instructorModules);
                 renderStudents(response.students || []);
                 renderAnnouncements(window.__instructorAnnouncements);
+                renderOverviewAnnouncements(window.__instructorAnnouncements);
             } catch (error) {
                 console.error('Dashboard error:', error);
                 alert(`Failed to load instructor dashboard: ${error.message}\n\nMake sure Django server is running: python manage.py runserver 127.0.0.1:8000`);

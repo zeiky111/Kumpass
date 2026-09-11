@@ -6,6 +6,7 @@ from .models import (
     GameLevelItem,
     LearningModule,
     ModuleFile,
+    Quiz,
     QuizQuestion,
     SignPredictionLog,
     SignVideo,
@@ -35,6 +36,20 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128)
     # Login accepts email or username plus password
+
+
+class QuizSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quiz
+        fields = [
+            "id",
+            "module",
+            "title",
+            "passing_score",
+            "is_published",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class LearningStateSerializer(serializers.ModelSerializer):

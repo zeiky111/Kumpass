@@ -14,6 +14,12 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127
 
 CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
 
+# OAuth 2.0 Web client ID from Google Cloud Console (Credentials > OAuth client
+# ID > Web application). Used to verify the ID token Google Identity Services
+# sends from the "Continue with Google" button. Not a secret -- it's also
+# embedded in the frontend JS -- but must match on both sides.
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

@@ -143,6 +143,17 @@ async function logoutUser() {
     window.location.replace('index.html');
 }
 
+// Every dashboard/portal page links "Logout" as a plain <a class="logout"
+// href="index.html">, which only navigates and never actually ends the
+// Django session server-side. Intercept those clicks everywhere so logout
+// really terminates the session instead of just leaving the page.
+document.addEventListener('click', function(event) {
+    const logoutLink = event.target.closest('a.logout');
+    if (!logoutLink) return;
+    event.preventDefault();
+    logoutUser();
+});
+
 // Login and Registration Form Handler
 document.addEventListener('DOMContentLoaded', function() {
     const API_BASE = DEFAULT_API_BASE;
@@ -312,15 +323,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Handle Google signup button
-    const googleBtns = document.querySelectorAll('.google-btn');
-    googleBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            alert('Google Sign-in integration coming soon! Please use email registration for now.');
-        });
-    });
-    
+    // Google Sign-In (Google Identity Services). Works for both login and
+    // register pages: the backend finds-or-creates the account by email, so
+    // the same button covers "sign up" and "sign in" with one flow.
+    const googleSignInContainer = document.getElementById('googleSignInContainer');
+    const configuredClientId = typeof GOOGLE_CLIENT_ID === 'string' ? GOOGLE_CLIENT_ID.trim() : '';
+
+    async function handleGoogleCredentialResponse(googleResponse) {
+        const credential = googleResponse && googleResponse.credential;
+        if (!credential) return;
+        try {
+            const result = await postJson('/auth/google/', { credential });
+            const redirectTarget = new URL(result.redirect || 'dashboard.html', window.location.href).href;
+            window.location.replace(redirectTarget);
+        } catch (error) {
+            alert(`Google sign-in failed: ${error.message}`);
+        }
+    }
+
+    if (googleSignInContainer) {
+        if (!configuredClientId) {
+            googleSignInContainer.style.display = 'none';
+        } else {
+            const renderGoogleButton = () => {
+                if (!window.google || !window.google.accounts || !window.google.accounts.id) return false;
+                google.accounts.id.initialize({
+                    client_id: configuredClientId,
+                    callback: handleGoogleCredentialResponse,
+                    auto_select: false
+                });
+                google.accounts.id.renderButton(googleSignInContainer, {
+                    theme: 'outline',
+                    size: 'large',
+                    shape: 'rectangular',
+                    text: 'continue_with',
+                    width: 320
+                });
+                return true;
+            };
+
+            // The GIS script tag loads with async/defer, so it may not have
+            // run yet when this handler fires -- poll briefly instead of
+            // assuming it's ready.
+            if (!renderGoogleButton()) {
+                let attempts = 0;
+                const poll = setInterval(() => {
+                    attempts += 1;
+                    if (renderGoogleButton() || attempts > 25) {
+                        clearInterval(poll);
+                    }
+                }, 200);
+            }
+        }
+    }
+
     function setupPasswordToggles() {
         document.querySelectorAll('.password-toggle').forEach(toggle => {
             toggle.addEventListener('click', function() {
