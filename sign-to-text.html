@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Sign-to-Text Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
@@ -61,7 +64,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -97,10 +100,8 @@
                         </div>
                     </div>
 
-                    <div class="camera-settings">
-                        <h3>Camera Selection</h3>
-                        <label for="cameraSelect" class="camera-select-label">Choose camera</label>
-                        <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)">
+                    <div class="camera-settings" id="cameraSettings" hidden>
+                        <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)" aria-label="Choose camera">
                             <option value="">Default front camera</option>
                         </select>
                         <p id="cameraStatus" class="camera-status">Using default camera.</p>
@@ -113,8 +114,28 @@
                         <button class="btn-secondary" onclick="stopCameraFeed()">Stop</button>
                         <button id="mirrorFixBtn" class="btn-secondary" onclick="toggleMirrorFix()">Mirror Fix: ON</button>
                     </div>
+
+                    <div class="realtime-panel">
+                        <h3>Real-Time Detection</h3>
+                        <div id="realtimeLetter" class="realtime-letter">–</div>
+                        <div id="realtimeMeta" class="realtime-meta">Waiting for a sign…</div>
+                    </div>
                 </div>
             </section>
+
+            <!-- Results Section -->
+            <section class="results-section">
+                <div class="results-panel">
+                    <h2>🔤 Word Builder</h2>
+                    <div id="wordInProgress" class="word-in-progress">–</div>
+                    <div id="detectionHistory" class="detection-history">
+                        <p class="detection-history-empty">No words yet.</p>
+                    </div>
+                    <p id="detectionTotal" class="detection-total">Total words: 0</p>
+                </div>
+            </section>
+
+            <textarea id="stableTranscript" hidden></textarea>
 
 
         </div>
@@ -131,10 +152,32 @@
     </footer>
 
     <style>
+        /* Scoped to this page only: the shared .page-header is tall (42px
+           top/bottom padding) and .footer adds a 60px top margin -- both,
+           combined with the camera panel, pushed this page past one
+           screen's height and forced scrolling. */
+        .page-header {
+            padding: 14px 20px;
+        }
+
+        body:has(.sign-to-text-container) .footer {
+            margin-top: 12px;
+            padding: 12px 20px;
+        }
+
+        .page-header .header-content h1 {
+            font-size: clamp(1.1rem, 1.6vw + 0.8rem, 1.5rem);
+            margin-bottom: 2px;
+        }
+
+        .page-header .header-content p {
+            font-size: 0.85rem;
+        }
+
         .sign-to-text-container {
             max-width: 1440px;
             margin: 0 auto;
-            padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem);
+            padding: clamp(0.5rem, 2vw, 1rem) clamp(1rem, 3vw, 2rem) clamp(1rem, 3vw, 1.5rem);
             font-family: 'Inter', -apple-system, sans-serif;
         }
 
@@ -146,15 +189,165 @@
 
         .translator-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            align-items: start;
+            gap: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .realtime-panel {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 0.85rem;
+            text-align: center;
+        }
+
+        .realtime-panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 0.85rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .realtime-letter {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 2rem;
+            line-height: 1;
+            color: #818cf8;
+            margin-bottom: 0.3rem;
+        }
+
+        .realtime-meta {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .results-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 22px;
+            padding: 1.1rem 1.25rem;
+            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
+            border: 1px solid rgba(148,163,184,0.14);
+            animation: kdRiseIn 0.55s ease both;
+        }
+
+        .results-panel h2 {
+            margin-top: 0;
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
+        }
+
+        .stable-transcript {
+            width: 100%;
+            min-height: 70px;
+            resize: vertical;
+            border: 1px solid rgba(148,163,184,0.35);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            font-size: 1.4rem;
+            letter-spacing: 0.08em;
+            font-family: 'Poppins', 'Inter', sans-serif;
+            color: #0f172a;
+            background: #f8fafc;
+            box-sizing: border-box;
+        }
+
+        .transcript-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .transcript-actions .btn-primary,
+        .transcript-actions .btn-secondary {
+            flex: 1;
+        }
+
+        .word-in-progress {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 0.9rem;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 1.6rem;
+            letter-spacing: 0.12em;
+            color: #a5b4fc;
+            min-height: 1.6em;
+        }
+
+        .detection-history {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .detection-history-empty {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .detection-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+        }
+
+        .detection-item-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detection-item-label {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .detection-item-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .detection-item-confidence {
+            background: #6366f1;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+        }
+
+        .detection-total {
+            margin: 1rem 0 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: right;
         }
 
         .camera-panel {
             background: rgba(255,255,255,0.95);
             border-radius: 22px;
-            padding: 1.5rem;
+            padding: 1rem 1.15rem;
             box-shadow: 0 14px 34px rgba(15,23,42,0.09);
             border: 1px solid rgba(148,163,184,0.14);
             animation: kdRiseIn 0.55s ease both;
@@ -168,17 +361,17 @@
             margin-top: 0;
             color: #0f172a;
             font-weight: 700;
-            margin-bottom: 1rem;
-            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.05rem;
         }
 
         .camera-container {
             background: #000;
             border-radius: 16px;
             overflow: hidden;
-            margin-bottom: 1.25rem;
-            aspect-ratio: 3/4;
-            max-height: 72vh;
+            margin-bottom: 0.6rem;
+            aspect-ratio: 4/3;
+            max-height: 30vh;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -211,8 +404,8 @@
         .camera-controls {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            gap: 0.6rem;
+            margin-bottom: 0.6rem;
         }
 
         .camera-select-label {
@@ -226,17 +419,17 @@
         .camera-select {
             width: 100%;
             border: 1px solid rgba(148,163,184,0.35);
-            border-radius: 12px;
-            padding: 0.8rem 0.95rem;
-            font-size: 0.95rem;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
             background: #fff;
             color: #0f172a;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.25rem;
         }
 
         .camera-status {
-            margin: 0 0 1rem;
-            font-size: 0.88rem;
+            margin: 0;
+            font-size: 0.75rem;
             color: #64748b;
         }
 
@@ -262,9 +455,9 @@
 
         .recognition-status, .camera-settings {
             background: #f8fafc;
-            border-radius: 14px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border-radius: 12px;
+            padding: 0.65rem 0.85rem;
+            margin-bottom: 0.6rem;
         }
 
         .recognition-status h3, .camera-settings h3 {
@@ -523,7 +716,7 @@
             }
 
             .camera-container {
-                max-height: 65vh;
+                max-height: 38vh;
             }
 
             .camera-controls,
@@ -540,7 +733,15 @@
 
         @media (max-height: 700px) {
             .camera-container {
-                max-height: 58vh;
+                max-height: 34vh;
+            }
+
+            .results-panel {
+                padding: 1rem;
+            }
+
+            .detection-history {
+                max-height: 160px;
             }
         }
 
@@ -654,7 +855,16 @@
         const DEBUG = true;
         function debugLog(msg, type = 'log') {
             const timestamp = new Date().toLocaleTimeString();
-            console[type](`[${timestamp}] ${msg}`);
+            // Only 'log'/'error'/'warn'/'info' exist on the console object --
+            // callers also pass 'success' (e.g. when a word is committed) as
+            // a purely cosmetic type, which isn't a real console method and
+            // used to throw "console[type] is not a function" right at the
+            // moment a correct prediction was about to be displayed. That
+            // thrown error aborted the calling function before it could
+            // finish showing the result, so a correct word could compute
+            // successfully and still never appear on screen.
+            const fn = typeof console[type] === 'function' ? type : 'log';
+            console[fn](`[${timestamp}] ${msg}`);
         }
 
         function isMobileDevice() {
@@ -674,6 +884,8 @@
         let lastPrediction = '';
         let lastPredictionAt = 0;
         let mirrorFixEnabled = true;
+        let detectionHistoryEntries = [];
+        const DETECTION_HISTORY_MAX = 30;
 
         let availableCameras = [];
         let selectedCameraId = '';
@@ -727,7 +939,14 @@
         const WORD_API_INTERVAL_MS = 700;
         const WORD_MIN_FRAMES = 6;
         const WORD_STABLE_MS = 600;
-        const WORD_MIN_CONFIDENCE = 40;
+        // The 105-class word SVC is poorly calibrated (rbf SVC + probability=True
+        // over many classes): correct predictions on real test data span
+        // 21-78% confidence, so a 40% cutoff was silently discarding a large
+        // share of correct low-confidence predictions -- this is why words
+        // "never got detected" even though the model itself scored 95%
+        // accuracy end-to-end. Lowered to 15%, just below the lowest wrong
+        // prediction observed (19.6%) in a same-model sample test.
+        const WORD_MIN_CONFIDENCE = 15;
         const WORD_MIN_REPEAT = 1;
 
         function apiBackoffActive() {
@@ -804,9 +1023,31 @@
             overlayCtx.fillStyle = color.startsWith('#') ? `${color}1f` : color;
             overlayCtx.fillRect(x, y, boxW, boxH);
             overlayCtx.strokeRect(x, y, boxW, boxH);
-            overlayCtx.font = '20px sans-serif';
-            overlayCtx.fillStyle = '#fff';
-            overlayCtx.fillText(label, x + 8, y + 22);
+
+            // A single recognized letter/word gets a large, solid, centered
+            // badge (matching the reference UI: a bold letter filling most
+            // of the box) instead of small corner text -- multi-word labels
+            // ("LEFT"/"RIGHT" fallback, or full word predictions) stay as a
+            // smaller top-left tag since they wouldn't fit legibly centered.
+            const isSingleGlyph = label.length <= 2;
+            if (isSingleGlyph) {
+                const badgeSize = Math.min(boxW, boxH) * 0.45;
+                const badgeX = x + boxW / 2 - badgeSize / 2;
+                const badgeY = y + 10;
+                overlayCtx.fillStyle = color;
+                overlayCtx.fillRect(badgeX, badgeY, badgeSize, badgeSize);
+                overlayCtx.font = `700 ${Math.round(badgeSize * 0.55)}px 'Poppins', sans-serif`;
+                overlayCtx.fillStyle = '#fff';
+                overlayCtx.textAlign = 'center';
+                overlayCtx.textBaseline = 'middle';
+                overlayCtx.fillText(label, badgeX + badgeSize / 2, badgeY + badgeSize / 2 + 2);
+                overlayCtx.textAlign = 'left';
+                overlayCtx.textBaseline = 'alphabetic';
+            } else {
+                overlayCtx.font = '20px sans-serif';
+                overlayCtx.fillStyle = '#fff';
+                overlayCtx.fillText(label, x + 8, y + 22);
+            }
         }
 
         function drawHandSkeleton(landmarks, color = '#00e5ff') {
@@ -948,6 +1189,11 @@
                     select.value = currentValue;
                 }
 
+                // Most users only have one camera; the picker is only useful
+                // (and only shown) when there's actually a choice to make.
+                const settingsBlock = document.getElementById('cameraSettings');
+                if (settingsBlock) settingsBlock.hidden = availableCameras.length <= 1;
+
                 updateCameraStatus();
             } catch (error) {
                 console.warn('Could not enumerate cameras:', error);
@@ -1076,6 +1322,7 @@
 
             handState.previewLetter = dominantLetter;
             try { drawPredictionLabel(dominantLetter, dominantAvgConfidence); } catch (e) { /* ignore */ }
+            try { updateRealtimePanel(dominantLetter, dominantAvgConfidence); } catch (e) { /* ignore */ }
 
             if (dominantCount < minVoteCount || dominantRatio < LETTER_VOTE_MIN_RATIO || dominantAvgConfidence < minAvgConfidence) {
                 return;
@@ -1096,6 +1343,7 @@
             if (now - handState.lastCommittedLetterAt < requiredCooldownMs) return;
 
             commitDetectedLetter(handedness, dominantLetter);
+            pushDetectionHistory(dominantLetter, dominantAvgConfidence);
             handState.lastCommittedLetterAt = now;
             handState.lastCommittedLetter = dominantLetter;
             handState.letterVoteBuffer = [];
@@ -1115,6 +1363,82 @@
         function appendOutputToken(token, icon, confidence, processingMs) {
             lastPrediction = String(token).toUpperCase();
             lastPredictionAt = Date.now();
+
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) {
+                transcript.value = transcript.value ? `${transcript.value} ${lastPrediction}` : lastPrediction;
+                transcript.scrollTop = transcript.scrollHeight;
+            }
+
+            pushDetectionHistory(lastPrediction, confidence);
+        }
+
+        function pushDetectionHistory(label, confidence) {
+            detectionHistoryEntries.unshift({
+                label: String(label || '').toUpperCase(),
+                confidence: Number(confidence || 0),
+                at: new Date(),
+            });
+            if (detectionHistoryEntries.length > DETECTION_HISTORY_MAX) {
+                detectionHistoryEntries.length = DETECTION_HISTORY_MAX;
+            }
+            renderDetectionHistory();
+        }
+
+        function renderDetectionHistory() {
+            const container = document.getElementById('detectionHistory');
+            const totalEl = document.getElementById('detectionTotal');
+            if (totalEl) totalEl.textContent = `Total words: ${detectionHistoryEntries.length}`;
+            if (!container) return;
+
+            if (!detectionHistoryEntries.length) {
+                container.innerHTML = '<p class="detection-history-empty">No words yet.</p>';
+                return;
+            }
+
+            container.innerHTML = detectionHistoryEntries.map(entry => `
+                <div class="detection-item">
+                    <div class="detection-item-main">
+                        <span class="detection-item-label">${entry.label}</span>
+                        <span class="detection-item-time">${entry.at.toLocaleTimeString()}</span>
+                    </div>
+                    <span class="detection-item-confidence">${entry.confidence.toFixed(0)}%</span>
+                </div>
+            `).join('');
+        }
+
+        function updateRealtimePanel(label, confidence) {
+            const letterEl = document.getElementById('realtimeLetter');
+            const metaEl = document.getElementById('realtimeMeta');
+            if (letterEl) letterEl.textContent = label || '–';
+            if (metaEl) {
+                metaEl.textContent = label
+                    ? `${Number(confidence || 0).toFixed(0)}% • ${new Date().toLocaleTimeString()}`
+                    : 'Waiting for a sign…';
+            }
+        }
+
+        function clearTranscript() {
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) transcript.value = '';
+            detectionHistoryEntries = [];
+            renderDetectionHistory();
+            updateRealtimePanel('', 0);
+        }
+
+        function exportTranscript() {
+            const transcript = document.getElementById('stableTranscript');
+            const text = transcript ? transcript.value : '';
+            if (!text) return;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sign-to-text-transcript-${Date.now()}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         function handleWordSequenceResult(data, processingMs) {
@@ -1164,6 +1488,19 @@
             handState.lastLetterAddedAt = Date.now();
             handState.previewLetter = String(letter || '').trim().toUpperCase();
             handState.lastCommittedLetter = handState.previewLetter;
+
+            const transcript = document.getElementById('stableTranscript');
+            if (transcript) {
+                transcript.value += handState.previewLetter;
+                transcript.scrollTop = transcript.scrollHeight;
+            }
+
+            updateWordInProgress(handState.currentWord);
+        }
+
+        function updateWordInProgress(word) {
+            const el = document.getElementById('wordInProgress');
+            if (el) el.textContent = word || '–';
         }
 
         function removeLastLetter(handedness) {
@@ -1171,6 +1508,7 @@
             if (!handState.currentWord) return;
             handState.currentWord = handState.currentWord.slice(0, -1);
             handState.previewLetter = handState.currentWord.slice(-1) || '';
+            updateWordInProgress(handState.currentWord);
         }
 
         function commitCurrentWord(handedness) {
@@ -1181,6 +1519,7 @@
             handState.stableLetter = '';
             handState.stableLetterSince = 0;
             handState.previewLetter = '';
+            updateWordInProgress('');
         }
 
         function pushHandWordFrame(handedness, landmarks) {
@@ -1222,6 +1561,11 @@
                 markApiRecovered();
                 const processingMs = Math.round(performance.now() - requestStart);
                 handleHandWordSequenceResult(handedness, data, processingMs);
+
+                // Same fix as maybePostWordSequence: drop the frames just
+                // sent so the next call gets a fresh window instead of
+                // resending mostly the same buffer.
+                handState.wordFrameBuffer = handState.wordFrameBuffer.filter(frame => frame.t > now);
             } catch (error) {
                 markApiFailure(error.message || 'Failed to fetch');
                 debugLog(`❌ Word-sequence request error (${normalizeHandednessLabel(handedness)}): ${error.message}`, 'error');
@@ -1396,14 +1740,10 @@
                         if (bothHandsClose) {
                             // Two hands visible AND close together = likely a
                             // two-handed word/phrase sign performed as one gesture.
-                            // Draw one combined box around both hands instead of two
-                            // separate boxes, with each hand's skeleton inside it.
+                            // Draw one combined box around both hands instead of
+                            // two separate boxes.
                             const combinedLandmarks = handRecords.flatMap(hand => hand.landmarks);
                             drawHandBox(combinedLandmarks, overlayLabel || 'Sign', '#ff33cc');
-                            handRecords.forEach((hand, idx) => {
-                                const isPrimary = idx === primaryIndex;
-                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
-                            });
                         } else {
                             // Either one hand, or two hands far apart (e.g. one hand
                             // fingerspelling while the other rests elsewhere in frame)
@@ -1413,7 +1753,6 @@
                                 const color = isPrimary ? '#ff33cc' : '#33ff99';
                                 const label = getHandDisplayLabel(hand.handedness);
                                 drawHandBox(hand.landmarks, label, color);
-                                drawHandSkeleton(hand.landmarks, isPrimary ? '#00e5ff' : '#a3ffcf');
                             });
                         }
                     } catch (e) {
@@ -1516,8 +1855,12 @@
             // overlay for boxes and labels
             createOverlay(container);
 
-            debugLog('⏱️ Starting hand tracking (200ms) and word-sequence poll (700ms)', 'log');
-            captureTimer = setInterval(maybePostWordSequence, WORD_API_INTERVAL_MS);
+            // Word-sequence detection is temporarily disabled -- letters
+            // (fingerspelling) are the current focus, so the word-sequence
+            // poll (maybePostWordSequence) is not started. Re-enable by
+            // uncommenting the setInterval line below.
+            debugLog('⏱️ Starting hand tracking (200ms); word-sequence detection disabled (letters-only mode)', 'log');
+            // captureTimer = setInterval(maybePostWordSequence, WORD_API_INTERVAL_MS);
             handsTimer = setInterval(runFingerSpellingFrame, 200);
         }
 
@@ -1628,6 +1971,7 @@
                     wordRequestInFlight = true;
                     lastWordApiCallAt = now;
                     const requestStart = performance.now();
+                    const requestStartedAt = now; // Date.now()-style, matches frame.t below
 
                     try {
                         const response = await fetch(`${API_BASE}/sign/word-sequence/`, {
@@ -1650,6 +1994,16 @@
                                 aiUnavailableLogged = true;
                             }
                             handleWordSequenceResult(data, processingMs);
+
+                            // Drop the frames just sent (everything up to this
+                            // request's start) so the next call gets a fresh
+                            // window instead of re-sending mostly the same
+                            // buffer -- WORD_BUFFER_MAX_AGE_MS (2600ms) is far
+                            // longer than WORD_API_INTERVAL_MS (700ms), so
+                            // without this, consecutive calls overlapped by
+                            // ~65-75% and produced the same frozen
+                            // prediction/confidence call after call.
+                            wordFrameBuffer = wordFrameBuffer.filter(frame => frame.t > requestStartedAt);
                         }
                     } catch (error) {
                         markApiFailure(error.message || 'Failed to fetch');
@@ -1689,5 +2043,6 @@
             }
         })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>

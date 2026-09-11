@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Admin Dashboard - Kumpas</title>
-    <link rel="stylesheet" href="css/style.css?v=20260731">
-    <link rel="stylesheet" href="css/pages.css?v=20260731">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260731">
-    <link rel="stylesheet" href="css/dashboard-pro.css?v=20260731">
+    <link rel="stylesheet" href="css/style.css?v=20260908">
+    <link rel="stylesheet" href="css/pages.css?v=20260908">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260908">
+    <link rel="stylesheet" href="css/dashboard-pro.css?v=20260908">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 </head>
 <body class="pro-dashboard admin-theme">
     <script src="js/auth.js"></script>
@@ -18,7 +22,7 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="admin-dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
@@ -53,7 +57,7 @@
         <main class="dashboard-main">
             <div class="container-fluid">
                 <div id="overview" class="tab-content active">
-                    <div class="stats-grid grid grid-4">
+                    <div class="stats-grid grid grid-3">
                         <div class="stat-card">
                             <div class="stat-card-top">
                                 <div class="stat-icon" style="background: #3b82f6;"><i class="fas fa-users"></i></div>
@@ -62,16 +66,6 @@
                             <div class="stat-content">
                                 <div class="stat-value" id="adminTotalUsers">0</div>
                                 <div class="stat-label">Total Users</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <div class="stat-icon" style="background: #10b981;"><i class="fas fa-user-graduate"></i></div>
-                                <div class="stat-meta">Currently active</div>
-                            </div>
-                            <div class="stat-content">
-                                <div class="stat-value" id="adminActiveStudents">0</div>
-                                <div class="stat-label">Active Students</div>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -106,14 +100,14 @@
                                 <h3>Role Distribution</h3>
                                 <p class="chart-card-copy">Quick breakdown of all active accounts by role.</p>
                             </div>
-                            <div id="overviewRoleChart" class="chart-body"></div>
+                            <div class="chart-body"><canvas id="overviewRoleChart"></canvas></div>
                         </div>
                         <div class="chart-card">
                             <div class="chart-card-header">
                                 <h3>Completion Insight</h3>
                                 <p class="chart-card-copy">Average course completion across students.</p>
                             </div>
-                            <div id="overviewCompletionChart" class="chart-body"></div>
+                            <div class="chart-body"><canvas id="overviewCompletionChart"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -203,7 +197,7 @@
                                 <div class="chart-card-header">
                                     <h4>Role Breakdown</h4>
                                 </div>
-                                <div id="adminRoleChart" class="chart-body"></div>
+                                <div class="chart-body"><canvas id="adminRoleChart"></canvas></div>
                             </div>
                             <div class="table-responsive">
                                 <table>
@@ -240,34 +234,27 @@
                         </div>
                         <div class="card-body">
                             <p style="color:#6b7280; margin-top:-6px; margin-bottom:16px;">Videos uploaded here are stored in the database and power the Text-to-Sign module only.</p>
-                            <div id="signVideoForm" style="display:none; padding:12px; border:1px solid #e5e7eb; margin-bottom:12px; border-radius:6px; background-color:#f9fafb;">
-                                <h4 id="signVideoFormTitle">Add Sign Language Video</h4>
-                                <input id="signVideoId" type="hidden" />
-                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                                    <input id="signVideoWord" class="form-input" placeholder="Word / phrase (e.g. Hello)" style="width:220px;" />
-                                    <select id="signVideoCategory" class="form-input" style="width:180px;">
-                                        <option value="alphabet">Alphabet</option>
-                                        <option value="emotions">Emotions</option>
-                                        <option value="everyday_words">Everyday Words</option>
-                                        <option value="expressions">Expressions</option>
-                                        <option value="greetings">Greetings</option>
-                                        <option value="phrases" selected>Phrases</option>
-                                        <option value="responses">Responses</option>
-                                    </select>
-                                    <input id="signVideoOrder" type="number" class="form-input" placeholder="Order" style="width:100px;" value="0" />
-                                    <label style="display:flex; align-items:center; gap:6px;">
-                                        <input id="signVideoPublished" type="checkbox" checked /> Published
-                                    </label>
-                                </div>
-                                <div style="margin-bottom:8px;">
-                                    <input id="signVideoFile" type="file" accept="video/*" class="form-input" />
-                                    <small id="signVideoFileHint" style="color:#6b7280; display:block; margin-top:4px;">MP4/MOV video file for this word or phrase.</small>
-                                </div>
-                                <div>
-                                    <button class="btn btn-primary btn-sm" onclick="saveSignVideo()">Save</button>
-                                    <button class="btn btn-secondary btn-sm" onclick="closeSignVideoForm()">Cancel</button>
-                                </div>
-                                <div id="signVideoMessage" style="margin-top:8px; color:#b91c1c;"></div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+                                <input id="signVideoSearch" class="form-input" placeholder="Search word / phrase..." style="width:220px;" oninput="onSignVideoSearchInput()" />
+                                <select id="signVideoCategoryFilter" class="form-input" style="width:180px;" onchange="onSignVideoFilterChange()">
+                                    <option value="">All Categories</option>
+                                    <option value="alphabet">Alphabet</option>
+                                    <option value="calendar">Calendar</option>
+                                    <option value="colors">Colors</option>
+                                    <option value="days">Days</option>
+                                    <option value="drink">Drink</option>
+                                    <option value="emotions">Emotions</option>
+                                    <option value="everyday_words">Everyday Words</option>
+                                    <option value="expressions">Expressions</option>
+                                    <option value="family">Family</option>
+                                    <option value="food">Food</option>
+                                    <option value="greetings">Greetings</option>
+                                    <option value="numbers">Numbers</option>
+                                    <option value="phrases">Phrases</option>
+                                    <option value="relationships">Relationships</option>
+                                    <option value="responses">Responses</option>
+                                    <option value="survival">Survival</option>
+                                </select>
                             </div>
                             <div class="table-responsive">
                                 <table>
@@ -276,7 +263,6 @@
                                             <th>Preview</th>
                                             <th>Word / Phrase</th>
                                             <th>Category</th>
-                                            <th>Order</th>
                                             <th>Published</th>
                                             <th>Actions</th>
                                         </tr>
@@ -284,6 +270,7 @@
                                     <tbody id="signVideosTable"></tbody>
                                 </table>
                             </div>
+                            <div id="signVideosPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
                 </div>
@@ -291,13 +278,64 @@
         </main>
     </div>
 
+    <div id="signVideoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="signVideoFormTitle">Add Sign Language Video</h2>
+                <button class="modal-close" onclick="closeSignVideoForm()">&times;</button>
+            </div>
+            <input id="signVideoId" type="hidden" />
+            <div class="form-group">
+                <label class="form-label">Word / Phrase</label>
+                <input id="signVideoWord" class="form-input" placeholder="e.g. Hello" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select id="signVideoCategory" class="form-input">
+                    <option value="alphabet">Alphabet</option>
+                    <option value="calendar">Calendar</option>
+                    <option value="colors">Colors</option>
+                    <option value="days">Days</option>
+                    <option value="drink">Drink</option>
+                    <option value="emotions">Emotions</option>
+                    <option value="everyday_words">Everyday Words</option>
+                    <option value="expressions">Expressions</option>
+                    <option value="family">Family</option>
+                    <option value="food">Food</option>
+                    <option value="greetings">Greetings</option>
+                    <option value="numbers">Numbers</option>
+                    <option value="phrases" selected>Phrases</option>
+                    <option value="relationships">Relationships</option>
+                    <option value="responses">Responses</option>
+                    <option value="survival">Survival</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="checkbox" style="display:flex;align-items:center;gap:10px;">
+                    <input id="signVideoPublished" type="checkbox" checked />
+                    Published
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Video File</label>
+                <input id="signVideoFile" type="file" accept="video/*" class="form-input" onchange="onSignVideoFileChange()" />
+                <small id="signVideoFileHint" style="color:#6b7280; display:block; margin-top:4px;">MP4/MOV video file for this word or phrase. Max size: 3MB.</small>
+            </div>
+            <div id="signVideoMessage" style="margin-bottom:8px; color:#b91c1c;"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeSignVideoForm()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveSignVideo()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <p>&copy; 2026 Kumpas &mdash; Sign Language Learning System. City College of Calapan</p>
     </footer>
 
-    <script src="js/main.js?v=20260731"></script>
-    <script src="js/portal.js?v=20260731"></script>
+    <script src="js/main.js?v=20260908"></script>
+    <script src="js/portal.js?v=20260908"></script>
     <script>
         const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
         let adminPayload = null;
@@ -442,6 +480,107 @@
             links.forEach(link => link.classList.remove('active'));
             const activeLink = document.querySelector(`.sidebar-link[onclick="switchTab('${tab}')"]`);
             if (activeLink) activeLink.classList.add('active');
+
+            // Charts created while their tab was hidden (display:none) paint at
+            // 0x0 and never recover their size on their own -- nudge Chart.js
+            // to remeasure now that the canvas is actually visible.
+            Object.values(chartInstances).forEach(chart => chart.resize());
+        }
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('active');
+        }
+
+        const chartInstances = {};
+
+        function renderRoleDistributionChart(canvasId, roleCounts) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === 'undefined') return;
+            const entries = [
+                { label: 'Students', value: Number(roleCounts.student || 0), color: '#3b82f6' },
+                { label: 'Instructors', value: Number(roleCounts.instructor || 0), color: '#10b981' },
+                { label: 'Admins', value: Number(roleCounts.admin || 0), color: '#f59e0b' },
+                { label: 'Inactive', value: Number(roleCounts.inactive || 0), color: '#ef4444' },
+            ];
+
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].data.datasets[0].data = entries.map(e => e.value);
+                chartInstances[canvasId].update();
+                return;
+            }
+
+            chartInstances[canvasId] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: entries.map(e => e.label),
+                    datasets: [{
+                        data: entries.map(e => e.value),
+                        backgroundColor: entries.map(e => e.color),
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                    },
+                },
+            });
+        }
+
+        function renderCompletionChart(canvasId, value) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === 'undefined') return;
+            const percent = Math.min(100, Math.max(0, Number(value || 0)));
+
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].data.datasets[0].data = [percent, 100 - percent];
+                chartInstances[canvasId].update();
+                return;
+            }
+
+            chartInstances[canvasId] = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'Remaining'],
+                    datasets: [{
+                        data: [percent, 100 - percent],
+                        backgroundColor: ['#8b5cf6', '#e5e7eb'],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false },
+                    },
+                },
+                plugins: [{
+                    id: 'centerText',
+                    afterDraw(chart) {
+                        const { ctx, chartArea } = chart;
+                        const centerX = (chartArea.left + chartArea.right) / 2;
+                        const centerY = (chartArea.top + chartArea.bottom) / 2;
+                        ctx.save();
+                        ctx.font = '700 22px Poppins, Inter, sans-serif';
+                        ctx.fillStyle = '#111827';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`${percent}%`, centerX, centerY);
+                        ctx.restore();
+                    },
+                }],
+            });
         }
 
         function renderOverview(payload) {
@@ -449,53 +588,14 @@
             const roleCounts = payload.roleCounts || {};
             const completionPercent = Math.min(100, Math.max(0, Number(summary.averageCompletion || 0)));
             document.getElementById('adminTotalUsers').textContent = Number(roleCounts.total || 0);
-            document.getElementById('adminActiveStudents').textContent = Number(summary.activeStudents || 0);
             document.getElementById('adminInstructors').textContent = Number(roleCounts.instructor || 0);
             document.getElementById('adminAverageCompletion').textContent = `${completionPercent}%`;
             const completionProgress = document.getElementById('adminCompletionProgress');
             if (completionProgress) {
                 completionProgress.style.width = `${completionPercent}%`;
             }
-            document.getElementById('overviewRoleChart').innerHTML = renderRoleDistributionChart(roleCounts);
-            document.getElementById('overviewCompletionChart').innerHTML = renderCompletionMetric(completionPercent);
-        }
-
-        function renderRoleDistributionChart(roleCounts) {
-            const total = Number(roleCounts.total || 0) || 1;
-            const entries = [
-                { label: 'Students', value: Number(roleCounts.student || 0), color: '#3b82f6' },
-                { label: 'Instructors', value: Number(roleCounts.instructor || 0), color: '#10b981' },
-                { label: 'Admins', value: Number(roleCounts.admin || 0), color: '#f59e0b' },
-                { label: 'Inactive', value: Number(roleCounts.inactive || 0), color: '#ef4444' },
-            ];
-            return entries.map(entry => {
-                const percent = Math.round((entry.value / total) * 100);
-                return `
-                    <div class="chart-bar-row">
-                        <div class="chart-bar-label">
-                            <span>${entry.label}</span>
-                            <strong>${entry.value}</strong>
-                        </div>
-                        <div class="chart-bar-track">
-                            <div class="chart-bar-fill" style="width:${percent}%; background:${entry.color};"></div>
-                        </div>
-                        <div class="chart-bar-percent">${percent}%</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderCompletionMetric(value) {
-            const percent = Math.min(100, Math.max(0, Number(value || 0)));
-            return `
-                <div class="completion-metric">
-                    <div class="completion-number">${percent}%</div>
-                    <div class="completion-label">Average completion across students</div>
-                    <div class="completion-bar">
-                        <div class="completion-fill" style="width: ${percent}%;"></div>
-                    </div>
-                </div>
-            `;
+            renderRoleDistributionChart('overviewRoleChart', roleCounts);
+            renderCompletionChart('overviewCompletionChart', completionPercent);
         }
 
         function renderUsers(payload) {
@@ -551,8 +651,7 @@
         function renderRoles(payload) {
             const roleCounts = payload.roleCounts || {};
             const target = document.getElementById('adminRoleDistributionTable');
-            const chartTarget = document.getElementById('adminRoleChart');
-            chartTarget.innerHTML = renderRoleDistributionChart(roleCounts);
+            renderRoleDistributionChart('adminRoleChart', roleCounts);
             target.innerHTML = `
                 <tr><td>Student</td><td>${Number(roleCounts.student || 0)}</td></tr>
                 <tr><td>Instructor</td><td>${Number(roleCounts.instructor || 0)}</td></tr>
@@ -821,17 +920,29 @@
             }
         }
 
+        const MAX_SIGN_VIDEO_SIZE_BYTES = 3 * 1024 * 1024;
+
         const SIGN_VIDEO_CATEGORY_LABELS = {
             alphabet: 'Alphabet',
+            calendar: 'Calendar',
+            colors: 'Colors',
+            days: 'Days',
+            drink: 'Drink',
             emotions: 'Emotions',
             everyday_words: 'Everyday Words',
             expressions: 'Expressions',
+            family: 'Family',
+            food: 'Food',
             greetings: 'Greetings',
+            numbers: 'Numbers',
             phrases: 'Phrases',
+            relationships: 'Relationships',
             responses: 'Responses',
+            survival: 'Survival',
         };
 
         let signVideosCache = [];
+        let signVideoSearchDebounce = null;
 
         function renderSignVideos(videos) {
             signVideosCache = Array.isArray(videos) ? videos : [];
@@ -847,15 +958,60 @@
                         </td>
                         <td>${safeText(video.word)}</td>
                         <td>${safeText(SIGN_VIDEO_CATEGORY_LABELS[video.category] || video.category)}</td>
-                        <td>${Number(video.order || 0)}</td>
                         <td><span style="color:${video.is_published ? '#10b981' : '#ef4444'};">${video.is_published ? 'Published' : 'Hidden'}</span></td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-info" onclick="openEditSignVideoForm(${Number(video.id)})" style="margin-right:4px;">Edit</button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSignVideo(${Number(video.id)})">Delete</button>
+                            <button type="button" class="btn btn-sm btn-info sign-video-edit-btn" data-video-id="${Number(video.id)}" style="margin-right:4px;">Edit</button>
+                            <button type="button" class="btn btn-sm btn-danger sign-video-delete-btn" data-video-id="${Number(video.id)}">Delete</button>
                         </td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="6" style="padding: 16px; color: #6b7280;">No sign language videos uploaded yet.</td></tr>';
+                : '<tr><td colspan="5" style="padding: 16px; color: #6b7280;">No sign language videos found.</td></tr>';
+        }
+
+        function renderSignVideosPagination(pageInfo) {
+            const pagination = document.getElementById('signVideosPagination');
+            if (!pagination) return;
+            const info = pageInfo || {};
+            const page = Number(info.page || 1);
+            const pageSize = Number(info.pageSize || 10);
+            const total = Number(info.total || 0);
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const start = total ? ((page - 1) * pageSize) + 1 : 0;
+            const end = total ? Math.min(page * pageSize, total) : 0;
+            pagination.innerHTML = `
+                <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeSignVideosPage(${page - 1})">Prev</button>
+                    <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                    <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeSignVideosPage(${page + 1})">Next</button>
+                </div>
+            `;
+        }
+
+        function getSignVideosPage() {
+            return Number(window.__signVideosPage || 1);
+        }
+
+        function setSignVideosPage(page) {
+            window.__signVideosPage = Math.max(1, Number(page || 1));
+        }
+
+        async function changeSignVideosPage(page) {
+            setSignVideosPage(page);
+            await refreshSignVideos();
+        }
+
+        function onSignVideoFilterChange() {
+            setSignVideosPage(1);
+            refreshSignVideos();
+        }
+
+        function onSignVideoSearchInput() {
+            setSignVideosPage(1);
+            if (signVideoSearchDebounce) clearTimeout(signVideoSearchDebounce);
+            signVideoSearchDebounce = setTimeout(() => {
+                refreshSignVideos();
+            }, 300);
         }
 
         async function refreshSignVideos() {
@@ -865,9 +1021,55 @@
                 window.location.href = 'login.html';
                 return;
             }
+            const search = String((document.getElementById('signVideoSearch') || {}).value || '').trim();
+            const category = String((document.getElementById('signVideoCategoryFilter') || {}).value || '');
+            const page = getSignVideosPage();
             try {
-                const videos = await requestJson(`/admin/sign-videos/?adminEmail=${encodeURIComponent(actorId)}`);
+                const params = new URLSearchParams({
+                    adminEmail: actorId,
+                    page: String(page),
+                    pageSize: '10',
+                });
+                if (search) params.set('search', search);
+                if (category) params.set('category', category);
+                const payload = await requestJson(`/admin/sign-videos/?${params.toString()}`);
+                let videos = payload.videos || [];
+                let pagination = payload.pagination || { page, pageSize: 10, total: videos.length };
+
+                // The admin-only endpoint can come back empty even though
+                // videos exist (e.g. rows created before some admin-only
+                // column was backfilled). Fall back to the same public feed
+                // Text-to-Sign uses, so the manager always reflects what's
+                // actually in the database, then apply search/category
+                // client-side to match what was asked for.
+                if (!videos.length && pagination.total === 0) {
+                    const fallback = await requestJson(`/sign-videos/`);
+                    let fallbackVideos = Array.isArray(fallback) ? fallback : [];
+                    if (category) {
+                        fallbackVideos = fallbackVideos.filter(v => String(v.category || '').toLowerCase() === category);
+                    }
+                    if (search) {
+                        const needle = search.toLowerCase();
+                        fallbackVideos = fallbackVideos.filter(v => String(v.word || '').toLowerCase().includes(needle));
+                    }
+                    const pageSize = 10;
+                    const total = fallbackVideos.length;
+                    const start = (page - 1) * pageSize;
+                    videos = fallbackVideos.slice(start, start + pageSize).map(v => ({
+                        id: v.id,
+                        key: v.key,
+                        word: v.word,
+                        category: v.category,
+                        video_url: v.video_url,
+                        order: v.order,
+                        is_published: true,
+                        text_to_sign_only: false,
+                    }));
+                    pagination = { page, pageSize, total };
+                }
+
                 renderSignVideos(videos);
+                renderSignVideosPagination(pagination);
             } catch (error) {
                 alert(`Failed to load sign language videos: ${error.message}`);
             }
@@ -878,31 +1080,19 @@
             document.getElementById('signVideoId').value = '';
             document.getElementById('signVideoWord').value = '';
             document.getElementById('signVideoCategory').value = 'phrases';
-            document.getElementById('signVideoOrder').value = '0';
             document.getElementById('signVideoPublished').checked = true;
             document.getElementById('signVideoFile').value = '';
-            document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase.';
+            document.getElementById('signVideoFileHint').textContent = 'MP4/MOV video file for this word or phrase. Max size: 3MB.';
             document.getElementById('signVideoMessage').textContent = '';
         }
 
         function toggleSignVideoForm() {
-            const el = document.getElementById('signVideoForm');
-            const btn = document.getElementById('showAddSignVideoBtn');
-            if (!el) return;
-            if (el.style.display === 'none' || !el.style.display) {
-                resetSignVideoForm();
-                el.style.display = 'block';
-                if (btn) btn.textContent = 'Hide';
-            } else {
-                closeSignVideoForm();
-            }
+            resetSignVideoForm();
+            openModal('signVideoModal');
         }
 
         function closeSignVideoForm() {
-            const el = document.getElementById('signVideoForm');
-            const btn = document.getElementById('showAddSignVideoBtn');
-            if (el) el.style.display = 'none';
-            if (btn) btn.textContent = 'Add Video';
+            closeModal('signVideoModal');
             document.getElementById('signVideoMessage').textContent = '';
         }
 
@@ -913,13 +1103,25 @@
             document.getElementById('signVideoId').value = video.id;
             document.getElementById('signVideoWord').value = video.word || '';
             document.getElementById('signVideoCategory').value = video.category || 'phrases';
-            document.getElementById('signVideoOrder').value = Number(video.order || 0);
             document.getElementById('signVideoPublished').checked = !!video.is_published;
             document.getElementById('signVideoFile').value = '';
-            document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file.';
+            document.getElementById('signVideoFileHint').textContent = 'Leave empty to keep the current video file. Max size: 3MB.';
             document.getElementById('signVideoMessage').textContent = '';
-            document.getElementById('signVideoForm').style.display = 'block';
-            document.getElementById('showAddSignVideoBtn').textContent = 'Hide';
+            openModal('signVideoModal');
+        }
+
+        function onSignVideoFileChange() {
+            const fileInput = document.getElementById('signVideoFile');
+            const msgEl = document.getElementById('signVideoMessage');
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            if (!file || !msgEl) return;
+            if (file.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                msgEl.style.color = '#b91c1c';
+                msgEl.textContent = 'Video file must be 3MB or smaller.';
+                fileInput.value = '';
+            } else {
+                msgEl.textContent = '';
+            }
         }
 
         async function saveSignVideo() {
@@ -935,7 +1137,6 @@
             const videoId = Number(document.getElementById('signVideoId').value || 0);
             const word = sanitizeAdminInput(document.getElementById('signVideoWord').value);
             const category = String(document.getElementById('signVideoCategory').value || 'phrases');
-            const order = Number(document.getElementById('signVideoOrder').value || 0);
             const isPublished = document.getElementById('signVideoPublished').checked;
             const fileInput = document.getElementById('signVideoFile');
             const file = fileInput && fileInput.files ? fileInput.files[0] : null;
@@ -948,12 +1149,15 @@
                 msgEl.textContent = 'A video file is required.';
                 return;
             }
+            if (file && file.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                msgEl.textContent = 'Video file must be 3MB or smaller.';
+                return;
+            }
 
             const formData = new FormData();
             formData.append('actorEmail', actorId);
             formData.append('word', word);
             formData.append('category', category);
-            formData.append('order', String(order));
             formData.append('is_published', isPublished ? 'true' : 'false');
             if (file) {
                 formData.append('video', file);
@@ -1007,6 +1211,21 @@
                 });
             }
 
+            const signVideosTable = document.getElementById('signVideosTable');
+            if (signVideosTable) {
+                signVideosTable.addEventListener('click', function (event) {
+                    const editBtn = event.target.closest('.sign-video-edit-btn');
+                    if (editBtn) {
+                        openEditSignVideoForm(Number(editBtn.dataset.videoId));
+                        return;
+                    }
+                    const deleteBtn = event.target.closest('.sign-video-delete-btn');
+                    if (deleteBtn) {
+                        deleteSignVideo(Number(deleteBtn.dataset.videoId));
+                    }
+                });
+            }
+
             await refreshAdminDashboard();
             await refreshSignVideos();
             switchTab('overview');
@@ -1041,5 +1260,6 @@
         });
     })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>

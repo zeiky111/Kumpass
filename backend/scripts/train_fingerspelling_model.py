@@ -39,6 +39,7 @@ from signtext.fingerspelling_svc import (  # noqa: E402
     CLASS_LABELS,
     MODEL_PATH,
     PROTOTYPES,
+    _canonicalize_landmarks_for_handedness,
     extract_features_from_landmarks,
 )
 
@@ -46,6 +47,95 @@ DATASET_DIR = BACKEND_DIR / "datasets" / "fingerspelling"
 MANIFEST_PATH = MODEL_PATH.parent / "fingerspelling_svc.meta.json"
 SYNTHETIC_SAMPLES_PER_MISSING_LETTER = 200
 LANDMARK_COLUMNS = 21 * 3
+# How many jittered variants to generate per real recorded row -- see
+# _jitter_landmarks for why this exists.
+# Increased from 4/0.01: the user reports widespread misdetection across
+# many letters on live webcam despite 96%+ accuracy on clean recorded data,
+# pointing to a bigger clean-data-vs-live-camera gap than the original
+# jitter strength covered. Doubled both the noise magnitude and the number
+# of jittered variants per real sample so the model sees a wider range of
+# imprecise/noisy landmark positions during training.
+JITTERS_PER_SAMPLE = 4
+JITTER_STDDEV = 0.02
+# How many rotated variants to generate per real recorded row -- see
+# _rotate_landmarks for why this exists. Kept modest (each rotation also
+# produces a jittered twin below, so the real multiplier is 2x this) to
+# keep training time and the resulting model file size reasonable.
+ROTATIONS_PER_SAMPLE = 3
+MAX_ROTATION_DEGREES = 20.0
+_NP_RNG = np.random.default_rng(42)
+
+
+def _mirror_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Flips every landmark's x coordinate (1 - x), leaving y/z alone.
+
+    predict_letter_from_landmarks canonicalizes "Left"-handed input by
+    mirroring it to look right-handed before feature extraction, so the
+    model only ever sees right-looking geometry in principle -- but that
+    canonicalization depends on MediaPipe/the browser reporting the
+    correct handedness label. If that label is wrong (a real risk on
+    live webcam, confirmed by testing: feeding a genuine "C" sample
+    through with a flipped handedness label predicted "Q" in most of the
+    error cases -- matching the user's exact live-camera report of C
+    reading as Q), the canonicalization mirrors an already-correct hand
+    the wrong way, corrupting the geometry into something the model
+    never trained on. Training directly on mirrored copies (paired with
+    the opposite handedness label, so canonicalization mirrors them back
+    to the *original* orientation) teaches the model to still get the
+    right answer even when that label is wrong.
+    """
+    return [{"x": 1.0 - float(p["x"]), "y": float(p["y"]), "z": float(p["z"])} for p in landmarks]
+
+
+def _rotate_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Rotates every landmark around the wrist (landmark 0) by a random
+    small angle in the image plane (x/y only; z is left alone).
+
+    collect-landmarks.html recordings have the signer's hand held at a
+    fairly consistent, deliberate angle relative to the camera. A live
+    user's hand is rarely at that exact angle -- a slight wrist tilt or a
+    camera that isn't perfectly perpendicular to the hand rotates the whole
+    landmark set in the image plane, which the geometric features (angles,
+    horizontal/vertical projections) are not inherently invariant to.
+    Training on randomly rotated copies of every real sample teaches the
+    model to tolerate that instead of requiring the exact recorded angle.
+    """
+    wrist = landmarks[0]
+    wx, wy = float(wrist["x"]), float(wrist["y"])
+    angle = np.radians(_NP_RNG.uniform(-MAX_ROTATION_DEGREES, MAX_ROTATION_DEGREES))
+    cos_a, sin_a = np.cos(angle), np.sin(angle)
+
+    rotated = []
+    for point in landmarks:
+        dx = float(point["x"]) - wx
+        dy = float(point["y"]) - wy
+        new_x = wx + dx * cos_a - dy * sin_a
+        new_y = wy + dx * sin_a + dy * cos_a
+        rotated.append({"x": new_x, "y": new_y, "z": float(point["z"])})
+    return rotated
+
+
+def _jitter_landmarks(landmarks: list[dict]) -> list[dict]:
+    """Adds small per-landmark Gaussian noise to every (x, y, z) coordinate.
+
+    The recorded training CSVs come from collect-landmarks.html under
+    controlled conditions (deliberate, held poses), so MediaPipe's landmark
+    estimates in that data are cleaner than what live webcam use produces
+    (motion blur, variable lighting, a signer who isn't holding perfectly
+    still). extract_features_from_landmarks derives geometric ratios
+    (distances, curl, extension) straight from raw coordinates, so a model
+    trained only on clean landmarks has no built-in tolerance for that
+    real-world noise. This mirrors the same fix already applied to the word
+    sequence model (see train_word_model.py's _jitter_frames).
+    """
+    jittered = []
+    for point in landmarks:
+        jittered.append({
+            "x": float(point["x"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+            "y": float(point["y"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+            "z": float(point["z"]) + _NP_RNG.normal(0.0, JITTER_STDDEV),
+        })
+    return jittered
 
 
 def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
@@ -75,13 +165,57 @@ def load_real_samples() -> tuple[np.ndarray, np.ndarray, Counter]:
                     skipped += 1
                     continue
 
-                landmarks = [
+                raw_landmarks = [
                     {"x": values[i * 3], "y": values[i * 3 + 1], "z": values[i * 3 + 2]}
                     for i in range(21)
                 ]
+                # IMPORTANT: predict_letter_from_landmarks canonicalizes
+                # "Left"-handed input (mirrors it to look right-handed)
+                # before extracting features -- this must match exactly, or
+                # the model is trained on geometry the live runtime never
+                # actually shows it. This was previously missing: ~7,500 of
+                # the ~20,000 real training rows are labeled "Left" (from
+                # kaggle_extracted.csv), and without this canonicalization
+                # step they were trained on raw, un-mirrored landmarks the
+                # live prediction path would never present in that form.
+                landmarks = list(_canonicalize_landmarks_for_handedness(raw_landmarks, handedness))
+
                 feature_vector = extract_features_from_landmarks(landmarks, handedness).reshape(-1)
                 features.append(feature_vector)
                 labels.append(label)
+
+                # A mirrored twin of the now-canonicalized (always
+                # right-looking) landmarks, so the model also learns to
+                # recognize the letter if handedness detection is wrong on a
+                # live frame and mirrors a genuinely-correct hand the wrong
+                # way -- confirmed by testing that this exact scenario
+                # reproduces the user's live "C reads as Q" report.
+                mirrored_vector = extract_features_from_landmarks(
+                    _mirror_landmarks(landmarks), handedness
+                ).reshape(-1)
+                features.append(mirrored_vector)
+                labels.append(label)
+
+                for _ in range(JITTERS_PER_SAMPLE):
+                    jittered_vector = extract_features_from_landmarks(
+                        _jitter_landmarks(landmarks), handedness
+                    ).reshape(-1)
+                    features.append(jittered_vector)
+                    labels.append(label)
+
+                for _ in range(ROTATIONS_PER_SAMPLE):
+                    # Jitter each rotated variant too, so the model sees the
+                    # combined effect of tilt + noisy tracking together.
+                    rotated = _rotate_landmarks(landmarks)
+                    rotated_vector = extract_features_from_landmarks(rotated, handedness).reshape(-1)
+                    features.append(rotated_vector)
+                    labels.append(label)
+
+                    jittered_rotated_vector = extract_features_from_landmarks(
+                        _jitter_landmarks(rotated), handedness
+                    ).reshape(-1)
+                    features.append(jittered_rotated_vector)
+                    labels.append(label)
 
     if skipped:
         print(f"Skipped {skipped} malformed/unrecognized rows across {len(csv_files)} CSV file(s).")
@@ -119,7 +253,7 @@ def evaluate_on_real_data(x_real: np.ndarray, y_real: np.ndarray, counts: Counte
     x_train, x_test, y_train, y_test = train_test_split(
         x_real, y_real, test_size=0.2, stratify=y_real, random_state=42
     )
-    model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
+    model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=20.0, gamma="scale", probability=True))
     model.fit(x_train, y_train)
     predictions = model.predict(x_test)
     accuracy = float(accuracy_score(y_test, predictions))
@@ -155,7 +289,7 @@ def main() -> None:
     print(f"\nTraining deployed model on {len(y_final)} rows "
           f"({len(y_real)} real + {len(y_fill)} synthetic-filled for missing letters)...")
 
-    final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
+    final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=20.0, gamma="scale", probability=True))
     final_model.fit(x_final, y_final)
 
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)

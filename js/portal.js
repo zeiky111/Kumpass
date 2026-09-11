@@ -3,6 +3,44 @@
   const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
   const DEFAULT_USER_NAME = 'Learner';
   const DEFAULT_USER_EMAIL = '';
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  async function ensureCsrfToken() {
+    const existing = getCookie('csrftoken');
+    if (existing) return existing;
+    try {
+      const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
+      const cookieToken = getCookie('csrftoken');
+      if (cookieToken) return cookieToken;
+      const data = await response.json().catch(() => ({}));
+      return data.csrfToken || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // Adds the session cookie and CSRF header every mutating request needs,
+  // so callers can just `await window.fetchWithAuth(url, options)` the same
+  // way they'd call fetch().
+  window.fetchWithAuth = async function fetchWithAuth(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const headers = { ...(options.headers || {}) };
+    if (method !== 'GET' && method !== 'HEAD') {
+      const csrfToken = await ensureCsrfToken();
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+    }
+    return fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers,
+    });
+  };
   let hydratedState = null;
   let studentContentCache = null;
   let currentUserCache = null;
@@ -122,14 +160,13 @@
     const yearLevel = String((module && module.year_level) || '1').trim();
     const level = getLevelTextFromYear(yearLevel);
     const files = Array.isArray(module && module.files) ? module.files : [];
-    // Backend now serves at most one published quiz per module (module.quiz,
-    // or null) instead of a raw quizzes[]/quizCount pair.
-    const rawQuiz = module && module.quiz && typeof module.quiz === 'object' ? module.quiz : null;
-    const quiz = rawQuiz ? {
-      id: rawQuiz.id,
-      title: rawQuiz.title || 'Quiz',
-      passingScore: Number(rawQuiz.passing_score || 0),
-      questions: Array.isArray(rawQuiz.questions) ? rawQuiz.questions : [],
+    const quizCount = Number((module && (module.quizCount || module.quiz_count)) || 0);
+    const quizzes = Array.isArray(module && module.quizzes) ? module.quizzes : [];
+    const quizAttemptRaw = module && module.quizAttempt;
+    const quizAttempt = quizAttemptRaw && typeof quizAttemptRaw === 'object' ? {
+      score: Number(quizAttemptRaw.score || 0),
+      total: Number(quizAttemptRaw.total || 0),
+      submittedAt: quizAttemptRaw.submittedAt || null,
     } : null;
 
     const numericId = Number(module && module.id);
@@ -147,7 +184,10 @@
       unlocks: 'Unlocks the next guided activities and game challenges.',
       files,
       filesCount: files.length,
-      quiz,
+      quizCount: Number.isFinite(quizCount) ? quizCount : 0
+      ,
+      quizzes: quizzes,
+      quizAttempt: quizAttempt
     };
   }
 
@@ -393,15 +433,6 @@
     return state;
   }
 
-  // Adopts a state object the server already computed and persisted (e.g.
-  // the "state" returned by a quiz submission) as the client's cache --
-  // unlike saveState/updateState, this does NOT sync back to the backend,
-  // since the backend is already authoritative for it.
-  function hydrateState(serverState) {
-    hydratedState = mergeState(serverState);
-    return hydratedState;
-  }
-
   function saveState(state) {
     const merged = mergeState(state);
     hydratedState = merged;
@@ -562,7 +593,8 @@
           actions.appendChild(openQuizBtn);
         }
         if (openQuizBtn) {
-          openQuizBtn.style.display = module && module.quiz ? 'inline-flex' : 'none';
+          openQuizBtn.style.display = module && (Number(module.quizCount || 0) > 0) ? 'inline-flex' : 'none';
+          openQuizBtn.textContent = module && module.quizAttempt ? 'View Quiz Results' : 'Open Quiz';
           openQuizBtn.onclick = (e) => { e.stopPropagation(); openQuiz(module.id); };
         }
       } catch (e) {
@@ -604,22 +636,33 @@
     const body = document.getElementById('quizModalBody');
     if (!modal || !body) return;
 
-    const quiz = module.quiz;
-    const questions = quiz && Array.isArray(quiz.questions) ? quiz.questions : [];
-    if (!quiz || !questions.length) {
-      body.innerHTML = '<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No quiz available for this module.</div>';
+    const moduleQuizzes = Array.isArray(module.quizzes) ? module.quizzes : [];
+    if (!moduleQuizzes.length) {
+      body.innerHTML = '<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No quizzes available for this module.</div>';
       modal.classList.add('active');
       return;
     }
 
-    const totalQuestions = questions.length;
+    if (module.quizAttempt) {
+      const { score, total, submittedAt } = module.quizAttempt;
+      const submittedLabel = submittedAt ? new Date(submittedAt).toLocaleString() : '';
+      body.innerHTML = `
+        <div class="quiz-results">
+          <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
+          <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}</div>
+        </div>`;
+      modal.classList.add('active');
+      return;
+    }
+
+    const totalQuestions = moduleQuizzes.length;
     const progressLabel = document.getElementById('quizProgressLabel');
     const progressFill = document.getElementById('quizProgressFill');
     if (progressLabel) progressLabel.textContent = `${totalQuestions} question${totalQuestions === 1 ? '' : 's'}`;
     if (progressFill) progressFill.style.width = '0%';
 
     let formHtml = `<form id="popupModuleQuizForm">`;
-    questions.forEach((q, i) => {
+    moduleQuizzes.forEach((q, i) => {
       const idx = i + 1;
       formHtml += `<div class="quiz-question-card" data-question-index="${i}">`;
       formHtml += `<div class="quiz-question-text">Q${idx}. ${safeText(q.question_text)}</div>`;
@@ -669,7 +712,7 @@
         if (!form) return;
         const fd = new FormData(form);
         const answers = [];
-        questions.forEach(q => {
+        moduleQuizzes.forEach(q => {
           const name = `q_${q.id}`;
           const val = fd.get(name);
           if (val !== null) answers.push({ question_id: Number(q.id), answer: String(val) });
@@ -690,6 +733,14 @@
           });
           if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
+            if (err && err.alreadyCompleted) {
+              body.innerHTML = `
+                <div class="quiz-results">
+                  <div class="quiz-results-score">Score: <strong>${Number(err.score || 0)}</strong> / ${Number(err.total || 0)}</div>
+                  <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once.</div>
+                </div>`;
+              return;
+            }
             alert(err && err.error ? `Quiz submission failed: ${err.error}` : 'Quiz submission failed');
             submitButton.disabled = false;
             submitButton.textContent = 'Submit Quiz';
@@ -698,13 +749,11 @@
           const result = await resp.json();
           const score = Number(result.score || 0);
           const total = Number(result.total || 0);
-          const passed = !!result.passed;
-          const passingScore = Number(result.passingScore || quiz.passingScore || 0);
-          const certificateEarned = !!result.certificateEarned;
           const details = Array.isArray(result.details) ? result.details : [];
+          const certificate = result.certificate && typeof result.certificate === 'object' ? result.certificate : null;
 
           if (result.state && typeof result.state === 'object') {
-            hydrateState(result.state);
+            hydratedState = mergeState(result.state);
           }
 
           if (progressLabel) progressLabel.textContent = 'Completed';
@@ -713,10 +762,6 @@
           body.innerHTML = `
             <div class="quiz-results">
               <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
-              <div class="quiz-results-pass ${passed ? 'quiz-answer-correct' : 'quiz-answer-incorrect'}">
-                ${passed ? `✅ Passed (needed ${passingScore}%)` : `❌ Not yet passed (needed ${passingScore}%) -- you can try again`}
-              </div>
-              ${certificateEarned ? `<div class="quiz-results-certificate">🎓 Certificate earned! Find it on your <a href="profile.html#certificates">profile</a>.</div>` : ''}
               <div class="quiz-results-list">
                 ${details.map(d => `
                   <div class="quiz-results-row ${d.correct ? 'quiz-answer-correct' : 'quiz-answer-incorrect'}">
@@ -725,6 +770,12 @@
                   </div>
                 `).join('')}
               </div>
+              ${certificate ? `
+                <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
+                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 Certificate earned!</div>
+                  <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
+                </div>
+              ` : ''}
             </div>`;
           submitButton.style.display = 'none';
 
@@ -1014,7 +1065,7 @@
                 <span class="module-chip">📚 ${Number(module.activities || 0)} Activities</span>
                 <span class="module-chip">⏱️ ${Number(module.minutes || 0)} min</span>
                 ${filesCount > 0 ? `<span class="module-chip">📎 ${filesCount} Materials</span>` : ''}
-                <span class="module-chip">📝 ${module.quiz ? `${module.quiz.questions.length} Question${module.quiz.questions.length === 1 ? '' : 's'}` : 'No Quiz Yet'}</span>
+                <span class="module-chip">📝 ${Number(module.quizCount || 0)} Quizzes</span>
               </div>
               ${filesCount > 0 ? `<div class="learning-module-files-preview">${previewFiles.map(file => safeText(file.file_name)).join(' • ')}</div>` : ''}
             </td>
@@ -2344,7 +2395,6 @@
     getCurrentUser,
     ensureCurrentUser,
     getState,
-    hydrateState,
     loadStateFromBackend,
     loadLeaderboardFromBackend,
     loadPublicAnnouncements,

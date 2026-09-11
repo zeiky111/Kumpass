@@ -161,11 +161,32 @@
   // Groups raw GameLevel records (with .items) into { easy: [GameLevel...], ... }
   // ordered by level_number, mapping each item through mapItem(item) and
   // dropping levels that end up with no usable content.
+  //
+  // Pooling: a GameLevelItem can carry extra_data.pool -- a list of raw
+  // alternative items ({prompt, media_url, extra_data}) sharing the same
+  // shape as a GameLevelItem. Each pool entry is mapped through mapItem() up
+  // front (here) and attached to the mapped item as `_pool`, so the level
+  // *slot* itself doesn't change (same level_number/title/count), but which
+  // WORD fills that slot can be redrawn from the pool on each playthrough --
+  // see createGameEngine's buildQuestionsForCurrentLevel/pickFromPool.
   function buildLevelsByDifficulty(levels, mapItem) {
     const byDifficulty = { easy: [], medium: [], hard: [] };
     levels.forEach(level => {
       const items = (level.items || [])
-        .map(mapItem)
+        .map(rawItem => {
+          const mapped = mapItem(rawItem);
+          if (mapped == null) return null;
+          const rawPool = (rawItem.extra_data && Array.isArray(rawItem.extra_data.pool))
+            ? rawItem.extra_data.pool
+            : null;
+          if (rawPool && rawPool.length) {
+            const mappedPool = rawPool
+              .map(mapItem)
+              .filter(entry => entry != null);
+            if (mappedPool.length) mapped._pool = mappedPool;
+          }
+          return mapped;
+        })
         .filter(item => item != null);
       if (!items.length) return;
       if (!byDifficulty[level.difficulty]) byDifficulty[level.difficulty] = [];
@@ -246,7 +267,12 @@
   }
 
   // Shows an in-page "Difficulty/Game Complete" panel instead of a jarring alert().
-  function showCompletionModal({ title, message, onContinue, continueLabel, autoContinueAfterMs = 0 }) {
+  // reviewItems (optional): [{ question, correctAnswer }, ...] -- missed
+  // questions to reveal now that the game has actually ended. Answers are
+  // intentionally withheld during play (no per-question reveal) so a wrong
+  // guess doesn't hand the player the answer for next time; this is the one
+  // place they're shown, once there's no more of that difficulty left to play.
+  function showCompletionModal({ title, message, onContinue, continueLabel, autoContinueAfterMs = 0, reviewItems }) {
     let modal = document.getElementById('gameCompleteModal');
     if (!modal) {
       document.body.insertAdjacentHTML('beforeend', `
@@ -257,6 +283,7 @@
               <button type="button" class="modal-close" aria-label="Close" onclick="KumpasGames.closeModal('gameCompleteModal')">&times;</button>
             </div>
             <p id="gameCompleteMessage"></p>
+            <div id="gameCompleteReview" style="display:none; text-align:left; max-height:220px; overflow-y:auto; margin-top:12px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
             <div class="button-group" style="margin-top:18px;">
               <button type="button" class="btn btn-primary" id="gameCompleteContinueBtn">Continue</button>
             </div>
@@ -266,6 +293,18 @@
     }
     document.getElementById('gameCompleteTitle').textContent = title || 'Great job!';
     document.getElementById('gameCompleteMessage').textContent = message || '';
+    const reviewDiv = document.getElementById('gameCompleteReview');
+    if (reviewDiv) {
+      if (Array.isArray(reviewItems) && reviewItems.length) {
+        reviewDiv.style.display = 'block';
+        reviewDiv.innerHTML = '<strong>Answers to review:</strong><ul style="margin:8px 0 0; padding-left:20px;">'
+          + reviewItems.map(item => `<li style="margin-bottom:4px;">${item.question} &rarr; <strong>${item.correctAnswer}</strong></li>`).join('')
+          + '</ul>';
+      } else {
+        reviewDiv.style.display = 'none';
+        reviewDiv.innerHTML = '';
+      }
+    }
     const btn = document.getElementById('gameCompleteContinueBtn');
     btn.textContent = continueLabel || 'Continue';
     const newBtn = btn.cloneNode(true);
@@ -304,20 +343,38 @@
   function createGameEngine(opts) {
     const state = {
       difficulty: 'easy',
-      levelIndex: 0, // index into levelsByDifficulty[difficulty] (a teacher level)
+      levelIndex: 0, // index into the CURRENT SHUFFLED ORDER for this difficulty
       questionIndex: 0, // index into the current level's question/item list
       score: 0,
       correct: 0,
       total: 0,
       completedDifficulties: { easy: false, medium: false, hard: false },
       levelsByDifficulty: { easy: [], medium: [], hard: [] },
+      // Per-difficulty shuffled level order, re-rolled every time that
+      // difficulty is (re)started -- so replaying assigns different
+      // questions to the "Level 1", "Level 2", ... slots instead of always
+      // playing the same authored level_number order every session.
+      shuffledOrder: { easy: null, medium: null, hard: null },
     };
+
+    // Re-shuffles which authored level fills each position for `difficulty`.
+    // Called every time that difficulty is (re)selected, including replays.
+    function reshuffleLevelOrder(difficulty) {
+      const list = state.levelsByDifficulty[difficulty] || [];
+      state.shuffledOrder[difficulty] = shuffle(list);
+    }
 
     // All playable content comes from teacher-authored GameLevel rows -- no
     // default/fallback pool. A difficulty with zero published levels simply
     // has nothing to play (see hasNextLevel/totalLevelsForDifficulty below).
     function activeLevelList() {
-      const list = state.levelsByDifficulty[state.difficulty] || [];
+      // Lazily shuffle on first access (e.g. the very first "Start Game" of a
+      // fresh page load, before any explicit setDifficulty() call) so even a
+      // brand-new session doesn't play the raw authored level_number order.
+      if (!state.shuffledOrder[state.difficulty]) {
+        reshuffleLevelOrder(state.difficulty);
+      }
+      const list = state.shuffledOrder[state.difficulty] || [];
       return list.length ? list : null;
     }
 
@@ -330,15 +387,13 @@
       return level ? level.items : [];
     }
 
+    // Displayed level number is the player's slot position in this session
+    // (1, 2, 3, ...) rather than the authored level_number, since the order
+    // is reshuffled every time the difficulty is (re)started -- showing the
+    // raw level_number would make the on-screen counter jump around
+    // non-sequentially (e.g. "Level 5" then "Level 2").
     function currentLevelNumber() {
-      const levels = activeLevelList();
-      let result;
-      if (levels) {
-        const level = levels[Math.min(state.levelIndex, levels.length - 1)];
-        result = level ? level.levelNumber : state.levelIndex + 1;
-      } else {
-        result = state.levelIndex + 1;
-      }
+      const result = state.levelIndex + 1;
       if (window.__KUMPAS_DEBUG_LEVELS__) {
         console.log('[KumpasGames.currentLevelNumber]', { difficulty: state.difficulty, levelIndex: state.levelIndex, result });
       }
@@ -358,9 +413,12 @@
       return Math.max(2, opts.choiceCounts[state.difficulty] || 4);
     }
 
+    // Flat points per correct answer for the CURRENT difficulty -- no
+    // level-number bonus, so the score always matches what's stated in the
+    // "How to Play" instructions (e.g. "Easy = 10 pts") regardless of which
+    // level/question the player happens to be on.
     function getPointValue() {
-      const base = opts.pointBase[state.difficulty] || 10;
-      return base + currentLevelNumber();
+      return opts.pointBase[state.difficulty] || 10;
     }
 
     function canSelectDifficulty(level) {
@@ -389,8 +447,18 @@
     // Builds the question set for the CURRENT level within the active
     // difficulty (teacher-level content used in full, in the order authored;
     // shuffled only if the level has more items than the difficulty needs).
+    // Redraws each item from its pool (if any) so the SAME level slot can
+    // surface a different word on each playthrough. An item without a
+    // `_pool` (or an empty one) always plays its own authored content, so
+    // this is a no-op for levels that were never given extra alternatives.
+    function drawFromPool(item) {
+      if (!item || !Array.isArray(item._pool) || !item._pool.length) return item;
+      const candidates = [item, ...item._pool];
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
     function buildQuestionsForCurrentLevel() {
-      const pool = getActivePool().slice();
+      const pool = getActivePool().map(drawFromPool);
       return shuffle(pool).slice(0, Math.max(1, pool.length));
     }
 
@@ -427,6 +495,7 @@
     function setDifficulty(level, resetScore) {
       state.difficulty = level;
       state.levelIndex = 0;
+      reshuffleLevelOrder(level);
       document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('selected'));
       const btn = document.querySelector(`.difficulty-btn[data-level="${level}"]`);
       if (btn) btn.classList.add('selected');

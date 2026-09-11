@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Scenario-Based Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260801">
     <link rel="stylesheet" href="css/dashboard.css?v=20260801">
@@ -656,7 +659,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -675,6 +678,7 @@
         <div class="game-topbar">
             <div class="topbar-title-row">
                 <span class="level-badge"><strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></span>
+                <span class="level-badge" id="questionProgressBadge"></span>
             </div>
             <div class="topbar-controls">
                 <div class="difficulty-buttons">
@@ -822,6 +826,12 @@
             if (ofTotal) {
                 const totalLevels = engine.totalLevelsForDifficulty(engine.state.difficulty);
                 ofTotal.textContent = totalLevels ? `of ${totalLevels}` : '';
+            }
+            const progressBadge = document.getElementById('questionProgressBadge');
+            if (progressBadge) {
+                progressBadge.textContent = activeScenarios.length
+                    ? `Question ${Math.min(currentIndex + 1, activeScenarios.length)} of ${activeScenarios.length}`
+                    : '';
             }
         }
 
@@ -1021,8 +1031,10 @@
                         'On Hard difficulty, the guiding question is hidden and more answer choices are shown.',
                     ],
                     scoring: [
-                        'Correct responses earn points based on your difficulty and current level.',
-                        'Harder difficulties and higher levels are worth more points.',
+                        'Easy correct response = 20 points',
+                        'Medium correct response = 25 points',
+                        'Hard correct response = 30 points',
+                        'Incorrect response = 0 points',
                     ],
                     levelCounts,
                     onStart: () => startLevel(true),
@@ -1033,6 +1045,7 @@
                 document.getElementById('options').innerHTML = '<p style="color:#991b1b;">Unable to load sign videos. Please refresh the page.</p>';
             });
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
 

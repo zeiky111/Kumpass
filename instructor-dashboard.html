@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Instructor Dashboard - Kumpas</title>
-    <link rel="stylesheet" href="css/style.css?v=20260801">
-    <link rel="stylesheet" href="css/pages.css?v=20260801">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260801">
-    <link rel="stylesheet" href="css/dashboard-pro.css?v=20260801">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/dashboard-pro.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
     <style>
         .tab-content {
             animation: fadeIn 0.3s ease-in;
@@ -60,83 +64,8 @@
             margin-top: 4px;
         }
 
-        .module-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 18px;
-        }
-
-        .module-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .module-card-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .module-card-header > div {
-            min-width: 0;
-        }
-
-        .module-card-title {
-            margin: 0;
-            font-size: 1.05rem;
-            color: #111827;
-            line-height: 1.35;
-            overflow-wrap: break-word;
-            word-break: break-word;
-        }
-
-        .module-card-description {
-            margin: 0;
-            color: #6b7280;
-            line-height: 1.55;
-            font-size: 0.95rem;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-
-        .module-card-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .module-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .module-card-files {
-            border-top: 1px solid #eef2f7;
-            padding-top: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .module-card-files h4 {
-            margin: 0;
-            font-size: 0.88rem;
-            color: #111827;
+        .module-row:hover {
+            background: #f8fafc;
         }
 
         .module-file-item {
@@ -164,25 +93,6 @@
             color: #6b7280;
         }
 
-        .module-card-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: auto;
-        }
-
-        .module-card-quiz-hint {
-            color: #475569;
-            font-size: 0.88rem;
-            line-height: 1.4;
-            margin-top: 6px;
-            max-width: 100%;
-        }
-
-        .module-card-actions .btn-sm {
-            flex: 1 1 120px;
-        }
-
         .materials-list {
             display: flex;
             flex-direction: column;
@@ -202,12 +112,6 @@
             text-decoration: underline;
         }
 
-        @media (max-width: 1024px) {
-            .module-card-actions .btn-sm {
-                flex: 1 1 100%;
-            }
-        }
-
         @media (max-width: 768px) {
             .modal-split-grid {
                 grid-template-columns: 1fr !important;
@@ -216,17 +120,28 @@
     </style>
 </head>
 <body class="pro-dashboard instructor-theme">
-    <script src="js/auth.js"></script>
     <script>
-        // Instructor and admin accounts both belong on this page (admins can
-        // manage instructor-facing content too); students get bounced home.
-        requireAuth(['instructor', 'admin']);
+        // Check authentication with backend (session cookie)
+        (async function() {
+            try {
+                const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+                const response = await fetch(`${apiBase}/auth/me/`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    window.location.replace('login.html');
+                }
+            } catch (_) {
+                window.location.replace('login.html');
+            }
+        })();
     </script>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="instructor-dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image">
+                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
@@ -254,6 +169,7 @@
                 <li><a href="#overview" class="sidebar-link active" onclick="switchTab('overview')"><i class="fas fa-chart-line"></i> Overview</a></li>
                 <li><a href="#modules" class="sidebar-link" onclick="switchTab('modules')"><i class="fas fa-book"></i> Manage Modules</a></li>
                 <li><a href="#students" class="sidebar-link" onclick="switchTab('students')"><i class="fas fa-users"></i> Monitor Students</a></li>
+                <li><a href="#quiz-reports" class="sidebar-link" onclick="switchTab('quiz-reports')"><i class="fas fa-clipboard-check"></i> Quiz Reports</a></li>
                 <li><a href="#announcements" class="sidebar-link" onclick="switchTab('announcements')"><i class="fas fa-bell"></i> Announcements</a></li>
                 <li><a href="#game-levels" class="sidebar-link" onclick="switchTab('game-levels')"><i class="fas fa-layer-group"></i> Game Levels</a></li>
                 <li><a href="index.html" class="sidebar-link" style="margin-top: 20px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
@@ -315,14 +231,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="card section-block" style="margin-top:20px;">
-                        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-                            <h3 class="card-title"><i class="fas fa-bullhorn" style="margin-right:8px;"></i>Recent Announcements</h3>
-                            <a href="#announcements" onclick="switchTab('announcements')" style="font-size:13px;color:#3b82f6;text-decoration:none;font-weight:600;">View All</a>
-                        </div>
-                        <div id="overviewRecentAnnouncements"></div>
-                    </div>
                 </div>
 
                 <!-- Manage Modules Tab -->
@@ -333,7 +241,6 @@
                                 <h3 class="card-title">Manage Learning Modules</h3>
                             </div>
                             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                <input id="moduleSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search modules..." oninput="changeModuleSearch(this.value)">
                                 <select id="moduleYearFilter" class="form-input" style="width:auto;" onchange="changeModuleYearFilter(this.value)">
                                     <option value="all">All Years</option>
                                     <option value="1">1st Year</option>
@@ -349,11 +256,13 @@
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Module Title</th>
-                                            <th>Year Level</th>
-                                            <th>Description</th>
+                                            <th>Module</th>
+                                            <th>Year</th>
                                             <th>Status</th>
-                                            <th>Date Created</th>
+                                            <th>Students</th>
+                                            <th>Activities</th>
+                                            <th>Materials</th>
+                                            <th>Quiz Items</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -370,7 +279,6 @@
                     <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Monitor Student Progress</h3>
-                        <input id="studentSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search students..." oninput="changeStudentSearch(this.value)">
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -393,19 +301,49 @@
                 </div>
                 </div>
 
+                <!-- Quiz Reports Tab -->
+                <div id="quiz-reports" class="tab-content" style="display: none;">
+                    <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Quiz Reports</h3>
+                        <span style="color:#6b7280;font-size:0.85rem;">Passing score: 75% and up</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="quizReportsChartWrap" style="position:relative; height:280px; margin-bottom:22px; display:none;">
+                            <canvas id="quizReportsChart"></canvas>
+                        </div>
+                        <div style="margin-bottom:14px;">
+                            <input id="quizReportsSearch" class="form-input" placeholder="Search module title..." style="width:240px;" oninput="renderQuizReportsTable(window.__quizReports || [])" />
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>Year Level</th>
+                                        <th>Attempts</th>
+                                        <th>Passed</th>
+                                        <th>Pass Rate</th>
+                                        <th>Average Score</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quizReportsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
                 <!-- Announcements Tab -->
                 <div id="announcements" class="tab-content" style="display: none;">
                     <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Announcements</h3>
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                            <input id="announcementSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search announcements..." oninput="changeAnnouncementSearch(this.value)">
-                            <button class="btn btn-primary btn-sm" onclick="openAnnouncementModal()">+ Create Announcement</button>
-                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="openAnnouncementModal()">+ Create Announcement</button>
                     </div>
                     <div class="card-body">
                         <div id="instructorAnnouncementsList" style="margin-top: 20px;"></div>
-                        <div id="announcementPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
                     </div>
                 </div>
                 </div>
@@ -418,16 +356,12 @@
                                 <h3 class="card-title">Manage Game Levels</h3>
                                 <p style="color:#6b7280;font-size:0.92rem;margin-top:4px;">Add levels and content (words, sentences, scenarios) for each interactive game.</p>
                             </div>
-                            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                <input id="levelSearchInput" type="text" class="form-input" style="width:200px;" placeholder="Search levels..." oninput="changeLevelSearch(this.value)">
-                                <button class="btn btn-primary btn-sm" onclick="openLevelModal()">+ Add Level</button>
-                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="openLevelModal()">+ Add Level</button>
                         </div>
                         <div class="card-body">
                             <div id="gameLevelGameTabs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;"></div>
-                            <div id="gameLevelsCoverage"></div>
                             <div id="instructorGameLevelsList"></div>
-                            <div id="levelPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;"></div>
+                            <div id="gameLevelsPagination" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;"></div>
                         </div>
                     </div>
                 </div>
@@ -459,15 +393,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
-                    <select id="moduleStatus" class="form-input" required>
+                    <select id="moduleStatus" class="form-input" required onchange="updateModuleStatusHint()">
                         <option value="draft">Draft</option>
                         <option value="published">Published</option>
                         <option value="archived">Archived</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Sort Order</label>
-                    <input type="number" id="moduleSortOrder" class="form-input" min="0" value="0" required>
+                    <small id="moduleStatusQuizHint" style="display:none; color:#b45309; margin-top:6px;"></small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
@@ -556,6 +487,29 @@
         </div>
     </div>
 
+    <div id="quizReportDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 760px; width: 94%;">
+            <div class="modal-header">
+                <h2 id="quizReportDetailTitle">Quiz Results</h2>
+                <button class="modal-close" onclick="closeModal('quizReportDetailModal')">&times;</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Score</th>
+                            <th>Result</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quizReportDetailTable"></tbody>
+                </table>
+            </div>
+            <div id="quizReportDetailPagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;padding:0 20px 16px;"></div>
+        </div>
+    </div>
+
     <div id="levelModal" class="modal">
         <div class="modal-content" style="max-width:1080px; width:96%;">
             <div class="modal-header">
@@ -563,13 +517,13 @@
                 <button class="modal-close" onclick="closeModal('levelModal')">&times;</button>
             </div>
             <div class="modal-split-grid" style="display:grid; grid-template-columns: 0.85fr 1.15fr; gap: 18px; align-items:start;">
-                <div class="game-level-reference-panel">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
                         <div>
-                            <h3>Existing Levels</h3>
-                            <p class="reference-subtitle">Reference the current progression before adding a new level.</p>
+                            <h3 style="margin:0; font-size:1rem;">Existing Levels</h3>
+                            <p style="margin:4px 0 0; color:#6b7280; font-size:0.9rem;">Reference the current progression before adding a new level.</p>
                         </div>
-                        <span id="levelReferenceCount" class="game-level-reference-count">0</span>
+                        <span id="levelReferenceCount" style="background:#e5e7eb; color:#374151; border-radius:999px; padding:4px 10px; font-size:0.8rem;">0</span>
                     </div>
                     <div id="levelReferenceList" style="display:flex; flex-direction:column; gap:10px; max-height:520px; overflow:auto;"></div>
                 </div>
@@ -577,7 +531,7 @@
                     <input type="hidden" id="levelId">
                     <div class="form-group">
                         <label class="form-label">Game</label>
-                        <select id="levelGameKey" class="form-input" required onchange="handleLevelGameChange(this.value, Boolean(document.getElementById('levelId').value))">
+                        <select id="levelGameKey" class="form-input" required onchange="handleLevelGameChange(this.value)">
                             <option value="sign_match">Sign Match Game</option>
                             <option value="typing">Sign-to-Word Typing Game</option>
                             <option value="sentence">Sentence Builder Game</option>
@@ -586,7 +540,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Difficulty</label>
-                        <select id="levelDifficulty" class="form-input" required onchange="applySuggestedLevelNumber()">
+                        <select id="levelDifficulty" class="form-input" required>
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
                             <option value="hard">Hard</option>
@@ -594,8 +548,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Level Number</label>
-                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required readonly style="background:#f3f4f6;cursor:not-allowed;">
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Automatic: the next open number for this game and difficulty. To edit a level's number, open it from the list instead.</small>
+                        <input type="number" id="levelNumber" class="form-input" min="1" value="1" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Title (optional)</label>
@@ -687,8 +640,8 @@
         </div>
     </div>
 
-    <script src="js/main.js?v=20260801"></script>
-    <script src="js/portal.js?v=20260801"></script>
+    <script src="js/main.js"></script>
+    <script src="js/portal.js"></script>
     <script>
         const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
         let currentUserPromise = null;
@@ -724,16 +677,12 @@
                 return sessionUser;
             }
 
-            // Fail closed: the page-load requireAuth(['instructor','admin']) guard
-            // should have already redirected away if there's no valid session, so
-            // reaching here with no session means something's wrong -- don't paper
-            // over it with a fake instructor identity.
-            return null;
+            return { name: 'Instructor', email: '', username: '', role: 'instructor' };
         }
 
         async function getInstructorActorIdentifier() {
             const currentUser = await getCurrentUser();
-            return (currentUser && (currentUser.email || currentUser.username)) || '';
+            return currentUser.email || currentUser.username || '';
         }
 
         function getCookie(name) {
@@ -747,17 +696,13 @@
             const existing = getCookie('csrftoken');
             if (existing) return existing;
             try {
-                // Browsers that block third-party/cross-site cookies (Safari ITP,
-                // Chrome/Firefox cross-site restrictions) drop the csrftoken cookie
-                // even though this request succeeds, so document.cookie never sees
-                // it. Fall back to the token the backend returns in the JSON body.
                 const response = await fetch(`${API_BASE}/auth/csrf/`, { method: 'GET', credentials: 'include' });
                 const cookieToken = getCookie('csrftoken');
                 if (cookieToken) return cookieToken;
                 const data = await response.json().catch(() => ({}));
                 return data.csrfToken || '';
             } catch (_) {
-                return getCookie('csrftoken');
+                return '';
             }
         }
 
@@ -843,12 +788,6 @@
             return '<span style="background:#fef3c7;color:#b45309;padding:4px 8px;border-radius:4px;font-size:0.85rem;">Draft</span>';
         }
 
-        function getQuizStatusLabel(quizStatus, quizCount) {
-            if (quizStatus === 'published') return `Published (${Number(quizCount || 0)} questions)`;
-            if (quizStatus === 'draft') return 'Draft quiz';
-            return 'No quiz yet';
-        }
-
         function setOverviewStats(summary) {
             document.getElementById('instructorTotalStudents').textContent = summary.totalStudents ?? 0;
             document.getElementById('instructorModulesCreated').textContent = summary.totalModules ?? 0;
@@ -862,19 +801,6 @@
 
         function setInstructorStudentPage(page) {
             window.__studentPage = Math.max(1, Number(page || 1));
-        }
-
-        function getInstructorStudentSearch() {
-            return String(window.__studentSearch || '');
-        }
-
-        function changeStudentSearch(value) {
-            window.__studentSearch = String(value || '').trim();
-            clearTimeout(window.__studentSearchTimer);
-            window.__studentSearchTimer = setTimeout(async () => {
-                setInstructorStudentPage(1);
-                await refreshInstructorDashboard();
-            }, 350);
         }
 
         function getInstructorModulePage() {
@@ -893,68 +819,6 @@
             window.__moduleYearFilter = String(yearLevel || 'all');
             setInstructorModulePage(1);
             await refreshInstructorDashboard();
-        }
-
-        function getInstructorModuleSearch() {
-            return String(window.__moduleSearch || '');
-        }
-
-        function changeModuleSearch(value) {
-            window.__moduleSearch = String(value || '').trim();
-            clearTimeout(window.__moduleSearchTimer);
-            window.__moduleSearchTimer = setTimeout(async () => {
-                setInstructorModulePage(1);
-                await refreshInstructorDashboard();
-            }, 350);
-        }
-
-        function getInstructorAnnouncementPage() {
-            return Number(window.__announcementPage || 1);
-        }
-
-        function setInstructorAnnouncementPage(page) {
-            window.__announcementPage = Math.max(1, Number(page || 1));
-        }
-
-        function getInstructorAnnouncementSearch() {
-            return String(window.__announcementSearch || '');
-        }
-
-        function changeAnnouncementSearch(value) {
-            window.__announcementSearch = String(value || '').trim();
-            clearTimeout(window.__announcementSearchTimer);
-            window.__announcementSearchTimer = setTimeout(async () => {
-                setInstructorAnnouncementPage(1);
-                await refreshInstructorDashboard();
-            }, 350);
-        }
-
-        async function changeAnnouncementPage(page) {
-            setInstructorAnnouncementPage(page);
-            await refreshInstructorDashboard();
-        }
-
-        function getGameLevelsSearch() {
-            return String(window.__levelSearch || '');
-        }
-
-        function changeLevelSearch(value) {
-            window.__levelSearch = String(value || '').trim();
-            setInstructorLevelPage(1);
-            renderGameLevels();
-        }
-
-        function getInstructorLevelPage() {
-            return Number(window.__levelPage || 1);
-        }
-
-        function setInstructorLevelPage(page) {
-            window.__levelPage = Math.max(1, Number(page || 1));
-        }
-
-        function changeLevelPage(page) {
-            setInstructorLevelPage(page);
-            renderGameLevels();
         }
 
         function sanitizeInstructorInput(value) {
@@ -983,33 +847,29 @@
                     const files = Array.isArray(module.files) ? module.files : [];
                     const filesCount = files.length;
                     return `
-                        <tr onclick="openModuleMaterialsModal(${Number(module.id || 0)})" role="button" tabindex="0" style="cursor:pointer;">
+                        <tr class="module-row" onclick="openModuleMaterialsModal(${Number(module.id || 0)})" style="cursor:pointer;">
                             <td>
                                 <div style="font-weight:600;color:#111827;">${safeText(module.title)}</div>
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                                    <span class="module-chip">📚 ${Number(module.activities_count || 0)} activities</span>
-                                    <span class="module-chip">📎 ${filesCount} materials</span>
-                                    <span class="module-chip">📝 ${getQuizStatusLabel(module.quizStatus, module.quizCount)}</span>
-                                </div>
+                                <small style="color:#6b7280;">${safeText(module.description || 'No module description yet.')}</small>
                             </td>
                             <td>${safeText(formatYearLabel(module.year_level))}</td>
-                            <td style="max-width:320px;color:#6b7280;">${safeText(module.description || 'No module description yet. Add a concise overview to guide students.')}</td>
                             <td>${getStatusBadge(module.status)}</td>
-                            <td>${safeText(formatDateTime(module.created_at)) || '—'}</td>
+                            <td>${Number(module.studentCount || 0)}</td>
+                            <td>${Number(module.activities_count || 0)}</td>
+                            <td>${filesCount}</td>
+                            <td>${Number(module.quizCount || 0)}</td>
                             <td onclick="event.stopPropagation();">
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
                                     <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
                                     <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
                                     <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>
-                                    ${module.status === 'archived'
-                                        ? `<button class="btn btn-sm btn-secondary" onclick="unarchiveModule(${module.id})">Unarchive</button>`
-                                        : `<button class="btn btn-sm btn-danger" onclick="archiveModule(${module.id})">Archive</button>`}
+                                    <button class="btn btn-sm btn-danger" onclick="deleteModule(${module.id})">Delete</button>
                                 </div>
                             </td>
                         </tr>
                     `;
                 }).join('')
-                : '<tr><td colspan="6" style="padding: 18px; color: #6b7280;">No modules found in the database.</td></tr>';
+                : '<tr><td colspan="8" style="padding: 18px; color: #6b7280;">No modules found in the database.</td></tr>';
 
             if (pagination) {
                 const pageInfo = window.__modulePagination || {};
@@ -1075,7 +935,6 @@
 
         function renderAnnouncements(announcements) {
             const target = document.getElementById('instructorAnnouncementsList');
-            const pagination = document.getElementById('announcementPagination');
             if (!target) return;
 
             target.innerHTML = (announcements && announcements.length)
@@ -1094,41 +953,7 @@
                         </div>
                     </div>
                 `).join('')
-                : `<div style="padding:16px;color:#6b7280;">${getInstructorAnnouncementSearch() ? 'No announcements match your search.' : 'No announcements posted yet.'}</div>`;
-
-            if (pagination) {
-                const pageInfo = window.__announcementPagination || {};
-                const page = Number(pageInfo.page || getInstructorAnnouncementPage());
-                const pageSize = Number(pageInfo.limit || 5);
-                const total = Number(pageInfo.total || announcements.length || 0);
-                const totalPages = Math.max(1, Math.ceil(total / pageSize));
-                const start = total ? ((page - 1) * pageSize) + 1 : 0;
-                const end = total ? Math.min(page * pageSize, total) : 0;
-                pagination.innerHTML = `
-                    <span style="color:#6b7280;">${total ? `Showing ${start}-${end} of ${total}` : 'No records to show'}</span>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeAnnouncementPage(${page - 1})">Prev</button>
-                        <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
-                        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeAnnouncementPage(${page + 1})">Next</button>
-                    </div>
-                `;
-            }
-        }
-
-        function renderOverviewAnnouncements(announcements) {
-            const target = document.getElementById('overviewRecentAnnouncements');
-            if (!target) return;
-
-            const items = Array.isArray(announcements) ? announcements.slice(0, 3) : [];
-            target.innerHTML = items.length
-                ? items.map(item => `
-                    <div class="announcement-item">
-                        <h4>${safeText(item.title)}</h4>
-                        <p>${safeText(item.message)}</p>
-                        <small>Updated: ${safeText(formatDateTime(item.updated_at) || formatDateTime(item.created_at))}</small>
-                    </div>
-                `).join('')
-                : `<div style="padding:16px;color:#6b7280;">No announcements posted yet -- post one from the Announcements tab.</div>`;
+                : '<div style="padding:16px;color:#6b7280;">No announcements posted yet.</div>';
         }
 
         function populateModuleForm(module) {
@@ -1136,8 +961,184 @@
             document.getElementById('moduleTitle').value = module ? module.title || '' : '';
             document.getElementById('moduleYearLevel').value = module ? module.year_level || '1' : '1';
             document.getElementById('moduleStatus').value = module ? module.status || 'draft' : 'draft';
-            document.getElementById('moduleSortOrder').value = module ? module.sort_order || 0 : 0;
             document.getElementById('moduleDescription').value = module ? module.description || '' : '';
+            window.__currentModuleQuizCount = module ? Number(module.quizCount || 0) : 0;
+            updateModuleStatusHint();
+        }
+
+        function updateModuleStatusHint() {
+            const statusSelect = document.getElementById('moduleStatus');
+            const hint = document.getElementById('moduleStatusQuizHint');
+            if (!statusSelect || !hint) return;
+            const moduleId = document.getElementById('moduleId').value;
+            const quizCount = Number(window.__currentModuleQuizCount || 0);
+            if (statusSelect.value === 'published' && quizCount === 0) {
+                hint.style.display = 'block';
+                hint.textContent = moduleId
+                    ? 'This module has no quiz questions yet. Add at least one quiz question before you can publish it.'
+                    : 'This module has no quiz questions yet. Save it and you will be directed to the quiz builder to add questions, then you can publish it.';
+            } else {
+                hint.style.display = 'none';
+            }
+        }
+
+        async function loadQuizReports() {
+            const tableBody = document.getElementById('quizReportsTable');
+            if (!tableBody) return;
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;">Loading…</td></tr>';
+
+            try {
+                const actorEmail = await getInstructorActorIdentifier();
+                const data = await requestJson(`/instructor/quiz-reports/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                window.__quizReports = Array.isArray(data.modules) ? data.modules : [];
+                renderQuizReportsTable(window.__quizReports);
+                renderQuizReportsChart(window.__quizReports);
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Failed to load quiz reports: ${safeText(error.message)}</td></tr>`;
+            }
+        }
+
+        function renderQuizReportsTable(reports) {
+            const tableBody = document.getElementById('quizReportsTable');
+            if (!tableBody) return;
+
+            const searchInput = document.getElementById('quizReportsSearch');
+            const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const filtered = searchQuery
+                ? reports.filter(report => String(report.title || '').toLowerCase().includes(searchQuery))
+                : reports;
+
+            if (!filtered.length) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#6b7280;">${searchQuery ? 'No modules match your search.' : 'No published modules with quizzes yet.'}</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = filtered.map(report => `
+                <tr>
+                    <td>${safeText(report.title)}</td>
+                    <td>${safeText(formatYearLabel(report.yearLevel))}</td>
+                    <td>${Number(report.attemptCount || 0)}</td>
+                    <td>${Number(report.passedCount || 0)} / ${Number(report.attemptCount || 0)}</td>
+                    <td>${Number(report.passRate || 0)}%</td>
+                    <td>${Number(report.averageScorePercent || 0)}%</td>
+                    <td><button class="btn btn-sm btn-secondary" onclick="openQuizReportDetail(${Number(report.moduleId)})" ${report.attemptCount ? '' : 'disabled'}>View Details</button></td>
+                </tr>
+            `).join('');
+        }
+
+        let quizReportsChartInstance = null;
+
+        function renderQuizReportsChart(reports) {
+            const wrap = document.getElementById('quizReportsChartWrap');
+            const canvas = document.getElementById('quizReportsChart');
+            if (!wrap || !canvas || typeof Chart === 'undefined') return;
+
+            const withAttempts = (reports || []).filter(report => Number(report.attemptCount || 0) > 0);
+            if (!withAttempts.length) {
+                wrap.style.display = 'none';
+                if (quizReportsChartInstance) {
+                    quizReportsChartInstance.destroy();
+                    quizReportsChartInstance = null;
+                }
+                return;
+            }
+
+            wrap.style.display = 'block';
+            const labels = withAttempts.map(r => r.title);
+            const passRates = withAttempts.map(r => Number(r.passRate || 0));
+            const avgScores = withAttempts.map(r => Number(r.averageScorePercent || 0));
+
+            if (quizReportsChartInstance) {
+                quizReportsChartInstance.data.labels = labels;
+                quizReportsChartInstance.data.datasets[0].data = passRates;
+                quizReportsChartInstance.data.datasets[1].data = avgScores;
+                quizReportsChartInstance.update();
+                return;
+            }
+
+            quizReportsChartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Pass Rate %', data: passRates, backgroundColor: '#10b981' },
+                        { label: 'Average Score %', data: avgScores, backgroundColor: '#3b82f6' },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 },
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                    },
+                },
+            });
+        }
+
+        const QUIZ_REPORT_DETAIL_PAGE_SIZE = 10;
+
+        function openQuizReportDetail(moduleId) {
+            const reports = window.__quizReports || [];
+            const report = reports.find(item => Number(item.moduleId) === Number(moduleId));
+            if (!report) {
+                alert('Report not found. Refresh and try again.');
+                return;
+            }
+
+            document.getElementById('quizReportDetailTitle').textContent = `Quiz Results — ${report.title}`;
+            window.__quizReportDetailStudents = Array.isArray(report.students) ? report.students : [];
+            window.__quizReportDetailPage = 1;
+            renderQuizReportDetailPage();
+
+            openModal('quizReportDetailModal');
+        }
+
+        function renderQuizReportDetailPage() {
+            const tableBody = document.getElementById('quizReportDetailTable');
+            const pagination = document.getElementById('quizReportDetailPagination');
+            const students = window.__quizReportDetailStudents || [];
+            const total = students.length;
+            const pageSize = QUIZ_REPORT_DETAIL_PAGE_SIZE;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const page = Math.min(Math.max(1, Number(window.__quizReportDetailPage || 1)), totalPages);
+            window.__quizReportDetailPage = page;
+
+            const start = (page - 1) * pageSize;
+            const pageStudents = students.slice(start, start + pageSize);
+
+            tableBody.innerHTML = pageStudents.length
+                ? pageStudents.map(student => `
+                    <tr>
+                        <td>${safeText(student.name)}<br><small style="color:#6b7280;">${safeText(student.email)}</small></td>
+                        <td>${Number(student.score)} / ${Number(student.total)} (${Number(student.percent)}%)</td>
+                        <td>${student.passed ? '<span style="color:#065f46;font-weight:600;">Passed</span>' : '<span style="color:#b45309;font-weight:600;">Failed</span>'}</td>
+                        <td>${safeText(formatDateTime(student.submittedAt))}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="4" style="text-align:center;color:#6b7280;">No submissions yet.</td></tr>';
+
+            if (pagination) {
+                const shownStart = total ? start + 1 : 0;
+                const shownEnd = total ? Math.min(start + pageSize, total) : 0;
+                pagination.innerHTML = total > pageSize || total > 0
+                    ? `
+                        <span style="color:#6b7280;">${total ? `Showing ${shownStart}-${shownEnd} of ${total}` : 'No records to show'}</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeQuizReportDetailPage(${page - 1})">Prev</button>
+                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeQuizReportDetailPage(${page + 1})">Next</button>
+                        </div>
+                    `
+                    : '';
+            }
+        }
+
+        function changeQuizReportDetailPage(page) {
+            window.__quizReportDetailPage = Math.max(1, Number(page || 1));
+            renderQuizReportDetailPage();
         }
 
         function populateAnnouncementForm(announcement) {
@@ -1169,19 +1170,13 @@
 
             try {
                 const studentPage = getInstructorStudentPage();
-                const studentSearch = getInstructorStudentSearch();
                 const modulePage = getInstructorModulePage();
                 const moduleYearFilter = getInstructorModuleYearFilter();
-                const moduleSearch = getInstructorModuleSearch();
-                const announcementPage = getInstructorAnnouncementPage();
-                const announcementSearch = getInstructorAnnouncementSearch();
-                const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5&search=${encodeURIComponent(studentSearch)}`);
-                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}&search=${encodeURIComponent(moduleSearch)}`);
-                const announcementsResponse = await requestJson(`/instructor/announcements/?actorEmail=${encodeURIComponent(actorId)}&page=${announcementPage}&limit=5&search=${encodeURIComponent(announcementSearch)}`);
+                const response = await requestJson(`/instructor/dashboard/?actorEmail=${encodeURIComponent(actorId)}&page=${studentPage}&pageSize=5`);
+                const modulesResponse = await requestJson(`/instructor/modules/?actorEmail=${encodeURIComponent(actorId)}&page=${modulePage}&limit=5&yearLevel=${encodeURIComponent(moduleYearFilter)}`);
                 window.__instructorModules = Array.isArray(modulesResponse.modules) ? modulesResponse.modules : [];
                 window.__modulePagination = modulesResponse || { page: modulePage, limit: 8, total: Array.isArray(modulesResponse.modules) ? modulesResponse.modules.length : 0 };
-                window.__instructorAnnouncements = Array.isArray(announcementsResponse.announcements) ? announcementsResponse.announcements : [];
-                window.__announcementPagination = announcementsResponse || { page: announcementPage, limit: 5, total: window.__instructorAnnouncements.length };
+                window.__instructorAnnouncements = Array.isArray(response.announcements) ? response.announcements : [];
                 window.__studentPagination = response.pagination || { page: studentPage, pageSize: 5, total: Array.isArray(response.students) ? response.students.length : 0 };
                 const welcomeTitle = document.getElementById('instructorWelcomeTitle');
                 const welcomeCopy = document.getElementById('instructorWelcomeCopy');
@@ -1195,11 +1190,10 @@
                 setOverviewStats(response.summary || {});
                 renderModules(window.__instructorModules);
                 renderStudents(response.students || []);
-                renderAnnouncements(window.__instructorAnnouncements);
-                renderOverviewAnnouncements(window.__instructorAnnouncements);
+                renderAnnouncements(response.announcements || []);
             } catch (error) {
                 console.error('Dashboard error:', error);
-                alert(`Failed to load instructor dashboard: ${error.message}\n\nMake sure Django server is running: python manage.py runserver 127.0.0.1:8000`);
+                alert(`Failed to load instructor dashboard: ${error.message}`);
             }
         }
 
@@ -1223,11 +1217,12 @@
             if (tab === 'game-levels') {
                 loadGameLevels();
             }
+            if (tab === 'quiz-reports') {
+                loadQuizReports();
+            }
         }
 
-        function openModuleModal(moduleId = '') {
-            const currentModules = window.__instructorModules || [];
-            const module = moduleId ? currentModules.find(item => Number(item.id) === Number(moduleId)) : null;
+        function applyModuleModalState(module) {
             populateModuleForm(module || null);
             const title = document.getElementById('moduleModalTitle');
             if (title) {
@@ -1254,6 +1249,32 @@
                 }
             }
             openModal('moduleModal');
+        }
+
+        async function openModuleModal(moduleId = '') {
+            if (!moduleId) {
+                applyModuleModalState(null);
+                return;
+            }
+
+            const currentModules = window.__instructorModules || [];
+            let module = currentModules.find(item => Number(item.id) === Number(moduleId));
+
+            // Not in the currently loaded page/filter of the modules list
+            // (e.g. returning from the quiz builder for a module that isn't
+            // on page 1) -- fetch it directly instead of silently falling
+            // back to "Add New Module".
+            if (!module) {
+                try {
+                    const actorEmail = await getInstructorActorIdentifier();
+                    module = await requestJson(`/instructor/modules/${moduleId}/?actorEmail=${encodeURIComponent(actorEmail)}`);
+                } catch (error) {
+                    alert(`Could not load module: ${error.message}`);
+                    return;
+                }
+            }
+
+            applyModuleModalState(module);
         }
 
         function openAnnouncementModal(announcementId = '') {
@@ -1318,7 +1339,6 @@
                 title,
                 year_level: document.getElementById('moduleYearLevel').value,
                 status: document.getElementById('moduleStatus').value,
-                sort_order: Number(document.getElementById('moduleSortOrder').value || 0),
                 description,
             };
 
@@ -1326,6 +1346,20 @@
             if (moduleError) {
                 alert(moduleError);
                 return;
+            }
+
+            if (payload.status === 'published') {
+                const quizCount = Number(window.__currentModuleQuizCount || 0);
+                if (!moduleId) {
+                    // Brand-new module: it can't have a quiz yet, and the
+                    // backend always rejects a new module published outright.
+                    // Save it as a draft instead and let the quiz builder
+                    // (opened right after) be where it actually gets published.
+                    payload.status = 'draft';
+                } else if (quizCount === 0) {
+                    alert('Add at least one quiz question before publishing this module. Save it as a draft first, then use "Add Quiz".');
+                    return;
+                }
             }
 
             if (!payload.actorEmail) {
@@ -1337,15 +1371,28 @@
                 const path = moduleId ? `/instructor/modules/${moduleId}/` : '/instructor/modules/';
                 const method = moduleId ? 'PATCH' : 'POST';
                 const moduleResponse = await requestJson(path, { method, body: JSON.stringify(payload) });
-                
+
                 // Upload files if any were selected
                 const fileInput = document.getElementById('moduleFile');
                 if (fileInput && fileInput.files.length > 0) {
                     const finalModuleId = moduleResponse.id || moduleId;
                     await uploadModuleFiles(finalModuleId, fileInput.files);
                 }
-                
+
                 closeModal('moduleModal');
+
+                // New modules have no quiz yet -- go straight into the quiz
+                // builder so instructors add questions right after creating
+                // the module, instead of having to find the "Quiz" button
+                // again from the modules table.
+                if (!moduleId) {
+                    const newModuleId = moduleResponse.id;
+                    if (newModuleId) {
+                        openModuleQuizBuilder(newModuleId);
+                        return;
+                    }
+                }
+
                 await refreshInstructorDashboard();
             } catch (error) {
                 alert(`Failed to save module: ${error.message}`);
@@ -1359,6 +1406,7 @@
             }
 
             const errors = [];
+            const csrfToken = await ensureCsrfToken();
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -1368,7 +1416,6 @@
                 formData.append('description', descriptionPrefix || file.name);
 
                 try {
-                    const csrfToken = await ensureCsrfToken();
                     const response = await fetch(`${API_BASE}/instructor/modules/${moduleId}/files/`, {
                         method: 'POST',
                         credentials: 'include',
@@ -1457,40 +1504,24 @@
 
             const path = announcementId ? `/instructor/announcements/${announcementId}/` : '/instructor/announcements/';
             const method = announcementId ? 'PATCH' : 'POST';
-            try {
-                await requestJson(path, { method, body: JSON.stringify(payload) });
-                closeModal('announcementModal');
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to save announcement: ${error.message}`);
-            }
+            await requestJson(path, { method, body: JSON.stringify(payload) });
+            closeModal('announcementModal');
+            await refreshInstructorDashboard();
         }
 
-        async function archiveModule(moduleId) {
-            if (!confirm('Archive this module? Students will no longer see it, but it stays in the database and can be restored later.')) {
+        async function deleteModule(moduleId) {
+            if (!confirm('Delete this module? This will remove it from the database.')) {
                 return;
             }
 
             try {
                 await requestJson(`/instructor/modules/${moduleId}/`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'archived' }),
+                    method: 'DELETE',
+                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier() }),
                 });
                 await refreshInstructorDashboard();
             } catch (error) {
-                alert(`Failed to archive module: ${error.message}`);
-            }
-        }
-
-        async function unarchiveModule(moduleId) {
-            try {
-                await requestJson(`/instructor/modules/${moduleId}/`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ actorEmail: await getInstructorActorIdentifier(), status: 'draft' }),
-                });
-                await refreshInstructorDashboard();
-            } catch (error) {
-                alert(`Failed to unarchive module: ${error.message}`);
+                alert(`Failed to delete module: ${error.message}`);
             }
         }
 
@@ -1505,7 +1536,6 @@
             const description = sanitizeInstructorInput(document.getElementById('moduleDescription').value || '');
             const yearLevel = document.getElementById('moduleYearLevel').value;
             const status = document.getElementById('moduleStatus').value;
-            const sortOrder = Number(document.getElementById('moduleSortOrder').value || 0);
             const moduleError = validateModulePayload(title, description);
 
             if (moduleError) {
@@ -1518,7 +1548,6 @@
                 title,
                 year_level: yearLevel,
                 status,
-                sort_order: sortOrder,
                 description,
             };
 
@@ -1588,28 +1617,6 @@
             scenario: 'Scenario-Based Game',
         };
         const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-        const DIFFICULTY_ORDER = { easy: 0, medium: 1, hard: 2 };
-        const GAME_PAGES = {
-            sign_match: 'sign-match-game.html',
-            typing: 'typing-game.html',
-            sentence: 'sentence-game.html',
-            scenario: 'scenario-game.html',
-        };
-
-        async function previewLevel(levelId) {
-            const currentLevels = window.__gameLevels || [];
-            const level = currentLevels.find(item => Number(item.id) === Number(levelId));
-            if (!level) return;
-            const page = GAME_PAGES[level.game_key];
-            if (!page) return;
-            if (!Number(level.items_count || 0)) {
-                alert('This level has no content yet. Add content before previewing.');
-                return;
-            }
-            const actorId = await getInstructorActorIdentifier();
-            const url = `${page}?previewLevelId=${encodeURIComponent(levelId)}&previewActor=${encodeURIComponent(actorId)}`;
-            window.open(url, '_blank');
-        }
 
         function getGameLevelsFilter() {
             return window.__gameLevelsFilter || 'sign_match';
@@ -1621,25 +1628,6 @@
             return '';
         }
 
-        // Suggests the next free level number for a game+difficulty (existing
-        // max + 1), so a new level doesn't default to 1 and collide with one
-        // that's already there.
-        function getNextLevelNumber(gameKey, difficulty) {
-            const existing = (window.__gameLevels || []).filter(l => l.game_key === gameKey && l.difficulty === difficulty);
-            if (!existing.length) return 1;
-            return Math.max(...existing.map(l => Number(l.level_number) || 0)) + 1;
-        }
-
-        // Auto-fills Level Number with the next free one for the currently
-        // selected game+difficulty. Only applies while adding a new level --
-        // editing an existing level must keep showing its actual number.
-        function applySuggestedLevelNumber() {
-            if (document.getElementById('levelId').value) return;
-            const gameKey = document.getElementById('levelGameKey').value;
-            const difficulty = document.getElementById('levelDifficulty').value;
-            document.getElementById('levelNumber').value = getNextLevelNumber(gameKey, difficulty);
-        }
-
         function renderGameLevelTabs() {
             const target = document.getElementById('gameLevelGameTabs');
             if (!target) return;
@@ -1649,94 +1637,74 @@
             `).join('');
         }
 
+        const GAME_LEVELS_PAGE_SIZE = 5;
+
+        function getGameLevelsPage() {
+            return Number(window.__gameLevelsPage || 1);
+        }
+
+        function changeGameLevelsPage(page) {
+            window.__gameLevelsPage = Math.max(1, Number(page || 1));
+            renderGameLevels();
+        }
+
         function renderGameLevels() {
             const target = document.getElementById('instructorGameLevelsList');
-            const pagination = document.getElementById('levelPagination');
+            const pagination = document.getElementById('gameLevelsPagination');
             if (!target) return;
             const activeGame = getGameLevelsFilter();
-            const levels = (window.__gameLevels || [])
-                .filter(level => level.game_key === activeGame)
-                .slice()
-                .sort((a, b) => {
-                    const diffOrder = (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99);
-                    return diffOrder !== 0 ? diffOrder : Number(a.level_number) - Number(b.level_number);
-                });
+            const allLevels = (window.__gameLevels || []).filter(level => level.game_key === activeGame);
 
-            renderGameLevelsCoverage(activeGame, levels);
-
-            const search = getGameLevelsSearch().toLowerCase();
-            const filteredLevels = search
-                ? levels.filter(level => {
-                    const haystack = `${level.title || ''} ${DIFFICULTY_LABELS[level.difficulty] || level.difficulty || ''} level ${level.level_number}`.toLowerCase();
-                    return haystack.includes(search);
-                })
-                : levels;
-
-            const pageSize = 5;
-            const total = filteredLevels.length;
+            const total = allLevels.length;
+            const pageSize = GAME_LEVELS_PAGE_SIZE;
             const totalPages = Math.max(1, Math.ceil(total / pageSize));
-            const page = Math.min(getInstructorLevelPage(), totalPages);
-            if (page !== getInstructorLevelPage()) {
-                setInstructorLevelPage(page);
-            }
-            const start = (page - 1) * pageSize;
-            const pagedLevels = filteredLevels.slice(start, start + pageSize);
+            const page = Math.min(Math.max(1, getGameLevelsPage()), totalPages);
+            window.__gameLevelsPage = page;
 
-            if (pagination) {
-                pagination.innerHTML = total
-                    ? `
-                        <span style="color:#6b7280;">Showing ${start + 1}-${Math.min(start + pageSize, total)} of ${total}</span>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeLevelPage(${page - 1})">Prev</button>
-                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
-                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeLevelPage(${page + 1})">Next</button>
-                        </div>
-                    `
-                    : '';
-            }
+            const start = (page - 1) * pageSize;
+            const levels = allLevels.slice(start, start + pageSize);
 
             if (!levels.length) {
                 target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels added yet for this game.</div>';
+                if (pagination) pagination.innerHTML = '';
                 return;
             }
 
-            if (!filteredLevels.length) {
-                target.innerHTML = '<div style="padding:16px;color:#6b7280;">No levels match your search.</div>';
-                return;
-            }
-
-            target.innerHTML = pagedLevels.map(level => {
-                const assignedVideo = (level.items || []).find(item => item.media_url);
-                const hasContent = Number(level.items_count || 0) > 0;
-                return `
-                <div class="game-level-card">
-                    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
-                        <div>
-                            <h4>
-                                Level ${Number(level.level_number)} &middot; ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}
-                                ${level.title ? ` &mdash; ${safeText(level.title)}` : ''}
-                            </h4>
-                            <p>${Number(level.items_count || 0)} content item(s)${assignedVideo ? ` &middot; Video: ${safeText(assignedVideo.prompt || assignedVideo.media_url)}` : ''}</p>
-                        </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <span class="${level.is_published ? 'badge-published' : 'badge-draft'}">${level.is_published ? 'Published' : 'Draft'}</span>
-                            ${hasContent ? '' : '<span class="badge-no-content">No content yet</span>'}
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-                        <button class="btn btn-sm btn-info" onclick="previewLevel(${Number(level.id)})">Preview as Student</button>
+            target.innerHTML = levels.map(level => `
+                <div class="announcement-item">
+                    <h4>
+                        ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)} &middot; Level ${Number(level.level_number)}
+                        ${level.title ? ` &mdash; ${safeText(level.title)}` : ''}
+                        ${level.is_published ? '' : ' <span style="color:#b45309;font-size:0.8rem;">(Draft)</span>'}
+                    </h4>
+                    <p>${Number(level.items_count || 0)} content item(s)</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
                         <button class="btn btn-sm btn-secondary" onclick="openLevelItemsModal(${Number(level.id)})">Manage Content</button>
                         <button class="btn btn-sm btn-secondary" onclick="openLevelModal(${Number(level.id)})">Edit</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteLevel(${Number(level.id)})">Delete</button>
                     </div>
                 </div>
-            `;
-            }).join('');
+            `).join('');
+
+            if (pagination) {
+                const shownStart = total ? start + 1 : 0;
+                const shownEnd = total ? Math.min(start + pageSize, total) : 0;
+                pagination.innerHTML = totalPages > 1
+                    ? `
+                        <span style="color:#6b7280;">Showing ${shownStart}-${shownEnd} of ${total}</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="changeGameLevelsPage(${page - 1})">Prev</button>
+                            <span style="color:#6b7280;">Page ${page} of ${totalPages}</span>
+                            <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeGameLevelsPage(${page + 1})">Next</button>
+                        </div>
+                    `
+                    : '';
+            }
         }
 
         function switchGameLevelsGame(gameKey) {
             window.__gameLevelsFilter = gameKey;
-            setInstructorLevelPage(1);
+            window.__gameLevelsPage = 1;
             renderGameLevelTabs();
             renderGameLevels();
             if (document.getElementById('levelModal')?.classList.contains('active')) {
@@ -1749,7 +1717,6 @@
                 const actorId = await getInstructorActorIdentifier();
                 const response = await requestJson(`/instructor/game-levels/?actorEmail=${encodeURIComponent(actorId)}`);
                 window.__gameLevels = Array.isArray(response) ? response : [];
-                await ensureSignVideoLibrary();
                 renderGameLevelTabs();
                 renderGameLevels();
                 if (document.getElementById('levelModal')?.classList.contains('active')) {
@@ -1760,41 +1727,8 @@
             }
         }
 
-        // There is no default/fallback content anymore -- students only see
-        // what a teacher has actually published for that game+difficulty.
-        function renderGameLevelsCoverage(activeGame, levelsForGame) {
-            const target = document.getElementById('gameLevelsCoverage');
-            if (!target) return;
-
-            const rows = ['easy', 'medium', 'hard'].map(difficulty => {
-                const published = levelsForGame.filter(l => l.difficulty === difficulty && l.is_published && Number(l.items_count || 0) > 0);
-                const text = published.length
-                    ? `${published.length} published level(s) with content`
-                    : 'Nothing published yet — students see no content for this difficulty.';
-                return `
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:180px;">
-                        <span class="${published.length ? 'badge-published' : 'badge-no-content'}">${DIFFICULTY_LABELS[difficulty]}</span>
-                        <span style="color:#64748b; font-size:0.85rem;">${safeText(text)}</span>
-                    </div>
-                `;
-            }).join('');
-
-            target.innerHTML = `
-                <div style="background:#f9fafb; border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
-                    <div style="font-weight:600; color:#0f172a; margin-bottom:8px; font-size:0.92rem;">What students currently see, per difficulty</div>
-                    <div style="display:flex; gap:14px; flex-wrap:wrap;">${rows}</div>
-                </div>
-            `;
-        }
-
         function renderLevelReference(gameKey) {
-            const levels = (window.__gameLevels || [])
-                .filter(l => l.game_key === gameKey)
-                .slice()
-                .sort((a, b) => {
-                    const diffOrder = (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99);
-                    return diffOrder !== 0 ? diffOrder : Number(a.level_number) - Number(b.level_number);
-                });
+            const levels = (window.__gameLevels || []).filter(l => l.game_key === gameKey);
             const container = document.getElementById('levelReferenceList');
             const count = document.getElementById('levelReferenceCount');
             if (!container || !count) return;
@@ -1807,22 +1741,16 @@
 
             container.innerHTML = levels.map(level => {
                 const assigned = (level.items || []).find(item => item.media_url);
-                const hasContent = Number(level.items_count || 0) > 0;
                 return `
-                    <div class="game-level-card" style="margin-bottom:0;">
+                    <div style="padding:12px; border-radius:10px; background:#ffffff; border:1px solid #e5e7eb;">
                         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
                             <div>
-                                <div style="font-weight:600; color:#0f172a;">Level ${Number(level.level_number)} — ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}</div>
+                                <div style="font-weight:600;">Level ${Number(level.level_number)} — ${safeText(DIFFICULTY_LABELS[level.difficulty] || level.difficulty)}</div>
                                 <div style="margin-top:4px; color:#6b7280; font-size:0.92rem;">${level.title ? safeText(level.title) : `${Number(level.items_count || 0)} item(s)`}</div>
-                                <div style="margin-top:6px; color:#4b5563; font-size:0.85rem;">
-                                    ${assigned
-                                        ? `Assigned video: ${safeText(assigned.prompt || assigned.media_url)} &middot; <a href="${safeAttr(assigned.media_url)}" target="_blank" rel="noopener">Preview</a>`
-                                        : 'No assigned video'}
-                                </div>
+                                <div style="margin-top:6px; color:#4b5563; font-size:0.85rem;">${assigned ? `Assigned video: ${safeText(assigned.prompt || assigned.media_url)}` : 'No assigned video'}</div>
                             </div>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span class="${level.is_published ? 'badge-published' : 'badge-draft'}">${level.is_published ? 'Published' : 'Draft'}</span>
-                                ${hasContent ? '' : '<span class="badge-no-content">No content</span>'}
+                            <div style="text-align:right; color:#6b7280; font-size:0.82rem;">
+                                ${level.is_published ? 'Published' : 'Draft'}<br>${formatDateTime(level.updated_at || level.created_at)}
                             </div>
                         </div>
                     </div>
@@ -1830,29 +1758,17 @@
             }).join('');
         }
 
-        function handleLevelGameChange(gameKey, isEdit = false) {
+        function handleLevelGameChange(gameKey) {
             const container = document.getElementById('levelDynamicFields');
             if (!container) return;
             renderLevelReference(gameKey);
-            if (!isEdit) applySuggestedLevelNumber();
-
-            if (isEdit) {
-                // These starter-content fields only apply when creating a new level;
-                // editing content for an existing level happens via "Manage Content".
-                container.innerHTML = `
-                    <div class="form-group">
-                        <small style="color:#6b7280; display:block;">To add, edit, or replace this level's sign video (or sentence/scenario content), use the <strong>Manage Content</strong> button after saving.</small>
-                    </div>
-                `;
-                return;
-            }
 
             if (gameKey === 'sign_match' || gameKey === 'typing') {
                 container.innerHTML = `
                     <div class="form-group">
-                        <label class="form-label">Assigned Sign Video <span style="color:#b91c1c;">*</span></label>
+                        <label class="form-label">Assigned Sign Video</label>
                         <div id="levelPrimaryVideoPicker"></div>
-                        <small style="color:#6b7280; display:block; margin-top:6px;">Required. Choose an existing video or upload a new one for this level.</small>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Choose an existing video or upload a new one for this level.</small>
                     </div>
                 `;
                 document.getElementById('levelPrimaryVideoPicker').innerHTML = renderVideoPicker('level_primary', '', '');
@@ -1860,11 +1776,20 @@
                     const picker = document.getElementById('levelPrimaryVideoPicker');
                     if (picker) picker.innerHTML = renderVideoPicker('level_primary', '', '');
                 }).catch(() => {});
-            } else if (gameKey === 'sentence' || gameKey === 'scenario') {
-                const kind = gameKey === 'sentence' ? 'signs (with their videos)' : 'scenario options (with their videos)';
+            } else if (gameKey === 'sentence') {
                 container.innerHTML = `
                     <div class="form-group">
-                        <small style="color:#6b7280; display:block;">After saving, you'll be taken straight to <strong>Manage Content</strong> to add the ${kind} for this level.</small>
+                        <label class="form-label">Preview Sentence (optional)</label>
+                        <input type="text" id="levelPreviewSentence" class="form-input" placeholder="e.g. I am fine">
+                        <small style="color:#6b7280; display:block; margin-top:6px;">This text helps create a primary sentence-level item automatically.</small>
+                    </div>
+                `;
+            } else if (gameKey === 'scenario') {
+                container.innerHTML = `
+                    <div class="form-group">
+                        <label class="form-label">Scenario Lead (optional)</label>
+                        <textarea id="levelScenarioLead" class="form-input" rows="2" placeholder="Short scenario description"></textarea>
+                        <small style="color:#6b7280; display:block; margin-top:6px;">Add a starting prompt for the scenario if you want quick setup.</small>
                     </div>
                 `;
             } else {
@@ -1883,20 +1808,13 @@
             document.getElementById('levelTitle').value = level ? (level.title || '') : '';
             document.getElementById('levelPublished').checked = level ? Boolean(level.is_published) : true;
 
-            // Level Number is auto-computed while adding (locked); editing an
-            // existing level still allows changing its number manually.
-            const levelNumberInput = document.getElementById('levelNumber');
-            levelNumberInput.readOnly = !level;
-            levelNumberInput.style.background = level ? '' : '#f3f4f6';
-            levelNumberInput.style.cursor = level ? '' : 'not-allowed';
-
             const title = document.getElementById('levelModalTitle');
             if (title) {
                 title.textContent = level ? 'Edit Level' : 'Add Level';
             }
 
             const currentGame = level ? level.game_key : getGameLevelsFilter();
-            handleLevelGameChange(currentGame, Boolean(level));
+            handleLevelGameChange(currentGame);
 
             openModal('levelModal');
         }
@@ -1919,19 +1837,6 @@
                 return;
             }
 
-            // For new Sign Match / Typing levels, the sign video is the level's core
-            // content — require it up front instead of allowing an empty level to be saved.
-            let initialVideo = '';
-            let initialVideoName = '';
-            if (!levelId && (payload.game_key === 'sign_match' || payload.game_key === 'typing')) {
-                initialVideo = document.getElementById('picker-video-level_primary')?.value || '';
-                initialVideoName = sanitizeInstructorInput(document.getElementById('picker-name-level_primary')?.value || '');
-                if (!initialVideo) {
-                    alert('Choose or upload a sign video for this level before saving.');
-                    return;
-                }
-            }
-
             const path = levelId ? `/instructor/game-levels/${levelId}/` : '/instructor/game-levels/';
             const method = levelId ? 'PATCH' : 'POST';
             let savedLevel = null;
@@ -1942,35 +1847,65 @@
                 return;
             }
 
-            // Sign Match/Typing: the single required video was already collected
-            // above, so create its one-item level content right away.
-            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sign_match' || payload.game_key === 'typing')) {
-                try {
-                    await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
-                        method: 'POST',
-                        body: JSON.stringify({
+            // Auto-create a primary level item when adding a new level with starter data.
+            if (!levelId && savedLevel && savedLevel.id) {
+                const gameKey = payload.game_key;
+                let itemPayload = null;
+
+                if (gameKey === 'sign_match' || gameKey === 'typing') {
+                    const video = document.getElementById('picker-video-level_primary')?.value || '';
+                    const name = sanitizeInstructorInput(document.getElementById('picker-name-level_primary')?.value || '');
+                    if (video) {
+                        itemPayload = {
                             actorEmail: await getInstructorActorIdentifier(),
-                            prompt: initialVideoName || 'Primary level item',
+                            prompt: name || 'Primary level item',
                             answer: '',
-                            media_url: initialVideo,
+                            media_url: video,
                             extra_data: {},
                             order: 0,
-                        }),
-                    });
-                } catch (warnError) {
-                    alert(`Level was saved, but its content could not be added: ${warnError.message}\nOpen "Manage Content" to add it manually.`);
+                        };
+                    }
+                } else if (gameKey === 'sentence') {
+                    const sentence = sanitizeInstructorInput(document.getElementById('levelPreviewSentence')?.value || '');
+                    if (sentence) {
+                        const words = sentence.toLowerCase().split(/\s+/).filter(Boolean);
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: sentence,
+                            answer: sentence,
+                            media_url: '',
+                            extra_data: { words, signs: [] },
+                            order: 0,
+                        };
+                    }
+                } else if (gameKey === 'scenario') {
+                    const lead = sanitizeInstructorInput(document.getElementById('levelScenarioLead')?.value || '');
+                    if (lead) {
+                        itemPayload = {
+                            actorEmail: await getInstructorActorIdentifier(),
+                            prompt: lead,
+                            answer: '',
+                            media_url: '',
+                            extra_data: {},
+                            order: 0,
+                        };
+                    }
+                }
+
+                if (itemPayload) {
+                    try {
+                        await requestJson(`/instructor/game-levels/${savedLevel.id}/items/`, {
+                            method: 'POST',
+                            body: JSON.stringify(itemPayload),
+                        });
+                    } catch (warnError) {
+                        console.warn('Could not create initial level item:', warnError);
+                    }
                 }
             }
 
             closeModal('levelModal');
             await loadGameLevels();
-
-            // Sentence/Scenario levels need multiple signs/options with their own
-            // videos, which can't be captured in this simple form -- go straight
-            // to Manage Content so the teacher can add real content right away.
-            if (!levelId && savedLevel && savedLevel.id && (payload.game_key === 'sentence' || payload.game_key === 'scenario')) {
-                await openLevelItemsModal(savedLevel.id);
-            }
         }
 
         async function deleteLevel(levelId) {
@@ -2018,13 +1953,14 @@
                     <select id="picker-select-${uid}" class="form-input" onchange="onVideoPickerSelect('${uid}')">
                         ${videoPickerOptionsHtml(selectedUrl)}
                     </select>
-                    <div class="video-picker-actions">
+                    <div style="margin-top:6px;">
                         <button type="button" class="btn btn-sm btn-secondary" onclick="toggleVideoUpload('${uid}')">Upload new video</button>
-                        ${selectedUrl ? `<a href="${safeAttr(selectedUrl)}" target="_blank" rel="noopener" style="font-size:0.82rem;">Preview current video</a>` : '<span style="color:#b91c1c;font-size:0.82rem;">No video selected</span>'}
+                        ${selectedUrl ? `<a href="${safeAttr(selectedUrl)}" target="_blank" rel="noopener" style="margin-left:8px;font-size:0.82rem;">Preview</a>` : ''}
                     </div>
-                    <div id="picker-upload-${uid}" class="video-picker-upload" style="display:none;">
+                    <div id="picker-upload-${uid}" style="display:none; margin-top:8px; padding:10px; background:#f3f4f6; border-radius:4px;">
                         <input type="text" id="picker-word-${uid}" class="form-input" placeholder="Word / phrase for this video" value="${safeAttr(selectedWord)}" style="margin-bottom:6px;">
                         <input type="file" id="picker-file-${uid}" class="form-input" accept=".mp4,.mov,.webm,.avi,.mkv" style="margin-bottom:6px;">
+                        <small style="color:#6b7280; display:block; margin-bottom:6px;">Max size: 3MB.</small>
                         <button type="button" class="btn btn-sm btn-primary" onclick="uploadVideoForPicker('${uid}')">Upload &amp; Use</button>
                     </div>
                     <input type="hidden" id="picker-video-${uid}" value="${safeAttr(selectedUrl)}">
@@ -2058,11 +1994,16 @@
                 alert('Choose a video file to upload.');
                 return;
             }
+            const selectedFile = fileInput.files[0];
+            if (selectedFile.size > MAX_SIGN_VIDEO_SIZE_BYTES) {
+                alert('Video file must be 3MB or smaller.');
+                return;
+            }
 
             const formData = new FormData();
             formData.append('word', word);
             formData.append('actorEmail', await getInstructorActorIdentifier());
-            formData.append('video', fileInput.files[0]);
+            formData.append('video', selectedFile);
 
             try {
                 const csrfToken = await ensureCsrfToken();
@@ -2445,7 +2386,14 @@
             } catch (error) {
                 alert(`Failed to load instructor dashboard: ${error.message}`);
             }
-            switchTab('overview');
+
+            const returnModuleId = new URLSearchParams(window.location.search).get('module');
+            if (returnModuleId) {
+                switchTab('modules');
+                await openModuleModal(returnModuleId);
+            } else {
+                switchTab('overview');
+            }
         });
     </script>
     <script>
@@ -2456,26 +2404,8 @@
             _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
             document.addEventListener('click', function() { _d.classList.remove('open'); });
         }
-
-        function doLogout(e) {
-            e.preventDefault();
-            fetch('https://kumpass.onrender.com/api/auth/logout/', {
-                method: 'POST',
-                credentials: 'include'
-            }).catch(function () {
-                // Continue even if logout request fails
-            }).finally(function () {
-                if (window.KumpasSession && typeof window.KumpasSession.clearCurrentUser === 'function') {
-                    window.KumpasSession.clearCurrentUser();
-                }
-                window.location.replace('index.html');
-            });
-        }
-
-        document.querySelectorAll('a.logout, a[href="index.html"]').forEach(function (link) {
-            link.addEventListener('click', doLogout);
-        });
     })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Text-to-Sign Translator - Kumpas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pages.css">
@@ -45,7 +48,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -68,107 +71,43 @@
 
     <!-- Main Content -->
     <div class="translator-container" id="translatorMain">
-        <div class="translator-grid">
-            <!-- Input Section -->
-            <section class="translator-panel input-panel">
-                <h2>📝 Input Text</h2>
-                <div class="input-wrapper">
-                    <textarea 
-                        id="textInput" 
-                        class="text-input" 
-                        placeholder="Type your text here..."
-                    ></textarea>
-                    <div class="input-counter">
-                        <span id="charCount">0</span>/200
-                    </div>
-                </div>
-
-                <div class="translator-options">
-                    <div class="option-group">
-                        <label for="categorySelect"><i class="fas fa-tags"></i> Category</label>
-                        <select id="categorySelect" class="select-input">
-                            <option value="all">All Categories</option>
-                            <option value="greetings">Greetings</option>
-                            <option value="everyday">Everyday Words</option>
-                            <option value="family">Family</option>
-                            <option value="numbers">Numbers</option>
-                            <option value="emotions">Emotions</option>
-                            <option value="school">School</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="btn-primary" onclick="translateText()">
-                        <span>▶</span> Translate to Sign
-                    </button>
-                    <button class="btn-secondary" onclick="clearInput()">Clear</button>
-                </div>
-
-                <div class="panel-divider"><span>or try a quick example</span></div>
-
-                <div class="quick-examples">
-                    <h3><i class="fas fa-bolt"></i> Quick Examples <span id="exampleCategoryLabel" class="example-category-label"></span></h3>
-                    <div class="example-chips" id="exampleChips"></div>
-                </div>
-            </section>
-
-            <!-- Output Section -->
-            <section class="translator-panel output-panel">
-                <h2>🤟 Sign Language Demonstration</h2>
-                
-                <div id="translationResult" class="translation-result">
-                    <div class="demo-placeholder">
-                        <div class="demo-icon">👋</div>
-                        <p>Enter text and click "Translate to Sign" to see the demonstration</p>
-                    </div>
-                </div>
-
-                <!-- Translation Details -->
-                <div id="translationDetails" class="translation-details" style="display: none;">
-                    <h3>Translation Details</h3>
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Words Translated:</span>
-                            <span id="wordCount" class="detail-value">0</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Duration:</span>
-                            <span id="duration" class="detail-value">0s</span>
-                        </div>
-                    </div>
-
-                    <div class="option-group">
-                        <label for="speedControl">Playback Speed:</label>
-                        <div class="slider-container">
-                            <input id="speedControl" class="slider" type="range" min="0.5" max="2" value="1" step="0.1">
-                            <span id="speedValue">Normal (1x)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div id="actionButtons" class="action-buttons" style="display: none;">
-                    <button class="btn-secondary" onclick="repeatSign()">🔄 Repeat</button>
-                    <button class="btn-secondary" onclick="slowMotion()">🐢 Slow Motion</button>
-                    <button class="btn-secondary" onclick="downloadSign()">⬇️ Download</button>
-                </div>
-            </section>
-        </div>
-
         <!-- Browse All Signs -->
         <section class="browse-section">
             <div class="browse-header">
                 <h2><i class="fas fa-list"></i> Browse All Signs</h2>
-                <div class="browse-search-row">
-                    <i class="fas fa-search browse-search-icon"></i>
-                    <input type="text" id="wordBrowseSearch" class="browse-search-input" placeholder="Search sign words…" autocomplete="off">
+                <div class="browse-header-controls">
+                    <select id="browseCategorySelect" class="browse-category-select">
+                        <option value="all">All Categories</option>
+                        <option value="greetings">Greetings</option>
+                        <option value="everyday">Everyday Words</option>
+                        <option value="family">Family</option>
+                        <option value="numbers">Numbers</option>
+                        <option value="emotions">Emotions</option>
+                        <option value="school">School</option>
+                        <option value="calendar">Calendar</option>
+                        <option value="colors">Colors</option>
+                        <option value="food_drink">Food &amp; Drink</option>
+                        <option value="survival">Survival</option>
+                    </select>
+                    <div class="browse-search-row">
+                        <i class="fas fa-search browse-search-icon"></i>
+                        <input type="text" id="wordBrowseSearch" class="browse-search-input" placeholder="Search sign words…" autocomplete="off">
+                    </div>
                 </div>
             </div>
             <div class="word-browse-grid" id="wordBrowseGrid"></div>
             <div class="word-browse-pagination" id="wordBrowsePagination"></div>
         </section>
 
+    </div>
+
+    <!-- Sign video preview modal -->
+    <div class="sign-preview-overlay hidden" id="signPreviewOverlay">
+        <div class="sign-preview-modal">
+            <button type="button" class="sign-preview-close" id="signPreviewClose" aria-label="Close">&times;</button>
+            <div class="sign-preview-media" id="signPreviewMedia"></div>
+            <h3 class="sign-preview-word" id="signPreviewWord"></h3>
+        </div>
     </div>
         </main>
     </div>
@@ -272,430 +211,10 @@
             flex-wrap: wrap;
         }
 
-        .translator-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-            align-items: stretch;
-        }
-
-        .translator-panel {
-            background: rgba(255,255,255,0.95);
-            border-radius: 22px;
-            padding: 2rem;
-            box-shadow: 0 14px 34px rgba(15,23,42,0.09);
-            border: 1px solid rgba(148,163,184,0.14);
-            animation: kdRiseIn 0.55s ease both;
-        }
-
-        .output-panel {
-            animation-delay: .08s;
-        }
-
-        .translator-panel h2 {
-            margin-top: 0;
-            color: #0f172a;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .input-wrapper {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-
-        .text-input {
-            width: 100%;
-            min-height: clamp(140px, 22vh, 220px);
-            padding: 1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 1rem;
-            resize: vertical;
-            transition: border-color 0.3s ease;
-        }
-
-        .text-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .input-counter {
-            text-align: right;
-            font-size: 0.85rem;
-            color: #999;
-            margin-top: 0.5rem;
-        }
-
-        .translator-container .btn-primary,
-        .translator-container .btn-secondary {
-            border-radius: 999px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .translator-container .btn-primary {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            box-shadow: 0 10px 20px rgba(37,99,235,0.24);
-        }
-
-        .translator-container .btn-primary:hover {
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 0 14px 26px rgba(37,99,235,0.32);
-        }
-
-        .translator-container .btn-secondary:hover {
-            transform: translateY(-1px);
-        }
-
-        .translator-options {
-            background: #f8fafc;
-            border-radius: 14px;
-            padding: 0.9rem 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .translator-options .option-group {
-            display: flex;
-            align-items: center;
-            gap: 0.85rem;
-            margin-bottom: 0;
-        }
-
-        .translator-options .option-group label {
-            margin-bottom: 0;
-            white-space: nowrap;
-        }
-
-        .translator-options .select-input {
-            flex: 1;
-        }
-
-        .option-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .option-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .option-group label {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .slider {
-            flex: 1;
-            height: 4px;
-            background: #ddd;
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary-blue);
-            cursor: pointer;
-            border-radius: 50%;
-        }
-
-        .slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: var(--primary-blue);
-            cursor: pointer;
-            border-radius: 50%;
-            border: none;
-        }
-
-        #speedValue {
-            font-size: 0.9rem;
-            color: #666;
-            min-width: 100px;
-        }
-
-        .select-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            background: white;
-        }
-
-        .select-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .button-group .btn-primary {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .panel-divider {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin: 0 0 1.25rem;
-            color: #94a3b8;
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .panel-divider::before,
-        .panel-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e5e7eb;
-        }
-
-        .quick-examples {
-            background: #fff8f0;
-            border-radius: 14px;
-            padding: 1rem;
-        }
-
-        .quick-examples h3 {
-            margin-top: 0;
-            font-size: 0.9rem;
-            color: var(--dark);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .quick-examples h3 i {
-            color: #f59e0b;
-        }
-
-        .example-category-label {
-            font-weight: 500;
-            color: #999;
-            text-transform: none;
-        }
-
-        .option-group label i {
-            color: #2563eb;
-        }
-
-        .example-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .chip-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .chip.is-active {
-            background: var(--primary-blue);
-            color: white;
-            border-color: var(--primary-blue);
-        }
-
-        .chip-hint {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: #777;
-        }
-
-        .ge-badge {
-            display: inline-block;
-            background: #eef2ff;
-            color: #4338ca;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            margin-left: 0.4rem;
-            vertical-align: middle;
-        }
-
-        .chip {
-            background: white;
-            border: 1px solid #ddd;
-            padding: 0.5rem 1rem;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.25s ease;
-        }
-
-        .chip:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            border-color: transparent;
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .translation-result {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 2rem;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .demo-placeholder {
-            text-align: center;
-            color: #999;
-        }
-
         .demo-icon {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
-        }
-
-        .signs-container {
-            margin-bottom: 1.5rem;
-        }
-
-        .signs-container h3 {
-            margin-top: 0;
-            font-size: 1rem;
-            color: var(--dark);
-            margin-bottom: 1rem;
-        }
-
-        .signs-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-        }
-
-        .sign-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 14px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-        }
-
-        .sign-card:hover {
-            border-color: var(--primary-blue);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
-        }
-
-        .sign-video,
-        .sign-video-placeholder {
-            width: 100%;
-            aspect-ratio: 4 / 3;
-            border-radius: 8px;
-            margin-bottom: 0.6rem;
-            background: #111827;
-        }
-
-        .sign-video {
-            display: block;
-            object-fit: cover;
-            object-position: center top;
-        }
-
-        .sign-video-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #e5e7eb;
-            font-size: 0.75rem;
-        }
-
-        .sign-card-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .sign-card-text {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .sign-card-meta {
-            margin-top: 0.3rem;
-            font-size: 0.75rem;
-            color: #6b7280;
-        }
-
-        .translation-details {
-            background: #e8f5e9;
-            border-radius: 14px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .translation-details h3 {
-            margin-top: 0;
-            font-size: 1rem;
-            color: var(--dark);
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-
-        .detail-label {
-            font-weight: 600;
-            color: #555;
-        }
-
-        .detail-value {
-            color: var(--primary-blue);
-            font-weight: 700;
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
         }
 
         .history-section {
@@ -759,47 +278,106 @@
             color: #999;
         }
 
-        @media (max-width: 1024px) {
-            .translator-grid {
-                gap: 1.25rem;
-            }
-
-            .translator-panel {
-                padding: 1.5rem;
-            }
-        }
-
         @media (max-width: 768px) {
             .ge-modal {
                 padding: 1.5rem;
-            }
-
-            .translator-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .action-buttons {
-                grid-template-columns: 1fr;
-            }
-
-            .button-group {
-                grid-template-columns: 1fr;
-            }
-
-            .translator-options .option-group {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5rem;
             }
 
             .browse-search-row {
                 max-width: 100%;
                 width: 100%;
             }
+        }
+
+        /* ---- Sign preview modal ---- */
+        .sign-preview-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1300;
+            padding: 1.5rem;
+        }
+
+        .sign-preview-overlay.hidden {
+            display: none;
+        }
+
+        .sign-preview-modal {
+            position: relative;
+            width: min(480px, 100%);
+            background: white;
+            border-radius: 18px;
+            padding: 1.75rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+        }
+
+        .sign-preview-close {
+            position: absolute;
+            top: 0.85rem;
+            right: 0.85rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sign-preview-close:hover {
+            background: #e2e8f0;
+        }
+
+        .sign-preview-media {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .sign-preview-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sign-preview-media .demo-icon {
+            font-size: 3rem;
+            color: #e5e7eb;
+        }
+
+        .sign-preview-word {
+            margin: 0;
+            text-align: center;
+            font-size: 1.25rem;
+            color: #0f172a;
+        }
+
+        :root[data-theme="dark"] .sign-preview-modal {
+            background: var(--surface-card);
+        }
+
+        :root[data-theme="dark"] .sign-preview-word {
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .sign-preview-close {
+            background: var(--surface-card-alt);
+            color: var(--text-muted-2);
         }
 
         /* ---- Browse All Signs ---- */
@@ -826,6 +404,32 @@
             margin: 0;
             color: #0f172a;
             font-weight: 700;
+        }
+
+        .browse-header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .browse-category-select {
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .browse-category-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
         }
 
         .browse-search-row {
@@ -863,29 +467,9 @@
 
         .word-browse-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 0.6rem;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.75rem;
             min-height: 60px;
-        }
-
-        .word-browse-chip {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            padding: 0.55rem 1rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #1f2937;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-
-        .word-browse-chip:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            border-color: transparent;
-            color: white;
-            transform: translateY(-2px);
         }
 
         .word-browse-empty {
@@ -933,10 +517,6 @@
         }
 
         /* ---- Dark theme overrides ---- */
-        :root[data-theme="dark"] .translator-panel h2 {
-            color: var(--text-body);
-        }
-
         :root[data-theme="dark"] .browse-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
@@ -952,9 +532,9 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .word-browse-chip {
-            background: var(--surface-card-alt);
-            border-color: var(--surface-border);
+        :root[data-theme="dark"] .browse-category-select {
+            background: var(--input-bg);
+            border-color: var(--input-border);
             color: var(--text-body);
         }
 
@@ -974,7 +554,6 @@
             color: #93c5fd;
         }
 
-        :root[data-theme="dark"] .translator-panel,
         :root[data-theme="dark"] .history-section {
             background: var(--surface-card);
             border-color: var(--surface-border);
@@ -1017,91 +596,16 @@
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .input-counter {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translator-options {
-            background: var(--surface-card-alt);
-        }
-
-        :root[data-theme="dark"] .option-group label {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .slider {
-            background: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] #speedValue {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .panel-divider {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .panel-divider::before,
-        :root[data-theme="dark"] .panel-divider::after {
-            background: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] .quick-examples {
-            background: rgba(124, 58, 237, 0.1);
-        }
-
-        :root[data-theme="dark"] .quick-examples h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .example-category-label {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .chip {
+        :root[data-theme="dark"] .word-picker-card {
             background: var(--surface-card-alt);
             border-color: var(--surface-border);
+        }
+
+        :root[data-theme="dark"] .word-picker-label {
             color: var(--text-body);
         }
 
-        :root[data-theme="dark"] .chip-hint {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translation-result {
-            background: var(--surface-card-alt);
-        }
-
-        :root[data-theme="dark"] .demo-placeholder {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .signs-container h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .sign-card {
-            background: var(--surface-card);
-            border-color: var(--surface-border);
-        }
-
-        :root[data-theme="dark"] .sign-card-text {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .sign-card-meta {
-            color: var(--text-muted-2);
-        }
-
-        :root[data-theme="dark"] .translation-details {
-            background: rgba(16, 185, 129, 0.12);
-        }
-
-        :root[data-theme="dark"] .translation-details h3 {
-            color: var(--text-body);
-        }
-
-        :root[data-theme="dark"] .detail-label {
+        :root[data-theme="dark"] .word-picker-empty {
             color: var(--text-muted-2);
         }
 
@@ -1156,17 +660,11 @@
 
     <script src="js/main.js"></script>
     <script>
-        const textInput = document.getElementById('textInput');
-        const charCount = document.getElementById('charCount');
-        const speedControl = document.getElementById('speedControl');
-        const speedValue = document.getElementById('speedValue');
-        const exampleChips = document.getElementById('exampleChips');
-        const categorySelect = document.getElementById('categorySelect');
-        const exampleCategoryLabel = document.getElementById('exampleCategoryLabel');
-
         // Sign videos are loaded from the database (SignVideo table), which is
-        // populated from the "Sign Language" media library. Both the Games and
-        // Text-to-Sign modules read from this same API endpoint.
+        // populated from the "Sign Language" media library (this includes the
+        // FSL-105/Mendeley videos, already imported as SignVideo rows keyed
+        // "fsl105_..."). Both the Games and Text-to-Sign modules read from
+        // this same API endpoint.
         const SIGN_VIDEOS_API = 'https://kumpass.onrender.com/api/sign-videos/';
 
         const BACKEND_TO_UI_CATEGORY = {
@@ -1177,6 +675,15 @@
             greetings: 'greetings',
             phrases: 'everyday',
             responses: 'everyday',
+            calendar: 'calendar',
+            colors: 'colors',
+            numbers: 'numbers',
+            days: 'calendar',
+            family: 'family',
+            relationships: 'family',
+            food: 'food_drink',
+            drink: 'food_drink',
+            survival: 'survival',
         };
 
         let signLibrary = {};
@@ -1195,73 +702,28 @@
                 throw new Error(`Failed to load sign videos (${response.status})`);
             }
             const items = await response.json();
+
+            // Some words exist twice (an original entry plus a same-word
+            // FSL-105 import, e.g. key "hello" and key "fsl105_hello"). When
+            // that happens, keep the original (non "fsl105_"-prefixed) entry.
             const library = {};
             items.forEach(item => {
-                library[String(item.key || '').toLowerCase()] = {
+                const wordKey = normalizeWord(String(item.word || ''));
+                if (!wordKey) return;
+
+                const isFsl105 = String(item.key || '').startsWith('fsl105_');
+                if (library[wordKey] && isFsl105) return;
+
+                library[wordKey] = {
                     label: item.word,
                     category: BACKEND_TO_UI_CATEGORY[item.category] || 'everyday',
                     video: item.video_url || '',
                     fallback: '🤟',
                 };
             });
+
             signLibrary = library;
             signLibraryReady = true;
-        }
-
-        const geExamples = {
-            all: { label: 'All', examples: ['Hello', 'How are you', 'What is your name', 'Thank you', 'Sorry'] },
-            greetings: { label: 'Greetings', examples: ['Hello', 'Good morning', 'How are you', 'Nice to meet you', 'Goodbye'] },
-            everyday: { label: 'Everyday Words', examples: ['Thank you', 'Please', 'Yes', 'No', 'Sorry'] },
-            family: { label: 'Family', examples: ['Mother', 'Father', 'Sister', 'Brother', 'Family'] },
-            numbers: { label: 'Numbers', examples: ['One', 'Two', 'Three', 'Ten', 'Twenty'] },
-            emotions: { label: 'Emotions', examples: ['Happy', 'Sad', 'Angry', 'Excited', 'Scared'] },
-            school: { label: 'School', examples: ['Teacher', 'Student', 'Book', 'Learn', 'School'] }
-        };
-
-        let lastTranslation = [];
-        let currentSpeed = 1;
-
-        function setSpeedLabel(value) {
-            const map = {
-                '0.5': '0.5x Slow',
-                '0.6': '0.6x',
-                '0.7': '0.7x',
-                '0.8': '0.8x',
-                '0.9': '0.9x',
-                '1.0': 'Normal (1x)',
-                '1.1': '1.1x',
-                '1.2': '1.2x',
-                '1.3': '1.3x',
-                '1.4': '1.4x',
-                '1.5': '1.5x',
-                '1.6': '1.6x',
-                '1.7': '1.7x',
-                '1.8': '1.8x',
-                '1.9': '1.9x',
-                '2.0': '2x Fast'
-            };
-            speedValue.textContent = map[Number(value).toFixed(1)] || `${value}x`;
-        }
-
-        function renderExampleChips(examples) {
-            exampleChips.innerHTML = '';
-            examples.forEach(text => {
-                const button = document.createElement('button');
-                button.className = 'chip';
-                button.type = 'button';
-                button.textContent = text;
-                button.addEventListener('click', () => setExample(text));
-                exampleChips.appendChild(button);
-            });
-        }
-
-        function updateExamplesForCategory() {
-            const category = categorySelect.value || 'all';
-            const entry = geExamples[category] || geExamples.all;
-            renderExampleChips(entry.examples);
-            if (exampleCategoryLabel) {
-                exampleCategoryLabel.textContent = category === 'all' ? '' : `— ${entry.label}`;
-            }
         }
 
         function normalizeWord(word) {
@@ -1277,53 +739,6 @@
             return signLibrary[clean] || null;
         }
 
-        function splitWords(text) {
-            return normalizeWord(text)
-                .split(/\s+/)
-                .filter(Boolean);
-        }
-
-        function buildTranslationUnits(text) {
-            const tokens = splitWords(text);
-            const units = [];
-            let index = 0;
-
-            while (index < tokens.length) {
-                let match = null;
-                let size = 0;
-
-                for (let len = 5; len >= 1; len--) {
-                    const phrase = tokens.slice(index, index + len).join(' ');
-                    if (phrase && signLibrary[phrase]) {
-                        match = signLibrary[phrase];
-                        size = len;
-                        break;
-                    }
-                }
-
-                if (match) {
-                    const sourceText = tokens.slice(index, index + size).join(' ');
-                    units.push({ sourceText, sign: match });
-                    index += size;
-                    continue;
-                }
-
-                const token = tokens[index];
-                units.push({
-                    sourceText: token,
-                    sign: {
-                        label: token,
-                        category: 'unknown',
-                        video: '',
-                        fallback: '🔤'
-                    }
-                });
-                index += 1;
-            }
-
-            return units;
-        }
-
         function escapeHtml(value) {
             return String(value)
                 .replaceAll('&', '&amp;')
@@ -1334,16 +749,28 @@
         }
 
         const wordBrowseSearch = document.getElementById('wordBrowseSearch');
+        const browseCategorySelect = document.getElementById('browseCategorySelect');
         const wordBrowseGrid = document.getElementById('wordBrowseGrid');
         const wordBrowsePagination = document.getElementById('wordBrowsePagination');
         const WORDS_PER_PAGE = 24;
         let wordBrowsePage = 1;
 
-        function addWordToInput(word) {
-            const current = textInput.value.trim();
-            const next = current ? `${current} ${word}` : word;
-            textInput.value = next.slice(0, 200);
-            charCount.textContent = textInput.value.length;
+        function renderPickerCardHtml(sign) {
+            const thumb = sign.video
+                ? `<i class="fas fa-play"></i>`
+                : sign.fallback;
+            return `
+                <button type="button" class="word-picker-card" data-word="${escapeHtml(sign.label)}">
+                    <div class="word-picker-thumb">${thumb}</div>
+                    <div class="word-picker-label">${escapeHtml(sign.label)}</div>
+                </button>
+            `;
+        }
+
+        function attachPickerCardHandlers(container) {
+            container.querySelectorAll('.word-picker-card').forEach(card => {
+                card.addEventListener('click', () => previewSign(card.dataset.word));
+            });
         }
 
         function renderWordBrowse() {
@@ -1356,7 +783,9 @@
             }
 
             const query = wordBrowseSearch ? wordBrowseSearch.value.trim().toLowerCase() : '';
+            const category = browseCategorySelect ? browseCategorySelect.value : 'all';
             const allWords = Object.values(signLibrary)
+                .filter(sign => category === 'all' || sign.category === category)
                 .filter(sign => !query || sign.label.toLowerCase().includes(query))
                 .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -1371,13 +800,8 @@
             const start = (wordBrowsePage - 1) * WORDS_PER_PAGE;
             const pageWords = allWords.slice(start, start + WORDS_PER_PAGE);
 
-            wordBrowseGrid.innerHTML = pageWords.map(sign =>
-                `<button type="button" class="word-browse-chip" data-word="${escapeHtml(sign.label)}">${escapeHtml(sign.label)}</button>`
-            ).join('');
-
-            wordBrowseGrid.querySelectorAll('.word-browse-chip').forEach(chip => {
-                chip.addEventListener('click', () => addWordToInput(chip.dataset.word));
-            });
+            wordBrowseGrid.innerHTML = pageWords.map(renderPickerCardHtml).join('');
+            attachPickerCardHandlers(wordBrowseGrid);
 
             wordBrowsePagination.innerHTML = `
                 <span class="browse-page-info">Showing ${start + 1}-${Math.min(start + WORDS_PER_PAGE, allWords.length)} of ${allWords.length} signs</span>
@@ -1401,183 +825,47 @@
             });
         }
 
-        function renderSignCard(word, sign, index) {
-            const mediaBlock = sign.video
-                ? `<video class="sign-video" controls playsinline preload="metadata" muted data-sign-video="${escapeHtml(sign.label)}"><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
-                : `<div class="sign-video-placeholder"><div class="demo-icon" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${sign.fallback}</div><span>Add video later</span></div>`;
-
-            return `
-                <article class="sign-card" data-sign-word="${escapeHtml(word)}" data-sign-index="${index}">
-                    ${mediaBlock}
-                    <div class="sign-card-text">${escapeHtml(sign.label)}</div>
-                    <div class="sign-card-meta">${escapeHtml(word)}</div>
-                </article>
-            `;
-        }
-
-        function getRenderedVideos() {
-            return Array.from(document.querySelectorAll('#translationResult .sign-video'));
-        }
-
-        function updateDurationEstimate() {
-            const videos = getRenderedVideos();
-            if (!videos.length) {
-                document.getElementById('duration').textContent = `${Math.max(2, Math.round(lastTranslation.length * (2 / currentSpeed)))}s`;
-                return;
-            }
-
-            let totalSeconds = 0;
-            videos.forEach(video => {
-                const duration = Number(video.duration);
-                if (Number.isFinite(duration) && duration > 0) {
-                    totalSeconds += duration / Math.max(currentSpeed, 0.1);
-                } else {
-                    totalSeconds += 2 / Math.max(currentSpeed, 0.1);
-                }
+        if (browseCategorySelect) {
+            browseCategorySelect.addEventListener('change', () => {
+                wordBrowsePage = 1;
+                renderWordBrowse();
             });
-
-            document.getElementById('duration').textContent = `${Math.max(1, Math.round(totalSeconds))}s`;
         }
 
-        function applyPlaybackSpeed() {
-            getRenderedVideos().forEach(video => {
-                video.playbackRate = currentSpeed;
-                video.defaultPlaybackRate = currentSpeed;
+        const signPreviewOverlay = document.getElementById('signPreviewOverlay');
+        const signPreviewMedia = document.getElementById('signPreviewMedia');
+        const signPreviewWord = document.getElementById('signPreviewWord');
+        const signPreviewClose = document.getElementById('signPreviewClose');
+
+        function previewSign(word) {
+            const sign = lookupSign(word);
+            if (!sign) return;
+
+            signPreviewWord.textContent = sign.label;
+            signPreviewMedia.innerHTML = sign.video
+                ? `<video controls playsinline preload="metadata" autoplay muted><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
+                : `<div class="demo-icon">${sign.fallback}</div>`;
+
+            signPreviewOverlay.classList.remove('hidden');
+        }
+
+        function closeSignPreview() {
+            signPreviewOverlay.classList.add('hidden');
+            signPreviewMedia.innerHTML = '';
+        }
+
+        if (signPreviewClose) signPreviewClose.addEventListener('click', closeSignPreview);
+        if (signPreviewOverlay) {
+            signPreviewOverlay.addEventListener('click', (e) => {
+                if (e.target === signPreviewOverlay) closeSignPreview();
             });
-            updateDurationEstimate();
         }
-
-        async function playSignSequence() {
-            const videos = getRenderedVideos();
-            if (!videos.length) {
-                return;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && signPreviewOverlay && !signPreviewOverlay.classList.contains('hidden')) {
+                closeSignPreview();
             }
+        });
 
-            for (const video of videos) {
-                video.pause();
-                video.currentTime = 0;
-                video.playbackRate = currentSpeed;
-                video.defaultPlaybackRate = currentSpeed;
-
-                try {
-                    await video.play();
-                } catch (_) {
-                    continue;
-                }
-
-                await new Promise(resolve => {
-                    const onDone = () => {
-                        video.removeEventListener('ended', onDone);
-                        video.removeEventListener('error', onDone);
-                        resolve();
-                    };
-
-                    video.addEventListener('ended', onDone, { once: true });
-                    video.addEventListener('error', onDone, { once: true });
-                });
-            }
-        }
-
-        function renderTranslationResult(units) {
-            const resultDiv = document.getElementById('translationResult');
-            const translationDetails = document.getElementById('translationDetails');
-            const actionButtons = document.getElementById('actionButtons');
-
-            const cardsHtml = units.map((unit, index) => {
-                return renderSignCard(unit.sourceText, unit.sign, index);
-            }).join('');
-
-            resultDiv.innerHTML = `
-                <div class="signs-container">
-                    <h3>Sign Demonstration</h3>
-                    <div class="signs-grid">${cardsHtml}</div>
-                </div>
-            `;
-
-            document.getElementById('wordCount').textContent = units.length;
-
-            getRenderedVideos().forEach(video => {
-                video.addEventListener('loadedmetadata', updateDurationEstimate);
-            });
-
-            applyPlaybackSpeed();
-            translationDetails.style.display = 'block';
-            actionButtons.style.display = 'grid';
-        }
-
-        function translateText() {
-            if (!signLibraryReady) {
-                alert('Sign videos are still loading, please wait a moment and try again.');
-                return;
-            }
-
-            const text = textInput.value.trim();
-            if (!text) {
-                alert('Please enter some text to translate');
-                return;
-            }
-
-            lastTranslation = buildTranslationUnits(text);
-            renderTranslationResult(lastTranslation);
-            document.getElementById('translationDetails').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function clearInput() {
-            textInput.value = '';
-            charCount.textContent = '0';
-            lastTranslation = [];
-            document.getElementById('translationResult').innerHTML = `
-                <div class="demo-placeholder">
-                    <div class="demo-icon">👋</div>
-                    <p>Enter text and click "Translate to Sign" to see the demonstration</p>
-                </div>
-            `;
-            document.getElementById('translationDetails').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'none';
-        }
-
-        function setExample(text) {
-            textInput.value = text;
-            charCount.textContent = text.length;
-            translateText();
-        }
-
-        function repeatSign() {
-            if (!lastTranslation.length) return;
-            playSignSequence();
-        }
-
-        function slowMotion() {
-            currentSpeed = currentSpeed === 1 ? 0.5 : 1;
-            speedControl.value = String(currentSpeed);
-            setSpeedLabel(currentSpeed);
-            if (lastTranslation.length) applyPlaybackSpeed();
-        }
-
-        function downloadSign() {
-            if (!lastTranslation.length) {
-                alert('Translate text first.');
-                return;
-            }
-
-            const payload = {
-                text: textInput.value.trim(),
-                words: lastTranslation.map(item => item.sourceText),
-                generatedAt: new Date().toISOString(),
-                note: 'Video files can be added later by setting the video field in signLibrary.'
-            };
-
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'text-to-sign-output.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        updateExamplesForCategory();
-        setSpeedLabel(speedControl.value);
         renderWordBrowse();
 
         loadSignLibrary()
@@ -1586,18 +874,6 @@
                 console.error('Failed to load sign videos:', err);
                 renderWordBrowse();
             });
-
-        textInput.addEventListener('input', function() {
-            charCount.textContent = this.value.length;
-        });
-
-        speedControl.addEventListener('input', function() {
-            currentSpeed = Number(this.value);
-            setSpeedLabel(this.value);
-            if (lastTranslation.length) applyPlaybackSpeed();
-        });
-
-        categorySelect.addEventListener('change', updateExamplesForCategory);
 
         // Navbar dropdown
         (function() {
@@ -1609,6 +885,7 @@
             }
         })();
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
 

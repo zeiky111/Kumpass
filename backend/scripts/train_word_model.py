@@ -19,6 +19,7 @@ Usage (from the backend/ directory, with the virtualenv active):
 from __future__ import annotations
 
 import json
+import random
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -35,17 +36,109 @@ from sklearn.svm import SVC
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from signtext.word_sequence_svc import MODEL_PATH, extract_sequence_features  # noqa: E402
+from signtext.word_sequence_svc import MIN_FRAMES, MODEL_PATH, extract_sequence_features  # noqa: E402
 
 DATASET_DIR = BACKEND_DIR / "datasets" / "phrases"
 MANIFEST_PATH = MODEL_PATH.parent / "word_sequence_svc.meta.json"
 MIN_SAMPLES_PER_PHRASE_FOR_EVAL = 2
+# How many randomly-cropped variants to generate per sequence (in addition
+# to the untrimmed original) -- see _random_crop for why this exists. Kept
+# modest: each crop variant roughly doubles again with its jittered twin
+# below, and an RBF SVC's serialized size scales with training-set size, so
+# an overly high multiplier here previously produced a 276MB model file
+# that exceeded GitHub's 100MB push limit.
+CROPS_PER_SEQUENCE = 3
+# Per-landmark coordinate jitter stddev, in the same normalized [0,1] units
+# MediaPipe reports -- see _jitter_frames for why this exists.
+JITTER_STDDEV = 0.01
+_AUG_RNG = random.Random(42)
+_NP_RNG = np.random.default_rng(42)
 
 
-def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter]:
+def _mirror_frames(frames: list[dict]) -> list[dict]:
+    """Flips a frame sequence left<->right (x -> 1-x on each landmark).
+
+    FSL-105's clips were filmed of a signer facing the camera third-person,
+    while the deployed app runs a selfie-view webcam feed straight through
+    MediaPipe -- so which physical hand MediaPipe calls "Left" vs "Right"
+    for the same real-world gesture depends on camera/device conventions
+    that vary per setup. A model trained only on the dataset's own
+    handedness convention collapses to ~13% accuracy (vs 99%) the moment a
+    live user's feed happens to report the opposite handedness for a given
+    hand -- see the investigation that added this function. Mirroring every
+    training sequence (flipping x and swapping the left/right slots) and
+    training on both orientations makes the model handedness-invariant
+    instead of trying to guess/normalize orientation at inference time.
+    """
+    mirrored = []
+    for frame in frames:
+        left = frame.get("left")
+        right = frame.get("right")
+        new_left = [[1.0 - pt[0], pt[1], pt[2]] for pt in right] if right is not None else None
+        new_right = [[1.0 - pt[0], pt[1], pt[2]] for pt in left] if left is not None else None
+        mirrored.append({"left": new_left, "right": new_right})
+    return mirrored
+
+
+def _random_crop(frames: list[dict]) -> list[dict] | None:
+    """Trims a random amount off the start and/or end of a sequence.
+
+    FSL-105's clips are pre-trimmed to exactly the gesture's start/end, but
+    the deployed app feeds the model a rolling buffer sampled from a live
+    webcam stream -- there is no way for that buffer to land on the exact
+    same start/end frame every time. extract_sequence_features leans heavily
+    on first-frame/last-frame features, so a model trained only on
+    perfectly-trimmed clips is brittle to this: trimming even 2 frames off
+    a real clip was enough to flip a correct prediction to a wrong one in
+    testing. Training on randomly-cropped variants of every sequence (in
+    addition to the untrimmed original) teaches the model to tolerate
+    whatever partial window a live buffer actually captures.
+    """
+    n = len(frames)
+    if n <= MIN_FRAMES:
+        return None
+
+    max_trim = max(0, n - MIN_FRAMES)
+    start_trim = _AUG_RNG.randint(0, max_trim)
+    end_trim = _AUG_RNG.randint(0, max_trim - start_trim)
+    if start_trim == 0 and end_trim == 0:
+        end_trim = 1  # force at least some crop, otherwise this is just the original
+    cropped = frames[start_trim: n - end_trim] if end_trim else frames[start_trim:]
+    return cropped if len(cropped) >= MIN_FRAMES else None
+
+
+def _jitter_frames(frames: list[dict]) -> list[dict]:
+    """Adds small per-landmark Gaussian noise to every coordinate.
+
+    FSL-105's clips are clean, well-lit, blue-background studio recordings,
+    so MediaPipe's hand tracking on them is near-perfect. A live webcam feed
+    (variable lighting, motion blur, a messier background) makes MediaPipe's
+    landmark estimates noisier frame to frame -- a model that only ever saw
+    noise-free landmarks has no reason to be robust to that jitter. This
+    perturbs every (x, y, z) coordinate by a small amount so the model
+    learns the sign's shape is what matters, not exact pixel-level
+    landmark positions.
+    """
+    jittered = []
+    for frame in frames:
+        new_frame = {}
+        for slot in ("left", "right"):
+            points = frame.get(slot)
+            if points is None:
+                new_frame[slot] = None
+                continue
+            arr = np.asarray(points, dtype=np.float64)
+            noise = _NP_RNG.normal(0.0, JITTER_STDDEV, size=arr.shape)
+            new_frame[slot] = (arr + noise).tolist()
+        jittered.append(new_frame)
+    return jittered
+
+
+def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter, np.ndarray]:
     jsonl_files = sorted(DATASET_DIR.glob("*.jsonl"))
     features: list[np.ndarray] = []
     labels: list[str] = []
+    groups: list[int] = []
     skipped = 0
 
     for jsonl_path in jsonl_files:
@@ -71,30 +164,67 @@ def load_sequences() -> tuple[np.ndarray, np.ndarray, Counter]:
                     skipped += 1
                     continue
 
+                clip_group = len(features)  # groups a clip with all its augmented variants below
                 features.append(feature_vector.reshape(-1))
                 labels.append(label)
+                groups.append(clip_group)
+
+                mirrored_frames = _mirror_frames(frames)
+                mirrored_vector = extract_sequence_features(mirrored_frames)
+                if mirrored_vector is not None:
+                    features.append(mirrored_vector.reshape(-1))
+                    labels.append(label)
+                    groups.append(clip_group)
+
+                # Crop both the original and its mirror, so the model sees
+                # partial windows in both handedness orientations. Every
+                # other crop also gets a jittered twin, so noise-robustness
+                # is learned alongside crop-robustness without doubling the
+                # dataset size again on top of the crop multiplier.
+                for source_frames in (frames, mirrored_frames):
+                    for crop_idx in range(CROPS_PER_SEQUENCE):
+                        cropped = _random_crop(source_frames)
+                        if cropped is None:
+                            continue
+                        use_jitter = crop_idx % 2 == 1
+                        variant = _jitter_frames(cropped) if use_jitter else cropped
+                        variant_vector = extract_sequence_features(variant)
+                        if variant_vector is not None:
+                            features.append(variant_vector.reshape(-1))
+                            labels.append(label)
+                            groups.append(clip_group)
 
     if skipped:
         print(f"Skipped {skipped} malformed/too-short sequences across {len(jsonl_files)} file(s).")
 
     if not features:
-        return np.zeros((0, 0)), np.asarray([]), Counter()
+        return np.zeros((0, 0)), np.asarray([]), Counter(), np.asarray([])
 
-    return np.vstack(features), np.asarray(labels), Counter(labels)
+    return np.vstack(features), np.asarray(labels), Counter(labels), np.asarray(groups)
 
 
-def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter) -> float | None:
+def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter, groups: np.ndarray) -> float | None:
     usable_labels = {label for label, count in counts.items() if count >= MIN_SAMPLES_PER_PHRASE_FOR_EVAL}
     if len(usable_labels) < 2:
         print("Not enough phrases with >=2 samples yet for a held-out accuracy check.")
         return None
 
     mask = np.asarray([label in usable_labels for label in y])
-    x_eval, y_eval = x[mask], y[mask]
+    x_eval, y_eval, groups_eval = x[mask], y[mask], groups[mask]
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x_eval, y_eval, test_size=0.25, stratify=y_eval, random_state=42
+    # Split by clip group (not by row) so a clip and its mirrored twin always
+    # land on the same side -- otherwise the split leaks a near-duplicate of
+    # every test row into training and the held-out score is inflated.
+    unique_groups = np.unique(groups_eval)
+    group_labels = np.asarray([y_eval[groups_eval == g][0] for g in unique_groups])
+    train_groups, test_groups = train_test_split(
+        unique_groups, test_size=0.25, stratify=group_labels, random_state=42
     )
+    train_mask = np.isin(groups_eval, train_groups)
+    test_mask = np.isin(groups_eval, test_groups)
+    x_train, x_test = x_eval[train_mask], x_eval[test_mask]
+    y_train, y_test = y_eval[train_mask], y_eval[test_mask]
+
     model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))
     model.fit(x_train, y_train)
     predictions = model.predict(x_test)
@@ -106,9 +236,9 @@ def evaluate(x: np.ndarray, y: np.ndarray, counts: Counter) -> float | None:
 
 
 def main() -> None:
-    x, y, counts = load_sequences()
+    x, y, counts, groups = load_sequences()
 
-    print(f"Loaded {len(y)} real sequences covering {len(counts)} phrase(s).")
+    print(f"Loaded {len(y)} sequences (original + mirrored) covering {len(counts)} phrase(s).")
     for label, count in sorted(counts.items()):
         print(f"  {label}: {count} sequences")
 
@@ -126,7 +256,7 @@ def main() -> None:
         )
         return
 
-    held_out_accuracy = evaluate(x, y, counts)
+    held_out_accuracy = evaluate(x, y, counts, groups)
 
     print(f"\nTraining deployed model on all {len(y)} recorded sequences...")
     final_model = make_pipeline(StandardScaler(), SVC(kernel="rbf", C=5.0, gamma="scale", probability=True))

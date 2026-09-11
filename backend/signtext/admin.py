@@ -3,18 +3,15 @@ from django.contrib import admin
 from .models import (
     Achievement,
     Announcement,
-    Certificate,
+    FSL105Clip,
     GameLevel,
     GameLevelItem,
     LearningModule,
-    Quiz,
     QuizAttempt,
     QuizQuestion,
-    QuizQuestionLink,
     SignPredictionLog,
     SignVideo,
     UserAchievement,
-    UserCertificate,
     UserProfile,
 )
 
@@ -39,35 +36,6 @@ class QuizQuestionAdmin(admin.ModelAdmin):
     list_display = ("id", "module", "question_type", "order", "created_at")
     list_filter = ("question_type",)
     search_fields = ("question_text", "correct_answer")
-
-
-class QuizQuestionLinkInline(admin.TabularInline):
-    model = QuizQuestionLink
-    extra = 0
-    autocomplete_fields = ("question",)
-
-
-@admin.register(Quiz)
-class QuizAdmin(admin.ModelAdmin):
-    list_display = ("title", "module", "passing_score", "is_published", "updated_at")
-    list_filter = ("is_published", "module")
-    search_fields = ("title", "module__title")
-    inlines = [QuizQuestionLinkInline]
-
-
-@admin.register(Certificate)
-class CertificateAdmin(admin.ModelAdmin):
-    list_display = ("title", "game_key", "quiz", "template_path")
-    list_filter = ("game_key",)
-    search_fields = ("title",)
-
-
-@admin.register(UserCertificate)
-class UserCertificateAdmin(admin.ModelAdmin):
-    list_display = ("user", "certificate", "student_name", "issued_at", "emailed")
-    search_fields = ("user__username", "student_name", "certificate__title")
-    list_filter = ("certificate", "emailed")
-    ordering = ("-issued_at",)
 
 
 @admin.register(Announcement)
@@ -110,9 +78,9 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ("user", "module", "quiz", "score", "total", "passed", "created_at")
+    list_display = ("user", "module", "score", "total", "created_at")
     search_fields = ("user__username", "module__title")
-    list_filter = ("module", "passed", "created_at")
+    list_filter = ("module", "created_at")
     ordering = ("-created_at",)
 
 
@@ -130,3 +98,11 @@ class UserAchievementAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "achievement__name")
     list_filter = ("achievement",)
     ordering = ("-unlocked_at",)
+
+
+@admin.register(FSL105Clip)
+class FSL105ClipAdmin(admin.ModelAdmin):
+    list_display = ("label", "clip_id", "category", "split", "created_at")
+    search_fields = ("label", "category", "source_path")
+    list_filter = ("split", "category")
+    ordering = ("label", "clip_id")

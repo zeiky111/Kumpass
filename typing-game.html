@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Sign-to-Word Typing Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260801">
     <link rel="stylesheet" href="css/dashboard.css?v=20260801">
@@ -570,7 +573,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -589,6 +592,7 @@
         <div class="game-topbar">
             <div class="topbar-title-row">
                 <span class="level-badge"><strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></span>
+                <span class="level-badge" id="questionProgressBadge"></span>
             </div>
             <div class="topbar-controls">
                 <div class="difficulty-buttons">
@@ -655,6 +659,39 @@
         const { videoMimeType } = KumpasGames;
         const HARD_TIME_LIMIT_SECONDS = 15;
 
+        // Accepted alternate answers (Filipino/Tagalog translations and common
+        // English synonyms) per word/phrase, keyed by the exact GameLevelItem
+        // prompt as authored. The player only needs to get the MEANING right --
+        // e.g. typing "Mad" or "Galit" for a sign meaning "Angry" should count.
+        // Single alphabet letters (Easy) have no synonyms, so they're omitted.
+        const ANSWER_ALTERNATES = {
+            'Happy': ['masaya', 'saya', 'glad', 'joyful'],
+            'Sad': ['malungkot', 'lungkot', 'unhappy'],
+            'Angry': ['galit', 'mad', 'furious'],
+            'Afraid': ['takot', 'natatakot', 'scared', 'fearful'],
+            'Excited': ['tuwang-tuwa', 'excited na', 'thrilled'],
+            'Tired': ['pagod', 'napagod', 'exhausted'],
+            'Love': ['mahal', 'pagmamahal', 'in love'],
+            'How are you': ['kumusta ka', 'kumusta', 'how are you doing'],
+            "I'm fine": ['ok lang ako', 'mabuti naman ako', 'fine', 'i am fine', 'im fine', 'okay lang ako'],
+            'What is your name': ['ano ang pangalan mo', 'anong pangalan mo', 'whats your name', "what's your name"],
+            'My name is': ['ang pangalan ko ay', 'ako si', 'my name'],
+            'Nice to meet you': ['ikinagagalak kong makilala ka', 'ikinagalak kong makilala ka', 'pleased to meet you', 'glad to meet you'],
+            'I need help': ['kailangan ko ng tulong', 'tulungan mo ako', 'i need assistance'],
+            'Can you repeat that': ['pakiulit', 'ulitin mo nga', 'can you say that again', 'say that again', 'paki ulit'],
+            'Yes': ['oo', 'opo', 'sige', 'yeah', 'yep'],
+            'Hello': ['kumusta', 'hi', 'hey'],
+            'Good morning': ['magandang umaga'],
+            'Good afternoon': ['magandang hapon'],
+            'Good evening': ['magandang gabi'],
+            'Goodbye': ['paalam', 'bye', 'bye bye', 'see you'],
+            'Welcome': ['maligayang pagdating', 'walang anuman'],
+            'Please': ['pakiusap', 'paki'],
+            'Thank you': ['salamat', 'maraming salamat', 'thanks'],
+            'Sorry': ['patawad', 'pasensya na', 'paumanhin', 'my bad'],
+            'Excuse me': ['makikiraan', 'pasensya po', 'pasintabi'],
+        };
+
         // Typing has no multiple-choice options, so choiceCounts isn't used for
         // rendering; kept for API symmetry with the other games' engine config.
         const engine = KumpasGames.createGameEngine({
@@ -667,6 +704,10 @@
         let answered = false;
         let countdown = null;
         let advanceTimer = null;
+        // Missed questions for this playthrough, shown only on the final
+        // "Game Complete" screen -- never revealed inline, so a wrong guess
+        // doesn't hand the player the answer for next time.
+        let missedQuestions = [];
 
         function updateLevelTag() {
             const levelTag = document.getElementById('randomLevelTag');
@@ -675,6 +716,12 @@
             if (ofTotal) {
                 const totalLevels = engine.totalLevelsForDifficulty(engine.state.difficulty);
                 ofTotal.textContent = totalLevels ? `of ${totalLevels}` : '';
+            }
+            const progressBadge = document.getElementById('questionProgressBadge');
+            if (progressBadge) {
+                progressBadge.textContent = activeQuestions.length
+                    ? `Question ${Math.min(currentIndex + 1, activeQuestions.length)} of ${activeQuestions.length}`
+                    : '';
             }
         }
 
@@ -760,7 +807,9 @@
                         title: '🏆 Game Complete!',
                         message: 'You completed every difficulty. Restarting at Easy so you can play again.',
                         continueLabel: 'Play Again',
+                        reviewItems: missedQuestions,
                         onContinue: () => {
+                            missedQuestions = [];
                             engine.setDifficulty('easy', true);
                             startLevel(false);
                         },
@@ -834,9 +883,8 @@
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');
-                feedbackDiv.textContent = timedOut
-                    ? `⏱ Time's up! The correct answer is: ${question.answers[0]}`
-                    : `✗ Incorrect. The correct answer is: ${question.answers[0]}`;
+                feedbackDiv.textContent = timedOut ? "⏱ Time's up!" : '✗ Incorrect. Keep practicing!';
+                missedQuestions.push({ question: 'Sign shown', correctAnswer: question.answers[0] });
             }
 
             updateScores();
@@ -880,9 +928,12 @@
             .then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
-                    item => (item.media_url && item.prompt)
-                        ? { video: item.media_url, answers: [String(item.prompt || '').toLowerCase()] }
-                        : null
+                    item => {
+                        if (!item.media_url || !item.prompt) return null;
+                        const prompt = String(item.prompt || '');
+                        const alternates = ANSWER_ALTERNATES[prompt] || [];
+                        return { video: item.media_url, answers: [prompt.toLowerCase(), ...alternates.map(a => a.toLowerCase())] };
+                    }
                 );
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
@@ -899,8 +950,10 @@
                         `On Hard difficulty, you have ${HARD_TIME_LIMIT_SECONDS} seconds to answer each question before time runs out.`,
                     ],
                     scoring: [
-                        'Correct answers earn points based on your difficulty and current level.',
-                        'Harder difficulties and higher levels are worth more points.',
+                        'Easy correct answer = 8 points',
+                        'Medium correct answer = 10 points',
+                        'Hard correct answer = 12 points',
+                        'Incorrect or timed-out answer = 0 points',
                     ],
                     levelCounts,
                     onStart: () => startLevel(true),
@@ -911,6 +964,7 @@
                 document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load game levels. Please refresh the page.</p>';
             });
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
 

@@ -2,7 +2,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 .kd-animated-bg {
-  position: relative;
   background-color: #eff6ff;
   background-image:
     radial-gradient(circle at 15% 20%, rgba(37,99,235,0.10), transparent 35%),
@@ -18,9 +17,17 @@
    The navbar and .modal are excluded since they manage their own fixed
    position/z-index (the navbar for sticky + dropdowns, modals so they stay
    centered as a fixed full-viewport overlay instead of being pulled into
-   normal document flow at the bottom of the page). */
-body.kd-animated-bg > *:not(.bg-orbs):not(.navbar):not(.modal) {
+   normal document flow at the bottom of the page).
+   Note: body itself is intentionally NOT position:relative, and
+   .dashboard-layout is excluded here too -- making either of them a
+   positioned element breaks position:sticky on descendants like
+   .dashboard-sidebar (it would scroll away instead of staying pinned). */
+body.kd-animated-bg > *:not(.bg-orbs):not(.navbar):not(.modal):not(.dashboard-layout) {
   position: relative;
+  z-index: 1;
+}
+
+body.kd-animated-bg > .dashboard-layout {
   z-index: 1;
 }
 

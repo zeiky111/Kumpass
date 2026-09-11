@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Kumpas - Interactive Sign Language Learning System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -12,8 +15,8 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="index.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" style="width:75px;height:75px;object-fit:contain;">
-                
+                <img src="images/kumpas_logo1.png" alt="Kumpas Logo" class="logo-image" style="width:75px;height:75px;object-fit:contain;" loading="lazy">
+                <span>Kumpas</span>
             </a>
             
             <ul class="nav-menu" id="navMenu">
@@ -40,10 +43,10 @@
             <div class="hero-content">
                 <div class="hero-text">
                     <h1 class="hero-title">
-                        Learn Sign Language
+                        Learn Filipino Sign Language
                     </h1>
                     <p class="hero-description">
-                        Kumpas is a web-based system designed to streamline communication between Deaf learners, hearing students, instructors, and non-teaching personnel through interactive Filipino Sign Language (FSL) tools.
+                        Master sign language with Kumpas - an innovative web-based learning platform designed for City College of Calapan. Practice with engaging games, real-time translation tools, and track your progress on the leaderboard.
                     </p>
                     <div class="hero-buttons">
                         <a href="login.html" class="btn btn-primary btn-lg">
@@ -57,8 +60,8 @@
                 <div class="hero-illustration">
                     <div class="illustration-card">
                         <div class="illustration-content">
-                            <img src="images/kumpas_logo.png" alt="Kumpas" style="width:250px;height:250px;object-fit:contain;">
-                            
+                            <img src="images/kumpas_logo.png" alt="Kumpas" style="width:250px;height:250px;object-fit:contain;" loading="lazy">
+                            <h3>Start Learning</h3>
                         </div>
                     </div>
                 </div>
@@ -163,68 +166,20 @@
         </div>
     </section>
 
-    <!-- Meet the Developers Section -->
-    <section class="developers" id="developers">
-        <div class="container">
-            <div class="section-header">
-                <h2>Meet the Developers</h2>
-                <div class="section-underline"></div>
-                <p>The talented team behind Kumpas's innovative technology</p>
-            </div>
-
-            <div class="developers-grid">
-                <!-- Developer 1 -->
-                <div class="developer-card">
-                    <div class="developer-avatar">
-                        <i class="fas fa-user"></i>
-                        <img src="images/irish.png" alt="Irish A. Villanueva" onerror="this.style.display='none'">
-                    </div>
-                    <h3>Irish A. Villanueva</h3>
-                    <span class="developer-role">Programmer / Technical Writer</span>
-                    <p>UI/UX designer focused on creating accessible and intuitive user experiences.</p>
-                    <div class="developer-social">
-                        <a href="https://www.facebook.com/share/1VVZPZctTy/" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="mailto:irishalda122@gmail.com" title="Email"><i class="fas fa-envelope"></i></a>
-                    </div>
-                </div>
-
-                <!-- Developer 2 -->
-                <div class="developer-card">
-                    <div class="developer-avatar">
-                        <i class="fas fa-user"></i>
-                        <img src="images/dev-neil-echanova.jpg" alt="Niezl Skye B. De Torres" onerror="this.style.display='none'">
-                    </div>
-                    <h3>Niezl Skye B. De Torres</h3>
-                    <span class="developer-role">Programmer</span>
-                    <p>Backend specialist with expertise in machine learning and computer vision algorithms.</p>
-                    <div class="developer-social">
-                        <a href="https://www.facebook.com/share/1NfPUxsw8V/" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="mailto:detorresniezlskye@gmail.com" title="Email"><i class="fas fa-envelope"></i></a>
-                    </div>
-                </div>
-
-                <!-- Developer 3 -->
-                <div class="developer-card">
-                    <div class="developer-avatar">
-                        <i class="fas fa-user"></i>
-                        <img src="images/ma.danielle.jpg" alt="Ma. Danielle A. Ramos" onerror="this.style.display='none'">
-                    </div>
-                    <h3>Ma. Danielle A. Ramos</h3>
-                    <span class="developer-role">Technical Writer</span>
-                    <p>Specialized in sign language recognition and natural language processing.</p>
-                    <div class="developer-social">
-                        <a href="https://www.facebook.com/share/1DjjRnpwDw/" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="mailto:ramosdanielle413@gmail.com" title="Email"><i class="fas fa-envelope"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-grid footer-grid-centered">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>Kumpas</h4>
+                    <p>Interactive Sign Language Learning System for City College of Calapan BSNED Program</p>
+                    <div class="social-links">
+                        <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
+                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                
                 <div class="footer-section">
                     <h5>Quick Links</h5>
                     <ul>
@@ -233,14 +188,7 @@
                         <li><a href="login.html">Login</a></li>
                     </ul>
                 </div>
-
-                <div class="footer-section footer-brand">
-                    <div class="footer-logo-panel">
-                        <img src="images/kumpas_logo_full.jpg" alt="Kumpas Logo" class="footer-logo">
-                    </div>
-                    <p>Interactive Sign Language Learning System for City College of Calapan BSNED Program</p>
-                </div>
-
+                
                 <div class="footer-section">
                     <h5>Contact</h5>
                     <ul>
@@ -250,13 +198,7 @@
                     </ul>
                 </div>
             </div>
-
-            <div class="social-links footer-social-center">
-                <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
-                <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
-                <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
-            </div>
-
+            
             <div class="footer-bottom">
                 <p>&copy; 2026 Kumpas - Interactive Sign Language Learning System. All rights reserved.</p>
                 <div class="footer-links">
@@ -269,5 +211,6 @@
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>

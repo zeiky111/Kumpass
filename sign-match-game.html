@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
     <title>Sign Match Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260801">
     <link rel="stylesheet" href="css/dashboard.css?v=20260801">
@@ -600,7 +603,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo">
+                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -619,12 +622,13 @@
         <div class="game-topbar">
             <div class="topbar-title-row">
                 <span class="level-badge"><strong id="randomLevelTag">Level 1</strong> <span id="levelOfTotal"></span></span>
+                <span class="level-badge" id="questionProgressBadge"></span>
             </div>
             <div class="topbar-controls">
                 <div class="difficulty-buttons">
-                    <button class="difficulty-btn selected" data-level="easy" type="button" onclick="setDifficulty('easy', this)">Easy (4)</button>
-                    <button class="difficulty-btn" data-level="medium" type="button" onclick="setDifficulty('medium', this)">Medium (6)</button>
-                    <button class="difficulty-btn" data-level="hard" type="button" onclick="setDifficulty('hard', this)">Hard (8)</button>
+                    <button class="difficulty-btn selected" data-level="easy" type="button" onclick="setDifficulty('easy', this)">Easy (4 choices)</button>
+                    <button class="difficulty-btn" data-level="medium" type="button" onclick="setDifficulty('medium', this)">Medium (6 choices)</button>
+                    <button class="difficulty-btn" data-level="hard" type="button" onclick="setDifficulty('hard', this)">Hard (8 choices)</button>
                 </div>
                 <div class="score-section">
                     <div class="score-box">
@@ -708,6 +712,11 @@
         let currentIndex = 0;
         let answered = false;
         let advanceTimer = null;
+        // Missed questions for this playthrough of Easy->Medium->Hard, shown
+        // only on the final "Game Complete" screen (see submitAnswer/nextQuestion)
+        // -- never revealed inline, so a wrong guess doesn't hand the player
+        // the answer for the same question if they encounter it again.
+        let missedQuestions = [];
 
         function updateLevelTag() {
             const levelTag = document.getElementById('randomLevelTag');
@@ -716,6 +725,12 @@
             if (ofTotal) {
                 const totalLevels = engine.totalLevelsForDifficulty(engine.state.difficulty);
                 ofTotal.textContent = totalLevels ? `of ${totalLevels}` : '';
+            }
+            const progressBadge = document.getElementById('questionProgressBadge');
+            if (progressBadge) {
+                progressBadge.textContent = activeQuestions.length
+                    ? `Question ${Math.min(currentIndex + 1, activeQuestions.length)} of ${activeQuestions.length}`
+                    : '';
             }
         }
 
@@ -778,7 +793,9 @@
                         title: '🏆 Game Complete!',
                         message: 'You completed every difficulty. Restarting at Easy so you can play again.',
                         continueLabel: 'Play Again',
+                        reviewItems: missedQuestions,
                         onContinue: () => {
+                            missedQuestions = [];
                             engine.setDifficulty('easy', true);
                             startLevel(false);
                         },
@@ -845,7 +862,8 @@
             } else {
                 feedbackDiv.classList.remove('correct');
                 feedbackDiv.classList.add('incorrect', 'show');
-                feedbackDiv.textContent = `✗ Incorrect. The correct answer is: ${question.label}`;
+                feedbackDiv.textContent = '✗ Incorrect. Keep practicing!';
+                missedQuestions.push({ question: 'Sign shown', correctAnswer: question.label });
             }
 
             updateScores();
@@ -902,8 +920,10 @@
                         'Click "Submit Answer" to check your choice, then move to the next question.',
                     ],
                     scoring: [
-                        'Correct answers earn points based on your difficulty and current level.',
-                        'Harder difficulties and higher levels are worth more points.',
+                        'Easy correct answer = 10 points',
+                        'Medium correct answer = 14 points',
+                        'Hard correct answer = 18 points',
+                        'Incorrect answer = 0 points',
                     ],
                     levelCounts,
                     onStart: () => startLevel(true),
@@ -914,6 +934,7 @@
                 document.getElementById('sign').innerHTML = '<p style="color:#991b1b;">Unable to load game levels. Please refresh the page.</p>';
             });
     </script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
 

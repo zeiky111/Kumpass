@@ -28,11 +28,7 @@ from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
-from .certificates import (
-    award_certificate_if_earned,
-    award_certificate_if_earned_for_quiz,
-    send_certificate_email_async,
-)
+from .certificates import award_certificate_if_earned, award_module_certificate_if_earned, send_certificate_email_async
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
     Achievement,
@@ -42,10 +38,8 @@ from .models import (
     GameLevelItem,
     LearningModule,
     ModuleFile,
-    Quiz,
     QuizAttempt,
     QuizQuestion,
-    QuizQuestionLink,
     SignPredictionLog,
     SignVideo,
     UserAchievement,
@@ -63,7 +57,6 @@ from .serializers import (
     LearningStateSerializer,
     LoginSerializer,
     ModuleFileSerializer,
-    QuizSerializer,
     QuizQuestionSerializer,
     StudentQuizQuestionSerializer,
     SignPredictionLogSerializer,
@@ -432,6 +425,15 @@ def _safe_bool(value: Any, default: bool = False) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+MAX_SIGN_VIDEO_SIZE_BYTES = 3 * 1024 * 1024
+
+
+def _sign_video_size_error(uploaded_file: Any) -> Any:
+    if uploaded_file.size > MAX_SIGN_VIDEO_SIZE_BYTES:
+        return Response({"error": "Video file must be 3MB or smaller"}, status=400)
+    return None
 
 
 def _skill_breakdown_for_user(user: User) -> list:
@@ -1340,49 +1342,6 @@ def user_certificates(request: Any) -> Response:
     })
 
 
-def _published_quiz_for_module(module: LearningModule) -> "Quiz | None":
-    """Picks the module's published quiz out of an already-prefetched
-    `module.quizzes.all()` -- filtering in Python (not a fresh query) so
-    callers can prefetch once per page instead of once per module."""
-    for quiz in module.quizzes.all():
-        if quiz.is_published:
-            return quiz
-    return None
-
-
-def _ordered_quiz_questions(quiz: "Quiz") -> list[QuizQuestion]:
-    return [link.question for link in quiz.question_links.all().order_by("order", "id")]
-
-
-def _quiz_status_summary(module: LearningModule) -> dict:
-    """Instructor-facing module list chip: which quiz (if any) is published,
-    how many questions it has, and whether any draft quiz also exists."""
-    quizzes = list(module.quizzes.all())
-    published = next((quiz for quiz in quizzes if quiz.is_published), None)
-    has_draft = any(not quiz.is_published for quiz in quizzes)
-    if published:
-        status = "published"
-        question_count = published.question_links.count()
-    elif has_draft:
-        status = "draft"
-        question_count = 0
-    else:
-        status = "none"
-        question_count = 0
-    return {"quizStatus": status, "quizCount": question_count}
-
-
-def _serialize_quiz(quiz: "Quiz", for_student: bool) -> dict:
-    """Shared quiz payload for both the student-facing module list and the
-    instructor quiz builder. `for_student` strips correct answers."""
-    questions = _ordered_quiz_questions(quiz)
-    question_serializer = StudentQuizQuestionSerializer if for_student else QuizQuestionSerializer
-    payload = QuizSerializer(quiz).data
-    payload["questions"] = question_serializer(questions, many=True).data
-    payload["questionCount"] = len(questions)
-    return payload
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def student_content(request: Any) -> Response:
@@ -1405,7 +1364,7 @@ def student_content(request: Any) -> Response:
     modules_qs = (
         LearningModule.objects
         .select_related("created_by", "updated_by")
-        .prefetch_related("files", "quizzes__question_links__question")
+        .prefetch_related("files", "quiz_questions")
         .filter(status=LearningModule.STATUS_PUBLISHED)
         .order_by("year_level", "sort_order", "title")
     )
@@ -1415,15 +1374,28 @@ def student_content(request: Any) -> Response:
     start = (page - 1) * limit
     end = start + limit
     modules = list(modules_qs[start:end])
+    attempts_by_module = {
+        attempt.module_id: attempt
+        for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at")
+    }
 
     serialized = []
     for module in modules:
         module_data = LearningModuleSerializer(module).data
         module_files = list(module.files.all().order_by("-created_at"))
         module_data["files"] = ModuleFileSerializer(module_files, many=True, context={"request": request}).data
-        # Student-safe published quiz only -- null if none published yet.
-        published_quiz = _published_quiz_for_module(module)
-        module_data["quiz"] = _serialize_quiz(published_quiz, for_student=True) if published_quiz else None
+        # include quiz count and student-safe quiz payload
+        questions = list(module.quiz_questions.all().order_by("order", "created_at"))
+        module_data["quizCount"] = len(questions)
+        module_data["quizzes"] = StudentQuizQuestionSerializer(questions, many=True).data
+
+        attempt = attempts_by_module.get(module.id)
+        module_data["quizAttempt"] = {
+            "score": attempt.score,
+            "total": attempt.total,
+            "submittedAt": attempt.created_at,
+        } if attempt is not None else None
+
         serialized.append(module_data)
 
     return Response({
@@ -1582,15 +1554,9 @@ def instructor_dashboard(request: Any) -> Response:
         page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
     except Exception:
         page_size = 10
-    search = str(request.query_params.get("search") or "").strip()
 
     try:
-        modules = list(
-            LearningModule.objects
-            .select_related("created_by", "updated_by")
-            .prefetch_related("quizzes")
-            .all()
-        )
+        modules = list(LearningModule.objects.select_related("created_by", "updated_by").all())
         announcements = list(Announcement.objects.select_related("created_by", "updated_by").all())
         student_profiles = list(
             UserProfile.objects.select_related("user")
@@ -1621,19 +1587,6 @@ def instructor_dashboard(request: Any) -> Response:
 
     students.sort(key=lambda item: (item["points"], item["overallProgress"], item["accuracy"]), reverse=True)
 
-    all_students_count = len(students)
-    average_completion = round(total_completion / all_students_count) if all_students_count else 0
-    average_accuracy = (
-        round(sum(student["accuracy"] for student in students) / all_students_count) if all_students_count else 0
-    )
-
-    if search:
-        needle = search.lower()
-        students = [
-            student for student in students
-            if needle in student["name"].lower() or needle in student["email"].lower()
-        ]
-
     total_students = len(students)
     start = (page - 1) * page_size
     end = start + page_size
@@ -1645,8 +1598,8 @@ def instructor_dashboard(request: Any) -> Response:
         "totalModules": total_modules,
         "publishedModules": sum(1 for module in modules if module.status == LearningModule.STATUS_PUBLISHED),
         "totalAnnouncements": len(announcements),
-        "averageCompletion": average_completion,
-        "averageAccuracy": average_accuracy,
+        "averageCompletion": round(total_completion / len(students)) if students else 0,
+        "averageAccuracy": round(sum(student["accuracy"] for student in students) / len(students)) if students else 0,
         "totalPoints": total_points,
     }
 
@@ -1666,7 +1619,7 @@ def instructor_dashboard(request: Any) -> Response:
                     context={"request": request},
                 ).data,
                 "studentCount": module_counts.get(module.module_key, 0),
-                **_quiz_status_summary(module),
+                "quizCount": module.quiz_questions.count(),
             }
             for module in modules
         ],
@@ -1675,7 +1628,6 @@ def instructor_dashboard(request: Any) -> Response:
             "page": page,
             "pageSize": page_size,
             "total": total_students,
-            "search": search,
         },
         "announcements": AnnouncementSerializer(announcements, many=True).data,
     }
@@ -1693,6 +1645,79 @@ def instructor_dashboard(request: Any) -> Response:
         }
 
     return Response(payload)
+
+
+QUIZ_PASSING_PERCENT = 75
+
+
+@api_view(["GET"])
+def instructor_quiz_reports(request: Any) -> Response:
+    """Per-module quiz summary (attempt count, average score, pass rate) plus
+    the individual student scores behind each module, for the instructor
+    Quiz Reports tab. A student passes a module quiz at >=75% correct."""
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    modules = list(
+        LearningModule.objects
+        .filter(status=LearningModule.STATUS_PUBLISHED, quiz_questions__isnull=False)
+        .distinct()
+        .order_by("sort_order", "title")
+    )
+    attempts = list(
+        QuizAttempt.objects
+        .filter(module__in=modules)
+        .select_related("user", "user__profile", "module")
+        .order_by("-created_at")
+    )
+
+    attempts_by_module: dict[int, list[QuizAttempt]] = {module.id: [] for module in modules}
+    for attempt in attempts:
+        attempts_by_module.setdefault(attempt.module_id, []).append(attempt)
+
+    reports = []
+    for module in modules:
+        module_attempts = attempts_by_module.get(module.id, [])
+        attempt_count = len(module_attempts)
+        percentages = [
+            (attempt.score / attempt.total * 100) if attempt.total else 0
+            for attempt in module_attempts
+        ]
+        passed_count = sum(1 for pct in percentages if pct >= QUIZ_PASSING_PERCENT)
+
+        reports.append({
+            "moduleId": module.id,
+            "moduleKey": module.module_key,
+            "title": module.title,
+            "yearLevel": module.year_level,
+            "quizCount": module.quiz_questions.count(),
+            "attemptCount": attempt_count,
+            "passedCount": passed_count,
+            "passRate": round(passed_count / attempt_count * 100) if attempt_count else 0,
+            "averageScorePercent": round(sum(percentages) / attempt_count) if attempt_count else 0,
+            "students": [
+                {
+                    "name": (
+                        getattr(getattr(attempt.user, "profile", None), "full_name", "")
+                        or attempt.user.first_name
+                        or attempt.user.username
+                    ),
+                    "email": attempt.user.email,
+                    "score": attempt.score,
+                    "total": attempt.total,
+                    "percent": round((attempt.score / attempt.total * 100)) if attempt.total else 0,
+                    "passed": ((attempt.score / attempt.total * 100) if attempt.total else 0) >= QUIZ_PASSING_PERCENT,
+                    "submittedAt": attempt.created_at,
+                }
+                for attempt in module_attempts
+            ],
+        })
+
+    return Response({
+        "passingPercent": QUIZ_PASSING_PERCENT,
+        "modules": reports,
+    })
 
 
 @api_view(["GET", "POST"])
@@ -1874,13 +1899,10 @@ def instructor_modules(request: Any) -> Response:
 
     if request.method == "GET":
         try:
-            modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quizzes").order_by("sort_order", "title").all()
+            modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quiz_questions").order_by("sort_order", "title").all()
             year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
             if year_level != "all":
                 modules_qs = modules_qs.filter(year_level=year_level)
-            search = str(request.query_params.get("search") or "").strip()
-            if search:
-                modules_qs = modules_qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
             try:
                 page = max(1, int(request.query_params.get("page") or 1))
             except Exception:
@@ -1905,7 +1927,7 @@ def instructor_modules(request: Any) -> Response:
                             context={"request": request},
                         ).data,
                         "studentCount": module_counts.get(module.module_key, 0),
-                        **_quiz_status_summary(module),
+                        "quizCount": module.quiz_questions.count(),
                     }
                     for module in modules
                 ],
@@ -1913,7 +1935,6 @@ def instructor_modules(request: Any) -> Response:
                 "page": page,
                 "limit": limit,
                 "yearLevel": year_level,
-                "search": search,
             })
         except (DatabaseError, OperationalError):
             return Response([])
@@ -1929,13 +1950,20 @@ def instructor_modules(request: Any) -> Response:
     elif LearningModule.objects.filter(module_key=module_key).exists():
         return Response({"error": "Module key already exists"}, status=409)
 
+    status_value = str(payload.get("status") or LearningModule.STATUS_DRAFT).strip()
+    if status_value == LearningModule.STATUS_PUBLISHED:
+        return Response(
+            {"error": "Add at least one quiz question before publishing this module. Save it as a draft first, then use Add Quiz."},
+            status=400,
+        )
+
     serializer = LearningModuleSerializer(data={
         "module_key": module_key,
         "title": title,
         "year_level": str(payload.get("year_level") or payload.get("yearLevel") or "1").strip(),
         "description": str(payload.get("description") or "").strip(),
         "activities_count": _safe_int(payload.get("activities_count") or payload.get("activitiesCount") or 0),
-        "status": str(payload.get("status") or LearningModule.STATUS_DRAFT).strip(),
+        "status": status_value,
         "sort_order": _safe_int(payload.get("sort_order") or payload.get("sortOrder") or 0),
     })
     if not serializer.is_valid():
@@ -1971,7 +1999,11 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
         return Response(data)
 
     if request.method == "DELETE":
-        module.delete()
+        try:
+            module.delete()
+        except (DatabaseError, IntegrityError, OperationalError) as exc:
+            logger.exception("Failed to delete module %s", module_id)
+            return Response({"error": f"Could not delete module: {exc}"}, status=500)
         return Response({"message": "Module deleted"})
 
     was_published = module.status == LearningModule.STATUS_PUBLISHED
@@ -1988,6 +2020,12 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     }
     if update_data["module_key"] != module.module_key and LearningModule.objects.exclude(pk=module.pk).filter(module_key=update_data["module_key"]).exists():
         return Response({"error": "Module key already exists"}, status=409)
+
+    if update_data["status"] == LearningModule.STATUS_PUBLISHED and module.quiz_questions.count() == 0:
+        return Response(
+            {"error": "Add at least one quiz question before publishing this module."},
+            status=400,
+        )
 
     serializer = LearningModuleSerializer(module, data=update_data, partial=True)
     if not serializer.is_valid():
@@ -2008,32 +2046,20 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
 
 
 @api_view(["GET", "POST"])
-def question_bank_list(request: Any) -> Response:
-    """The Question Bank: reusable QuizQuestion rows, independent of any one
-    quiz. GET filters/searches it for the instructor picker; POST authors a
-    new bank question (optionally tagged to a module for filtering)."""
+def module_quiz_questions(request: Any, module_id: int) -> Response:
     actor, error_response = _get_instructor_actor(request)
     if error_response:
         return error_response
 
+    module = get_object_or_404(LearningModule, pk=module_id)
+
     if request.method == "GET":
-        questions = QuizQuestion.objects.select_related("module").order_by("-created_at")
-        module_id = request.query_params.get("module")
-        if module_id:
-            questions = questions.filter(module_id=module_id)
-        question_type = str(request.query_params.get("question_type") or "").strip()
-        if question_type:
-            questions = questions.filter(question_type=question_type)
-        search = str(request.query_params.get("search") or "").strip()
-        if search:
-            questions = questions.filter(
-                Q(question_text__icontains=search) | Q(correct_answer__icontains=search)
-            )
+        questions = QuizQuestion.objects.filter(module=module).order_by("order", "created_at")
         return Response(QuizQuestionSerializer(questions, many=True).data)
 
     payload = request.data.copy()
     serializer = QuizQuestionSerializer(data={
-        "module": payload.get("module") or None,
+        "module": module.id,
         "question_text": str(payload.get("question_text") or "").strip(),
         "question_type": str(payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE).strip(),
         "choices": payload.get("choices") or [],
@@ -2047,197 +2073,6 @@ def question_bank_list(request: Any) -> Response:
     return Response(QuizQuestionSerializer(question).data, status=201)
 
 
-@api_view(["PATCH", "DELETE"])
-def question_bank_detail(request: Any, question_id: int) -> Response:
-    actor, error_response = _get_instructor_actor(request)
-    if error_response:
-        return error_response
-
-    question = get_object_or_404(QuizQuestion, pk=question_id)
-
-    if request.method == "DELETE":
-        # Deleting a bank question removes it from every quiz that uses it
-        # (QuizQuestionLink cascades) -- permanent, like every other delete
-        # in this app, but worth being explicit about here since it can
-        # silently shrink an already-published quiz's question count.
-        question.delete()
-        return Response({"message": "Question deleted"})
-
-    payload = request.data.copy()
-    update_data = {
-        "module": payload.get("module") if "module" in payload else question.module_id,
-        "question_text": str(payload.get("question_text") or question.question_text).strip(),
-        "question_type": str(payload.get("question_type") or question.question_type).strip(),
-        "choices": payload.get("choices") if payload.get("choices") is not None else question.choices,
-        "correct_answer": str(payload.get("correct_answer") or question.correct_answer).strip(),
-        "order": int(payload.get("order") or question.order),
-    }
-    serializer = QuizQuestionSerializer(question, data=update_data, partial=True)
-    if not serializer.is_valid():
-        return Response({"error": serializer.errors}, status=400)
-
-    question = serializer.save()
-    return Response(QuizQuestionSerializer(question).data)
-
-
-def _resolve_quiz_questions_payload(items: list, default_module: LearningModule) -> "list[QuizQuestion] | Response":
-    """Turns the ordered `questions` array from a quiz create/update payload
-    into an ordered list of QuizQuestion rows -- reusing existing bank
-    questions via {"question_id": N} and authoring new ones (added to the
-    bank AND this quiz in one call) via {"new": {...}}. Returns a Response
-    on validation failure so the caller can return it directly."""
-    resolved: list[QuizQuestion] = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        if item.get("question_id"):
-            try:
-                resolved.append(QuizQuestion.objects.get(pk=item["question_id"]))
-            except QuizQuestion.DoesNotExist:
-                return Response({"error": f"Question {item['question_id']} not found in the bank"}, status=400)
-            continue
-        new_payload = item.get("new")
-        if isinstance(new_payload, dict):
-            serializer = QuizQuestionSerializer(data={
-                "module": new_payload.get("module") or default_module.id,
-                "question_text": str(new_payload.get("question_text") or "").strip(),
-                "question_type": str(
-                    new_payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE
-                ).strip(),
-                "choices": new_payload.get("choices") or [],
-                "correct_answer": str(new_payload.get("correct_answer") or "").strip(),
-                "order": 0,
-            })
-            if not serializer.is_valid():
-                return Response({"error": serializer.errors}, status=400)
-            resolved.append(serializer.save())
-    return resolved
-
-
-@api_view(["GET", "POST"])
-def instructor_quizzes(request: Any) -> Response:
-    actor, error_response = _get_instructor_actor(request)
-    if error_response:
-        return error_response
-
-    if request.method == "GET":
-        quizzes = Quiz.objects.select_related("module").prefetch_related("question_links").order_by("-updated_at")
-        module_id = request.query_params.get("module")
-        if module_id:
-            quizzes = quizzes.filter(module_id=module_id)
-        return Response([
-            {**QuizSerializer(quiz).data, "questionCount": quiz.question_links.count()}
-            for quiz in quizzes
-        ])
-
-    payload = request.data
-    try:
-        module = LearningModule.objects.get(pk=payload.get("module"))
-    except (LearningModule.DoesNotExist, TypeError, ValueError):
-        return Response({"error": "A valid module is required"}, status=400)
-
-    title = str(payload.get("title") or "").strip() or f"{module.title} Quiz"
-    try:
-        passing_score = max(0, min(100, int(payload.get("passing_score") or 70)))
-    except (TypeError, ValueError):
-        return Response({"error": "passing_score must be a number 0-100"}, status=400)
-
-    resolved = _resolve_quiz_questions_payload(payload.get("questions") or [], module)
-    if isinstance(resolved, Response):
-        return resolved
-
-    quiz = Quiz.objects.create(
-        module=module,
-        title=title,
-        passing_score=passing_score,
-        created_by=actor,
-        updated_by=actor,
-    )
-    QuizQuestionLink.objects.bulk_create([
-        QuizQuestionLink(quiz=quiz, question=question, order=index)
-        for index, question in enumerate(resolved)
-    ])
-    return Response(_serialize_quiz(quiz, for_student=False), status=201)
-
-
-@api_view(["GET", "PATCH", "DELETE"])
-def instructor_quiz_detail(request: Any, quiz_id: int) -> Response:
-    actor, error_response = _get_instructor_actor(request)
-    if error_response:
-        return error_response
-
-    quiz = get_object_or_404(Quiz, pk=quiz_id)
-
-    if request.method == "GET":
-        return Response(_serialize_quiz(quiz, for_student=False))
-
-    if request.method == "DELETE":
-        # A quiz's Certificate (and any already-issued UserCertificates) is
-        # CASCADE-linked to the quiz -- refuse to silently destroy earned
-        # certificate records instead of deleting through them.
-        certificate = getattr(quiz, "certificate", None)
-        if certificate and UserCertificate.objects.filter(certificate=certificate).exists():
-            return Response(
-                {"error": "Students have already earned a certificate for this quiz. Unlink the certificate before deleting the quiz."},
-                status=400,
-            )
-        quiz.delete()
-        return Response({"message": "Quiz deleted"})
-
-    payload = request.data
-    if "title" in payload:
-        quiz.title = str(payload.get("title") or quiz.title).strip()
-    if "passing_score" in payload:
-        try:
-            quiz.passing_score = max(0, min(100, int(payload.get("passing_score"))))
-        except (TypeError, ValueError):
-            return Response({"error": "passing_score must be a number 0-100"}, status=400)
-    quiz.updated_by = actor
-    quiz.save()
-
-    if "questions" in payload:
-        resolved = _resolve_quiz_questions_payload(payload.get("questions") or [], quiz.module)
-        if isinstance(resolved, Response):
-            return resolved
-        quiz.question_links.all().delete()
-        QuizQuestionLink.objects.bulk_create([
-            QuizQuestionLink(quiz=quiz, question=question, order=index)
-            for index, question in enumerate(resolved)
-        ])
-
-    return Response(_serialize_quiz(quiz, for_student=False))
-
-
-@api_view(["POST"])
-def instructor_quiz_publish(request: Any, quiz_id: int) -> Response:
-    actor, error_response = _get_instructor_actor(request)
-    if error_response:
-        return error_response
-
-    quiz = get_object_or_404(Quiz, pk=quiz_id)
-    publish = bool(request.data.get("publish", True))
-
-    if not publish:
-        quiz.is_published = False
-        quiz.updated_by = actor
-        quiz.save(update_fields=["is_published", "updated_by", "updated_at"])
-        return Response(_serialize_quiz(quiz, for_student=False))
-
-    if quiz.question_links.count() == 0:
-        return Response({"error": "Add at least one question before publishing"}, status=400)
-
-    quiz.is_published = True
-    quiz.updated_by = actor
-    try:
-        quiz.save(update_fields=["is_published", "updated_by", "updated_at"])
-    except IntegrityError:
-        return Response(
-            {"error": "This module already has a published quiz. Unpublish it first."},
-            status=400,
-        )
-    return Response(_serialize_quiz(quiz, for_student=False))
-
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
@@ -2245,8 +2080,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     by the session (not a client-supplied email).
 
     Expects JSON: { "answers": [{"question_id": 1, "answer": "A"}, ...] }
-    Returns: { score, total, passed, passingScore, certificateEarned,
-               details: [{question_id, correct, expected, given}], state }
+    Returns: { score: int, total: int, details: [{question_id, correct, expected, given}] }
     """
     user = request.user
     answers = request.data.get("answers") or []
@@ -2256,12 +2090,17 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except LearningModule.DoesNotExist:
         return Response({"error": "Module not found"}, status=404)
 
-    quiz = Quiz.objects.filter(module=module, is_published=True).first()
-    if not quiz:
-        return Response({"error": "This module has no published quiz"}, status=404)
+    existing_attempt = QuizAttempt.objects.filter(user=user, module=module).order_by("-created_at").first()
+    if existing_attempt is not None:
+        return Response({
+            "error": "You have already completed this quiz. Each quiz can only be taken once.",
+            "alreadyCompleted": True,
+            "score": existing_attempt.score,
+            "total": existing_attempt.total,
+        }, status=409)
 
     # Build lookup of correct answers
-    questions = _ordered_quiz_questions(quiz)
+    questions = list(QuizQuestion.objects.filter(module=module).all())
     question_map = {q.id: q for q in questions}
 
     if not isinstance(answers, list):
@@ -2295,28 +2134,14 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
 
     total = len(questions)
     score = correct_count
-    passed = bool(total) and (score / total * 100) >= quiz.passing_score
-
-    # First attempt at THIS quiz only -- checked before creating the new
-    # attempt row -- so retaking a quiz can't farm points/completedActivities
-    # indefinitely. Rewarded on first attempt (not first pass): the prior
-    # behavior already rewarded effort regardless of correctness, so this is
-    # the smallest fix that kills the farming bug without changing that.
-    is_first_attempt = not QuizAttempt.objects.filter(user=user, quiz=quiz).exists()
 
     # Any submission completes the module, regardless of score, and updates
     # the student's progress/recent-activity state authoritatively here so
     # completion is guaranteed correct even if the client never re-syncs.
     updated_state = None
-    certificate_earned = False
+    certificate_payload = None
     try:
-        QuizAttempt.objects.create(user=user, module=module, quiz=quiz, score=score, total=total, passed=passed)
-
-        if passed:
-            new_certificate = award_certificate_if_earned_for_quiz(user, quiz)
-            if new_certificate:
-                send_certificate_email_async(new_certificate)
-            certificate_earned = UserCertificate.objects.filter(user=user, certificate__quiz=quiz).exists()
+        QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
 
         learning_state = _get_learning_state_for_user(user)
         state = dict(learning_state.state or {})
@@ -2324,16 +2149,30 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         module_progress[module.module_key] = 100
         state["moduleProgress"] = module_progress
 
-        if is_first_attempt:
-            state["points"] = int(state.get("points") or 0) + 50
-            state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
+        state["points"] = int(state.get("points") or 0) + 50
+        state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
 
         recent_activity = list(state.get("recentActivity") or [])
         recent_activity.insert(0, {
             "icon": "📝",
             "text": f"Completed quiz: {module.title}",
-            "meta": f"{score}/{total} correct" + (" -- passed" if passed else ""),
+            "meta": f"{score}/{total} correct",
         })
+
+        user_certificate = award_module_certificate_if_earned(user, module)
+        if user_certificate is not None:
+            send_certificate_email_async(user_certificate)
+            recent_activity.insert(0, {
+                "icon": "🏆",
+                "text": f"Earned the {user_certificate.certificate.title} certificate",
+                "meta": "Certificate unlocked",
+            })
+            certificate_payload = {
+                "title": user_certificate.certificate.title,
+                "issuedAt": user_certificate.issued_at,
+                "downloadUrl": request.build_absolute_uri(user_certificate.file.url),
+            }
+
         state["recentActivity"] = recent_activity[:10]
 
         state["performance"] = _skill_breakdown_for_user(user)
@@ -2345,15 +2184,36 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except Exception:
         logger.exception("Failed to persist quiz completion state for %s / module %s", user.username, module_id)
 
-    return Response({
-        "score": score,
-        "total": total,
-        "passed": passed,
-        "passingScore": quiz.passing_score,
-        "certificateEarned": certificate_earned,
-        "details": details,
-        "state": updated_state,
-    })
+    return Response({"score": score, "total": total, "details": details, "state": updated_state, "certificate": certificate_payload})
+
+
+@api_view(["PATCH", "DELETE"])
+def module_quiz_question_detail(request: Any, module_id: int, question_id: int) -> Response:
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    module = get_object_or_404(LearningModule, pk=module_id)
+    question = get_object_or_404(QuizQuestion, pk=question_id, module=module)
+
+    if request.method == "DELETE":
+        question.delete()
+        return Response({"message": "Question deleted"})
+
+    payload = request.data.copy()
+    update_data = {
+        "question_text": str(payload.get("question_text") or question.question_text).strip(),
+        "question_type": str(payload.get("question_type") or question.question_type).strip(),
+        "choices": payload.get("choices") if payload.get("choices") is not None else question.choices,
+        "correct_answer": str(payload.get("correct_answer") or question.correct_answer).strip(),
+        "order": int(payload.get("order") or question.order),
+    }
+    serializer = QuizQuestionSerializer(question, data=update_data, partial=True)
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+
+    question = serializer.save()
+    return Response(QuizQuestionSerializer(question).data)
 
 
 @api_view(["GET"])
@@ -2425,32 +2285,10 @@ def instructor_announcements(request: Any) -> Response:
 
     if request.method == "GET":
         try:
-            announcements_qs = Announcement.objects.select_related("created_by", "updated_by").order_by("-updated_at", "-created_at")
-            search = str(request.query_params.get("search") or "").strip()
-            if search:
-                announcements_qs = announcements_qs.filter(Q(title__icontains=search) | Q(message__icontains=search))
-            try:
-                page = max(1, int(request.query_params.get("page") or 1))
-            except Exception:
-                page = 1
-            try:
-                limit = max(1, min(100, int(request.query_params.get("limit") or 10)))
-            except Exception:
-                limit = 10
-
-            total = announcements_qs.count()
-            start = (page - 1) * limit
-            end = start + limit
-            announcements = list(announcements_qs[start:end])
-            return Response({
-                "announcements": AnnouncementSerializer(announcements, many=True).data,
-                "total": total,
-                "page": page,
-                "limit": limit,
-                "search": search,
-            })
+            announcements = Announcement.objects.select_related("created_by", "updated_by").all()
+            return Response(AnnouncementSerializer(announcements, many=True).data)
         except (DatabaseError, OperationalError):
-            return Response({"announcements": [], "total": 0, "page": 1, "limit": 10, "search": ""})
+            return Response([])
 
     serializer = AnnouncementSerializer(data={
         "title": str(request.data.get("title") or "").strip(),
@@ -2702,6 +2540,10 @@ def instructor_upload_sign_video(request: Any) -> Response:
     if "video" not in request.FILES:
         return Response({"error": "No video file provided"}, status=400)
 
+    size_error = _sign_video_size_error(request.FILES["video"])
+    if size_error:
+        return size_error
+
     category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
     valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
     if category not in valid_categories:
@@ -2819,7 +2661,32 @@ def admin_sign_videos(request: Any) -> Response:
         category = str(request.query_params.get("category") or "").strip().lower()
         if category:
             videos = videos.filter(category=category)
-        return Response(AdminSignVideoSerializer(videos, many=True, context={"request": request}).data)
+        search = str(request.query_params.get("search") or "").strip()
+        if search:
+            videos = videos.filter(word__icontains=search)
+
+        try:
+            page = max(1, int(request.query_params.get("page") or 1))
+        except Exception:
+            page = 1
+        try:
+            page_size = max(1, min(50, int(request.query_params.get("pageSize") or 10)))
+        except Exception:
+            page_size = 10
+
+        total = videos.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_videos = videos[start:end]
+        return Response({
+            "videos": AdminSignVideoSerializer(page_videos, many=True, context={"request": request}).data,
+            "pagination": {
+                "page": page,
+                "pageSize": page_size,
+                "total": total,
+                "totalPages": max(1, (total + page_size - 1) // page_size),
+            },
+        })
 
     # POST - upload a new video. Always scoped to Text-to-Sign only.
     word = str(request.data.get("word") or "").strip()
@@ -2828,6 +2695,10 @@ def admin_sign_videos(request: Any) -> Response:
 
     if "video" not in request.FILES:
         return Response({"error": "No video file provided"}, status=400)
+
+    size_error = _sign_video_size_error(request.FILES["video"])
+    if size_error:
+        return size_error
 
     category = str(request.data.get("category") or SignVideo.CATEGORY_PHRASES).strip().lower()
     valid_categories = {choice[0] for choice in SignVideo.CATEGORY_CHOICES}
@@ -2894,6 +2765,9 @@ def admin_sign_video_detail(request: Any, video_id: int) -> Response:
         video.is_published = _safe_bool(request.data.get("is_published"), video.is_published)
 
     if "video" in request.FILES:
+        size_error = _sign_video_size_error(request.FILES["video"])
+        if size_error:
+            return size_error
         if video.video:
             video.video.delete(save=False)
         video.video = request.FILES["video"]
