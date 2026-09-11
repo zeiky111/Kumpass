@@ -6,17 +6,17 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="images/kumpas_logo.png">
+    <link rel="icon" type="image/png" href="images/kumpas_logo.png">
     <title>Kumpas - Interactive Sign Language Learning System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar">
+    <nav class="navbar navbar-home">
         <div class="container navbar-container">
             <a href="index.html" class="logo">
-                <img src="images/kumpas_logo1.png" alt="Kumpas Logo" class="logo-image" style="width:75px;height:75px;object-fit:contain;" loading="lazy">
-                <span>Kumpas</span>
+                <img src="images/logo_transparent.png" alt="Kumpas Logo" class="logo-image" style="width:75px;height:75px;object-fit:contain;" loading="lazy">
             </a>
             
             <ul class="nav-menu" id="navMenu">
@@ -60,8 +60,7 @@
                 <div class="hero-illustration">
                     <div class="illustration-card">
                         <div class="illustration-content">
-                            <img src="images/kumpas_logo.png" alt="Kumpas" style="width:250px;height:250px;object-fit:contain;" loading="lazy">
-                            <h3>Start Learning</h3>
+                            <img src="images/logo_transparent.png" alt="Kumpas" style="width:250px;height:250px;object-fit:contain;" loading="lazy">
                         </div>
                     </div>
                 </div>
@@ -166,45 +165,137 @@
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
+    <!-- Meet the Developers Section -->
+    <section class="developers" id="developers">
         <div class="container">
-            <div class="footer-grid">
-                <div class="footer-section">
-                    <h4>Kumpas</h4>
-                    <p>Interactive Sign Language Learning System for City College of Calapan BSNED Program</p>
-                    <div class="social-links">
-                        <a href="#" title="Facebook"><i class="fab fa-facebook"></i></a>
-                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
-                        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <div class="section-header">
+                <h2>Meet the Developers</h2>
+                <div class="section-underline"></div>
+                <p>The talented team behind our innovative technology</p>
+            </div>
+
+            <div class="developers-grid">
+                <!-- Developer 1 -->
+                <article class="developer-card">
+                    <div class="developer-avatar">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        <img src="images/irish.png" alt="Irish A. Villanueva" loading="lazy" onerror="this.style.display='none'">
                     </div>
-                </div>
-                
-                <div class="footer-section">
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="login.html">Login</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h5>Contact</h5>
-                    <ul>
-                        <li><i class="fas fa-map-marker"></i> City College of Calapan</li>
+                    <h3>Irish A. Villanueva</h3>
+                    <span class="developer-role">Programmer / Technical Writer</span>
+                    <p>UI/UX designer focused on creating accessible and intuitive user experiences.</p>
+                    <div class="developer-social">
+                        <a href="https://www.facebook.com/share/1VVZPZctTy/" title="Facebook" aria-label="Irish A. Villanueva on Facebook" target="_blank" rel="noopener"><i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                        <a href="mailto:irishalda122@gmail.com" title="Email" aria-label="Email Irish A. Villanueva"><i class="fas fa-envelope" aria-hidden="true"></i></a>
+                    </div>
+                </article>
+
+                <!-- Developer 2 -->
+                <article class="developer-card">
+                    <div class="developer-avatar">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        <img src="images/niezl-skye.jpg" alt="Niezl Skye B. De Torres" loading="lazy" onerror="this.style.display='none'">
+                    </div>
+                    <h3>Niezl Skye B. De Torres</h3>
+                    <span class="developer-role">Programmer</span>
+                    <p>Backend specialist with expertise in machine learning and computer vision algorithms.</p>
+                    <div class="developer-social">
+                        <a href="https://www.facebook.com/share/1NfPUxsw8V/" title="Facebook" aria-label="Niezl Skye B. De Torres on Facebook" target="_blank" rel="noopener"><i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                        <a href="mailto:detorresniezlskye@gmail.com" title="Email" aria-label="Email Niezl Skye B. De Torres"><i class="fas fa-envelope" aria-hidden="true"></i></a>
+                    </div>
+                </article>
+
+                <!-- Developer 3 -->
+                <article class="developer-card">
+                    <div class="developer-avatar">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        <img src="images/ma.danielle.jpg" alt="Ma. Danielle A. Ramos" loading="lazy" onerror="this.style.display='none'">
+                    </div>
+                    <h3>Ma. Danielle A. Ramos</h3>
+                    <span class="developer-role">Technical Writer</span>
+                    <p>Specialized in sign language recognition and natural language processing.</p>
+                    <div class="developer-social">
+                        <a href="https://www.facebook.com/share/1DjjRnpwDw/" title="Facebook" aria-label="Ma. Danielle A. Ramos on Facebook" target="_blank" rel="noopener"><i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                        <a href="mailto:ramosdanielle413@gmail.com" title="Email" aria-label="Email Ma. Danielle A. Ramos"><i class="fas fa-envelope" aria-hidden="true"></i></a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="site-footer-glow glow-1"></div>
+        <div class="site-footer-glow glow-2"></div>
+
+        <div class="container site-footer-inner">
+            <!-- Newsletter -->
+            <div class="footer-newsletter">
+                <h3>Connect with KUMPAS</h3>
+                <p>Stay updated with the latest learning resources and announcements.</p>
+                <form class="newsletter-form" onsubmit="return false;">
+                    <label class="newsletter-input-wrap">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" placeholder="Enter your email" aria-label="Email address" required>
+                    </label>
+                    <button type="submit" class="newsletter-btn">Subscribe</button>
+                </form>
+            </div>
+
+            <!-- Main columns -->
+            <div class="site-footer-grid">
+                <div class="site-footer-col site-footer-brand">
+                    <img src="images/logo_transparent.png" alt="Kumpas Logo" class="site-footer-logo" loading="lazy">
+                    <p>Interactive Sign Language Learning System for City College of Calapan BSNED Program.</p>
+                    <ul class="site-footer-contact">
+                        <li><i class="fas fa-location-dot"></i> City College of Calapan</li>
                         <li><i class="fas fa-envelope"></i> <a href="mailto:kumpas@gmail.com">kumpas@gmail.com</a></li>
                         <li><i class="fas fa-phone"></i> <a href="tel:+63000000000">+63 (0) 000-0000</a></li>
                     </ul>
                 </div>
+
+                <div class="site-footer-col">
+                    <h5>Quick Links</h5>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#developers">About</a></li>
+                        <li><a href="mailto:kumpas@gmail.com">Contact</a></li>
+                        <li><a href="login.html">Login</a></li>
+                    </ul>
+                </div>
+
+                <div class="site-footer-col">
+                    <h5>Learning Resources</h5>
+                    <ul>
+                        <li><a href="learning.html">Learning Modules</a></li>
+                        <li><a href="games.html">Sign Language Games</a></li>
+                        <li><a href="text-to-sign.html">Text-to-Sign Translator</a></li>
+                        <li><a href="sign-to-text.html">Sign-to-Text Translator</a></li>
+                        <li><a href="profile.html">Certificates</a></li>
+                    </ul>
+                </div>
+
+                <div class="site-footer-col">
+                    <h5>Support</h5>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">FAQs</a></li>
+                        <li><a href="#">Accessibility</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
             </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2026 Kumpas - Interactive Sign Language Learning System. All rights reserved.</p>
-                <div class="footer-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Accessibility</a>
+
+            <div class="site-footer-divider"></div>
+
+            <div class="site-footer-bottom">
+                <p>&copy; 2026 Kumpas. All rights reserved.</p>
+                <div class="site-footer-social">
+                    <a href="#" title="Facebook" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" title="Instagram" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="#" title="YouTube" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
                 </div>
             </div>
         </div>
