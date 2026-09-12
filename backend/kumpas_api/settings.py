@@ -124,7 +124,13 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Trust local frontend dev servers for CSRF origin checks during development.
+# "null" is the literal Origin value browsers send for file:// pages (e.g.
+# double-clicking login.html) -- Django's CsrfViewMiddleware adds each
+# CSRF_TRUSTED_ORIGINS entry that isn't a wildcard subdomain to an exact-match
+# set, so the raw string "null" here really does match that Origin header
+# (mirrors the same "null" entry already in CORS_ALLOWED_ORIGINS above).
 CSRF_TRUSTED_ORIGINS = [
+    "null",
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://127.0.0.1:5501",
