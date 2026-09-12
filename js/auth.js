@@ -285,19 +285,39 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!configuredClientId) {
             googleSignInContainer.style.display = 'none';
         } else {
+            let initialized = false;
+
+            // Google's button is a fixed-pixel-width iframe, not a responsive
+            // element -- measure the form so it matches the width of the
+            // inputs/submit button above/below it instead of floating as a
+            // narrower, centered box. 400 is the widest size Google supports.
+            const getButtonWidth = () => {
+                // googleSignInContainer is a sibling of the form, not inside
+                // it, so measure the form itself -- its parent (auth-form-container)
+                // has its own padding and would overstate the available width.
+                const authFormContainer = googleSignInContainer.closest('.auth-form-container');
+                const reference = (authFormContainer && authFormContainer.querySelector('.auth-form')) || googleSignInContainer.parentElement;
+                const measured = reference ? reference.getBoundingClientRect().width : 0;
+                return Math.max(200, Math.min(400, Math.round(measured) || 320));
+            };
+
             const renderGoogleButton = () => {
                 if (!window.google || !window.google.accounts || !window.google.accounts.id) return false;
-                google.accounts.id.initialize({
-                    client_id: configuredClientId,
-                    callback: handleGoogleCredentialResponse,
-                    auto_select: false
-                });
+                if (!initialized) {
+                    google.accounts.id.initialize({
+                        client_id: configuredClientId,
+                        callback: handleGoogleCredentialResponse,
+                        auto_select: false
+                    });
+                    initialized = true;
+                }
+                googleSignInContainer.innerHTML = '';
                 google.accounts.id.renderButton(googleSignInContainer, {
                     theme: 'outline',
                     size: 'large',
                     shape: 'rectangular',
                     text: 'continue_with',
-                    width: 320
+                    width: getButtonWidth()
                 });
                 return true;
             };
@@ -314,6 +334,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 200);
             }
+
+            // Re-render at the new width when the layout changes (e.g. the
+            // window is resized across the mobile/desktop breakpoint).
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(renderGoogleButton, 200);
+            });
         }
     }
 
