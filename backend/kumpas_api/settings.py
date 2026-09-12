@@ -18,7 +18,10 @@ CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
 # ID > Web application). Used to verify the ID token Google Identity Services
 # sends from the "Continue with Google" button. Not a secret -- it's also
 # embedded in the frontend JS -- but must match on both sides.
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_ID = os.getenv(
+    "GOOGLE_CLIENT_ID",
+    "747897750553-fiq4oth29f31qkfvm16khenht6e3q8mo.apps.googleusercontent.com",
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
