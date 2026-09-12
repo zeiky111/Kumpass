@@ -151,8 +151,7 @@
 
                     <div class="result-actions">
                         <button class="btn-secondary" onclick="clearTranscript()"><i class="fas fa-rotate-left"></i> Clear</button>
-                        <button class="btn-secondary" onclick="copyTranscriptText()"><i class="fas fa-copy"></i> Copy Text</button>
-                        <button class="btn-primary" onclick="speakTranscriptText()"><i class="fas fa-volume-high"></i> Listen</button>
+                        <button class="btn-primary" onclick="copyTranscriptText()"><i class="fas fa-copy"></i> Copy Text</button>
                     </div>
 
                     <div class="result-footer">
@@ -414,7 +413,7 @@
 
         .result-actions {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.6rem;
             margin-bottom: 0.9rem;
         }
@@ -1835,9 +1834,9 @@
             if (index < 0 || index >= detectionHistoryEntries.length) return;
             const entry = detectionHistoryEntries[index];
 
-            // Copy Text/Listen now read straight from detectionHistoryEntries
-            // (see getFinalDetectedText), so removing it here is enough --
-            // there's no separate transcript copy left to keep in sync.
+            // Copy Text now reads straight from detectionHistoryEntries (see
+            // getFinalDetectedText), so removing it here is enough -- there's
+            // no separate transcript copy left to keep in sync.
             if (index === 0) {
                 if (lastPrediction === entry.label) lastPrediction = '';
 
@@ -1876,8 +1875,8 @@
 
         // Single source of truth for "the final result" -- the detection
         // history list, oldest first, joined into words. Deleting an entry
-        // (deleteDetectionEntry) removes it from this array, so Copy/Listen
-        // never include something the player has already deleted, and each
+        // (deleteDetectionEntry) removes it from this array, so Copy Text
+        // never includes something the player has already deleted, and each
         // entry is already a finalized letter or whole word (see
         // commitCurrentWord), never spelled out one raw letter at a time.
         function getFinalDetectedText() {
@@ -1902,24 +1901,6 @@
                     transcript.hidden = true;
                 }
             }
-        }
-
-        function speakTranscriptText() {
-            if (!('speechSynthesis' in window)) return;
-            const text = getFinalDetectedText();
-            if (!text) return;
-            window.speechSynthesis.cancel();
-            // Detected labels are stored ALL CAPS for on-screen display, but
-            // most browser TTS voices treat a short all-caps token as an
-            // acronym and spell it out letter by letter (e.g. "CAT" -> "C
-            // A T") instead of saying the word. Lowercasing before speaking
-            // (display text is untouched) makes multi-letter words get
-            // pronounced normally, while single letters still read out as
-            // just that letter -- exactly what each case should sound like.
-            const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
-            utterance.lang = 'en-US';
-            utterance.rate = 0.95;
-            window.speechSynthesis.speak(utterance);
         }
 
         function exportTranscript() {
@@ -2016,7 +1997,7 @@
             // Drop those now-superseded per-letter rows -- they're the most
             // recently pushed entries (unshifted, so they sit at the front)
             // -- and replace them with the single finalized word below, so
-            // the history list (and Copy/Listen, which read from it) show
+            // the history list (and Copy Text, which reads from it) show
             // "CAT" once instead of "C", "A", "T", "CAT".
             detectionHistoryEntries.splice(0, Math.min(handState.currentWord.length, detectionHistoryEntries.length));
 
