@@ -10,6 +10,25 @@ function getCookie(name) {
     return '';
 }
 
+// Render's free tier spins the backend down after ~15 minutes idle, so the
+// first request after a while can hit a cold start and fail to connect
+// before the dyno finishes waking up. Retrying a couple times with a short
+// delay covers that window instead of surfacing a hard failure immediately.
+async function fetchWithRetry(url, options, attempts = 3, delayMs = 4000) {
+    let lastError;
+    for (let i = 0; i < attempts; i++) {
+        try {
+            return await fetch(url, options);
+        } catch (error) {
+            lastError = error;
+            if (i < attempts - 1) {
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+    }
+    throw lastError;
+}
+
 async function ensureCsrfToken(base = DEFAULT_API_BASE) {
     const existingToken = getCookie('csrftoken');
     if (existingToken) {
@@ -17,7 +36,7 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
     }
 
     try {
-        const response = await fetch(`${base}/auth/csrf/`, {
+        const response = await fetchWithRetry(`${base}/auth/csrf/`, {
             method: 'GET',
             credentials: 'include'
         });
@@ -38,7 +57,7 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
 // Check if user is authenticated with the backend
 async function isUserAuthenticated() {
     try {
-        const response = await fetch(`${DEFAULT_API_BASE}/auth/me/`, {
+        const response = await fetchWithRetry(`${DEFAULT_API_BASE}/auth/me/`, {
             method: 'GET',
             credentials: 'include' // Important: send cookies
         });
@@ -51,7 +70,7 @@ async function isUserAuthenticated() {
 // Get current user from backend session
 async function getCurrentUser() {
     try {
-        const response = await fetch(`${DEFAULT_API_BASE}/auth/me/`, {
+        const response = await fetchWithRetry(`${DEFAULT_API_BASE}/auth/me/`, {
             method: 'GET',
             credentials: 'include'
         });
@@ -109,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let response;
         try {
             const csrfToken = await ensureCsrfToken(base);
-            response = await fetch(getUrl(path, base), {
+            response = await fetchWithRetry(getUrl(path, base), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -119,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(payload)
             });
         } catch (error) {
-            throw new Error(`Cannot reach the backend at ${base}. Start the Django server and try again.`);
+            throw new Error('We could not reach the server. It may still be waking up -- please wait a few seconds and try again.');
         }
 
         let data = {};
@@ -350,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // the default backend).
                     const msg = String(firstError && firstError.message || '');
                     const status = firstError && firstError.status;
-                    const networkFailed = msg.includes('Cannot reach the backend') || msg.includes('Failed to fetch') || msg.includes('NetworkError');
+                    const networkFailed = msg.includes('could not reach the server') || msg.includes('Failed to fetch') || msg.includes('NetworkError');
                     const shouldRetryWithDefault = API_BASE !== DEFAULT_API_BASE && (networkFailed || status === 401);
                     if (shouldRetryWithDefault) {
                         console.warn('Retrying login using default backend API base because stored API base failed:', msg || status);
