@@ -54,17 +54,25 @@ async function ensureCsrfToken(base = DEFAULT_API_BASE) {
     }
 }
 
-// Check if user is authenticated with the backend
-async function isUserAuthenticated() {
+// Checks the backend session and reports which of three things happened:
+// 'authenticated' / 'unauthenticated' (the server actually responded), or
+// 'unreachable' (every retry failed to connect -- a slow Render cold start
+// or network blip, which is NOT the same thing as being logged out).
+async function checkAuthStatus(attempts, delayMs) {
     try {
         const response = await fetchWithRetry(`${DEFAULT_API_BASE}/auth/me/`, {
             method: 'GET',
             credentials: 'include' // Important: send cookies
-        });
-        return response.ok;
+        }, attempts, delayMs);
+        return response.ok ? 'authenticated' : 'unauthenticated';
     } catch (_) {
-        return false;
+        return 'unreachable';
     }
+}
+
+// Check if user is authenticated with the backend
+async function isUserAuthenticated() {
+    return (await checkAuthStatus()) === 'authenticated';
 }
 
 // Get current user from backend session
@@ -82,10 +90,16 @@ async function getCurrentUser() {
     }
 }
 
-// Require authentication on protected pages
+// Require authentication on protected pages. Only redirects to login when
+// the backend actually confirms the session is invalid -- a cold-start or
+// network blip ('unreachable') leaves the user on the page instead of
+// bouncing them out, since that would look like an unexplained auto-logout
+// for a still-valid session. Give this check a much longer retry budget
+// than the default (up to ~1 minute) to comfortably outlast a Render
+// free-tier cold start, since this runs on every protected page load.
 async function requireAuth() {
-    const isAuth = await isUserAuthenticated();
-    if (!isAuth) {
+    const status = await checkAuthStatus(8, 7000);
+    if (status === 'unauthenticated') {
         window.location.replace('login.html');
         return false;
     }
