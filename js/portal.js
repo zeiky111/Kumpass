@@ -1279,10 +1279,6 @@
       `;
 
       container.innerHTML = `
-        <div class="section-header">
-          <h2>${yearLabel} Activities</h2>
-          <p>Progressive learning activities tailored for your level</p>
-        </div>
         <div class="activities-grid grid grid-3">
           ${cardBlocks}
         </div>
