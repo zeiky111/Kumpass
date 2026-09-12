@@ -145,6 +145,7 @@
         /* Score Section */
         .score-section {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
         }
 
@@ -643,6 +644,10 @@
                         <div class="label">Total</div>
                         <div class="value" id="total">0</div>
                     </div>
+                    <div class="score-box">
+                        <div class="label">High Score</div>
+                        <div class="value" id="highScore">0</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -708,6 +713,32 @@
             pointBase: { easy: 10, medium: 14, hard: 18 },
         });
 
+        // High score is kept per-user (keyed by email) so different accounts
+        // sharing a browser don't clobber each other's best; falls back to a
+        // shared 'guest' bucket if no email is available yet.
+        let highScore = 0;
+        let highScoreKey = 'kumpasHighScore_signMatch_guest';
+
+        function initHighScore() {
+            const currentUser = window.KumpasPortal && typeof window.KumpasPortal.getCurrentUser === 'function'
+                ? window.KumpasPortal.getCurrentUser()
+                : null;
+            const email = currentUser && currentUser.email ? currentUser.email.trim().toLowerCase() : '';
+            highScoreKey = `kumpasHighScore_signMatch_${email || 'guest'}`;
+            highScore = parseInt(localStorage.getItem(highScoreKey), 10) || 0;
+            const el = document.getElementById('highScore');
+            if (el) el.textContent = highScore;
+        }
+
+        function maybeUpdateHighScore() {
+            if (engine.state.score > highScore) {
+                highScore = engine.state.score;
+                localStorage.setItem(highScoreKey, String(highScore));
+                const el = document.getElementById('highScore');
+                if (el) el.textContent = highScore;
+            }
+        }
+
         let activeQuestions = [];
         let currentIndex = 0;
         let answered = false;
@@ -734,12 +765,29 @@
             }
         }
 
+        // A-Z alphabet signs are single letters; everything else (words/phrases)
+        // should only be mixed with other words -- never letters with words.
+        function isSingleLetter(label) {
+            return /^[a-z]$/i.test(String(label || '').trim());
+        }
+
         function buildOptions(question) {
             const count = engine.getChoiceCount();
+            const wantLetter = isSingleLetter(question.label);
             const otherLabels = allWordLabels
                 .filter(label => engine.normalizeText(label) !== engine.normalizeText(question.label));
 
-            const distractors = engine.shuffle(otherLabels).slice(0, Math.max(1, count - 1));
+            const sameType = otherLabels.filter(label => isSingleLetter(label) === wantLetter);
+            const needed = Math.max(1, count - 1);
+            let distractors = engine.shuffle(sameType).slice(0, needed);
+
+            // Fallback only if the same-type pool can't fill every slot (e.g. a
+            // very small word bank), so the game never breaks for lack of options.
+            if (distractors.length < needed) {
+                const otherType = otherLabels.filter(label => isSingleLetter(label) !== wantLetter);
+                distractors = distractors.concat(engine.shuffle(otherType).slice(0, needed - distractors.length));
+            }
+
             const base = [question.label, ...distractors];
             return engine.shuffle(base);
         }
@@ -880,6 +928,7 @@
             document.getElementById('score').textContent = engine.state.score;
             document.getElementById('correct').textContent = engine.state.correct;
             document.getElementById('total').textContent = engine.state.total;
+            maybeUpdateHighScore();
         }
 
         function clearFeedback() {
@@ -903,8 +952,12 @@
                     item => (item.prompt && item.media_url) ? { label: item.prompt, video: item.media_url } : null
                 );
             }),
+            window.KumpasPortal && typeof window.KumpasPortal.ensureCurrentUser === 'function'
+                ? window.KumpasPortal.ensureCurrentUser().catch(() => null)
+                : Promise.resolve(null),
         ])
             .then(() => {
+                initHighScore();
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
                     medium: engine.totalLevelsForDifficulty('medium') || 0,
