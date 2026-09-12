@@ -10,4 +10,4 @@
 //   2. Under "Authorized JavaScript origins" add every origin this app is
 //      served from (e.g. http://127.0.0.1:5500, https://kumpass-frontend.onrender.com).
 //   3. Paste the resulting "....apps.googleusercontent.com" client ID below.
-const GOOGLE_CLIENT_ID = '';
+const GOOGLE_CLIENT_ID = '747897750553-fiq4oth29f31qkfvm16khenht6e3q8mo.apps.googleusercontent.com';
