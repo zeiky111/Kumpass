@@ -1,8 +1,9 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v2';
-// auth.js and main.js are deliberately excluded: they drive login/redirect
-// logic, and a stale cache-first copy of either can silently break login
-// (a bug fix ships but the old cached script keeps running) with no way
+var CACHE_NAME = 'kumpas-cache-v3';
+// auth.js, main.js, and google-config.js are deliberately excluded: they
+// drive login/redirect logic and Google Sign-In configuration, and a stale
+// cache-first copy of any of them can silently break login (a bug fix or
+// config change ships but the old cached script keeps running) with no way
 // for the user to recover short of manually clearing site data.
 var PRECACHE_URLS = [
   'css/style.css',
@@ -16,7 +17,7 @@ var PRECACHE_URLS = [
   'images/kumpas_logo.png',
   'images/kumpas_logo1.png'
 ];
-var NETWORK_ONLY_SCRIPTS = /\/js\/(auth|main)\.js$/;
+var NETWORK_ONLY_SCRIPTS = /\/js\/(auth|main|google-config)\.js$/;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
