@@ -287,19 +287,25 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             let initialized = false;
 
-            // Google's button is a fixed-pixel-width iframe, not a responsive
-            // element -- measure the form so it matches the width of the
+            // Measure the form so the button targets the same width as the
             // inputs/submit button above/below it instead of floating as a
-            // narrower, centered box. 400 is the widest size Google supports.
-            const getButtonWidth = () => {
+            // narrower, centered box.
+            const getTargetWidth = () => {
                 // googleSignInContainer is a sibling of the form, not inside
                 // it, so measure the form itself -- its parent (auth-form-container)
                 // has its own padding and would overstate the available width.
                 const authFormContainer = googleSignInContainer.closest('.auth-form-container');
                 const reference = (authFormContainer && authFormContainer.querySelector('.auth-form')) || googleSignInContainer.parentElement;
                 const measured = reference ? reference.getBoundingClientRect().width : 0;
-                return Math.max(200, Math.min(400, Math.round(measured) || 320));
+                return Math.max(200, Math.round(measured) || 320);
             };
+
+            // Google's official button can only be rendered up to 400px wide --
+            // requesting more is silently clamped back down to 400. On wide
+            // desktop forms that's narrower than the full-width Sign In/Create
+            // Account button next to it, so scale the rendered button up to
+            // fill the rest of the target width instead of leaving it short.
+            const GOOGLE_BUTTON_MAX_WIDTH = 400;
 
             const renderGoogleButton = () => {
                 if (!window.google || !window.google.accounts || !window.google.accounts.id) return false;
@@ -311,14 +317,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     initialized = true;
                 }
+                const targetWidth = getTargetWidth();
+                const renderWidth = Math.min(GOOGLE_BUTTON_MAX_WIDTH, targetWidth);
                 googleSignInContainer.innerHTML = '';
                 google.accounts.id.renderButton(googleSignInContainer, {
                     theme: 'outline',
                     size: 'large',
                     shape: 'rectangular',
                     text: 'continue_with',
-                    width: getButtonWidth()
+                    width: renderWidth
                 });
+                const renderedButton = googleSignInContainer.firstElementChild;
+                if (renderedButton && targetWidth > renderWidth) {
+                    renderedButton.style.transformOrigin = 'left top';
+                    renderedButton.style.transform = `scaleX(${targetWidth / renderWidth})`;
+                } else if (renderedButton) {
+                    renderedButton.style.transform = '';
+                }
                 return true;
             };
 
