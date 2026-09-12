@@ -11,10 +11,18 @@ from django.contrib.auth.models import User
 # Cloudinary is actually configured, since the package raises
 # ImproperlyConfigured at import time otherwise.
 if getattr(settings, "CLOUDINARY_URL", ""):
-    from cloudinary_storage.storage import RawMediaCloudinaryStorage
+    from cloudinary_storage.storage import RawMediaCloudinaryStorage, VideoMediaCloudinaryStorage
     RAW_FILE_STORAGE = RawMediaCloudinaryStorage()
+    # Actual video files (SignVideo.video) must use resource_type="video", not
+    # "raw" -- Cloudinary's raw uploads are for arbitrary binary files and
+    # don't serve back correctly as playable video, which is why sign videos
+    # were 404ing on the Text-to-Sign/Games pages in production even though
+    # the same files play fine locally (plain filesystem storage, no
+    # resource_type concept).
+    VIDEO_FILE_STORAGE = VideoMediaCloudinaryStorage()
 else:
     RAW_FILE_STORAGE = None
+    VIDEO_FILE_STORAGE = None
 
 
 class SignPredictionLog(models.Model):
@@ -322,10 +330,11 @@ class SignVideo(models.Model):
     key = models.CharField(max_length=120, unique=True, db_index=True)
     word = models.CharField(max_length=150)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default=CATEGORY_PHRASES)
-    # Same reasoning as ModuleFile/UserCertificate above: Render's disk is
-    # ephemeral, so these must land in Cloudinary (raw, not the default
-    # image-typed storage) to survive a deploy/restart instead of 404ing.
-    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/", storage=RAW_FILE_STORAGE)
+    # Same "Render's disk is ephemeral" reasoning as ModuleFile/UserCertificate
+    # above, but these are actual video files, so they need Cloudinary's
+    # video resource type (not raw, and not the default image-typed storage)
+    # to survive a deploy/restart AND serve back as playable video.
+    video = models.FileField(upload_to="sign_videos/%Y/%m/%d/", storage=VIDEO_FILE_STORAGE)
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
     # True for videos uploaded via the Admin "Sign Language Videos" manager --

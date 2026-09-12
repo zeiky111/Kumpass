@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
+    <link rel="apple-touch-icon" href="images/logo_transparent.png">
+    <link rel="icon" type="image/png" href="images/logo_transparent.png">
     <title>Register - Kumpas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260912">
     <link rel="stylesheet" href="css/pages.css">
 </head>
 <body class="register-page">
@@ -17,7 +18,7 @@
             <!-- Sidebar -->
             <div class="auth-sidebar">
                 <div class="logo auth-brand">
-                    <img src="images/kumpas_logo.png" alt="Kumpas logo" class="auth-brand-logo" loading="lazy">
+                    <img src="images/logo_transparent.png" alt="Kumpas logo" class="auth-brand-logo" loading="lazy">
                     <div class="auth-brand-text">
                         <span>Kumpas</span>
                         <small>Sign Language Learning System</small>
@@ -36,6 +37,9 @@
                     <h1>Create Account</h1>
                     <p>Sign up to begin your FSL learning journey</p>
                 </div>
+
+                <div class="google-signin-container" id="googleSignInContainer"></div>
+                <div class="divider"><span>OR</span></div>
 
                 <form class="auth-form" id="registerForm">
                     <div class="form-group">
@@ -108,6 +112,8 @@
         </div>
     </div>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="js/google-config.js"></script>
     <script src="js/main.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/pwa.js"></script>

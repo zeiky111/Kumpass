@@ -6,6 +6,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="images/kumpas_logo.png">
+    <link rel="icon" type="image/png" href="images/kumpas_logo.png">
     <title>Sentence Builder Game - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260801">
     <link rel="stylesheet" href="css/dashboard.css?v=20260801">
@@ -709,8 +710,8 @@
             align-items: center;
             justify-content: center;
             border-radius: 26px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+            background: radial-gradient(circle, rgba(37,99,235,0.14) 0%, rgba(124,58,237,0.06) 65%, transparent 100%);
+            box-shadow: none;
         }
 
         .sidebar-logo {
@@ -754,7 +755,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
+                    <img src="images/logo_transparent.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -797,6 +798,10 @@
                     <div class="score-box" id="timeBox" style="display:none;">
                         <div class="label">Time Left</div>
                         <div class="value" id="time">0s</div>
+                    </div>
+                    <div class="score-box">
+                        <div class="label">High Score</div>
+                        <div class="value" id="highScore">0</div>
                     </div>
                 </div>
             </div>
@@ -899,6 +904,32 @@
             choiceCounts: EXTRA_WORD_COUNTS,
             pointBase: { easy: 15, medium: 20, hard: 25 },
         });
+
+        // High score is kept per-user (keyed by email) so different accounts
+        // sharing a browser don't clobber each other's best; falls back to a
+        // shared 'guest' bucket if no email is available yet.
+        let highScore = 0;
+        let highScoreKey = 'kumpasHighScore_sentence_guest';
+
+        function initHighScore() {
+            const currentUser = window.KumpasPortal && typeof window.KumpasPortal.getCurrentUser === 'function'
+                ? window.KumpasPortal.getCurrentUser()
+                : null;
+            const email = currentUser && currentUser.email ? currentUser.email.trim().toLowerCase() : '';
+            highScoreKey = `kumpasHighScore_sentence_${email || 'guest'}`;
+            highScore = parseInt(localStorage.getItem(highScoreKey), 10) || 0;
+            const el = document.getElementById('highScore');
+            if (el) el.textContent = highScore;
+        }
+
+        function maybeUpdateHighScore() {
+            if (engine.state.score > highScore) {
+                highScore = engine.state.score;
+                localStorage.setItem(highScoreKey, String(highScore));
+                const el = document.getElementById('highScore');
+                if (el) el.textContent = highScore;
+            }
+        }
 
         let activeQuestions = [];
         let currentIndex = 0;
@@ -1144,6 +1175,7 @@
             document.getElementById('score').textContent = engine.state.score;
             document.getElementById('correct').textContent = engine.state.correct;
             document.getElementById('total').textContent = engine.state.total;
+            maybeUpdateHighScore();
         }
 
         function clearFeedback() {
@@ -1176,8 +1208,12 @@
             KumpasGames.loadGameLevels('sentence').then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(levels, mapSentenceItem);
             }),
+            window.KumpasPortal && typeof window.KumpasPortal.ensureCurrentUser === 'function'
+                ? window.KumpasPortal.ensureCurrentUser().catch(() => null)
+                : Promise.resolve(null),
         ])
             .then(() => {
+                initHighScore();
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
                     medium: engine.totalLevelsForDifficulty('medium') || 0,

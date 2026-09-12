@@ -18,6 +18,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 import logging
 
 logger = logging.getLogger(__name__)
@@ -974,6 +976,109 @@ def login(request: Any) -> Response:
             "redirect": _redirect_for_role(profile.role),
         }
     )
+
+
+@csrf_exempt
+@api_view(["POST"])
+def google_auth(request: Any) -> Response:
+    """Sign in (or register) using a Google Identity Services ID token.
+
+    The frontend's "Continue with Google" button hands back a signed JWT
+    ("credential") straight from Google -- verify its signature/audience/
+    issuer server-side rather than trusting any profile data the client
+    might send, then find-or-create the matching account by email so a
+    Google login always resolves to the same account as an email/password
+    one instead of creating a duplicate.
+    """
+    credential = str(request.data.get("credential") or "").strip()
+    if not credential:
+        return Response({"error": "Missing Google credential"}, status=400)
+
+    client_id = getattr(settings, "GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return Response({"error": "Google sign-in is not configured on the server"}, status=500)
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            credential, google_auth_requests.Request(), client_id
+        )
+    except ValueError:
+        return Response({"error": "Invalid or expired Google credential"}, status=401)
+
+    if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        return Response({"error": "Invalid Google credential issuer"}, status=401)
+
+    email = str(idinfo.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "Your Google account has no email address"}, status=400)
+    if not idinfo.get("email_verified"):
+        return Response({"error": "Your Google email address is not verified"}, status=400)
+
+    given_name = _normalize_name_part(idinfo.get("given_name") or "")
+    family_name = _normalize_name_part(idinfo.get("family_name") or "")
+
+    # Same identifier convention as signup(): username == email. Look up by
+    # either so a Google login lands on an existing email/password account
+    # instead of creating a duplicate.
+    user = User.objects.select_related("profile").filter(email__iexact=email).first()
+    if not user:
+        user = User.objects.select_related("profile").filter(username__iexact=email).first()
+
+    created = False
+    if not user:
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=given_name,
+            last_name=family_name,
+        )
+        # No password is ever set for a Google-only account -- the user can
+        # still add one later, but they can't be brute-forced via /auth/login/.
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+        created = True
+
+    # Google already verified this email address, so there's nothing left to
+    # gate an account on -- activate immediately instead of sending an OTP.
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        full_name = (
+            str(idinfo.get("name") or "").strip()
+            or " ".join(part for part in [given_name, family_name] if part)
+            or email.split("@")[0]
+        )
+        profile = UserProfile.objects.create(
+            user=user,
+            full_name=full_name,
+            first_name=given_name,
+            last_name=family_name,
+            # Public sign-in only ever creates student accounts, same as signup().
+            role="student",
+            year_level="",
+        )
+
+    # No password was checked (there may not be one), so authenticate() can't
+    # be used here -- tell django_login() which backend vouches for this user.
+    user.backend = "django.contrib.auth.backends.ModelBackend"
+    django_login(request, user)
+    _get_learning_state_for_user(user)
+
+    return Response({
+        "message": "Account created" if created else "Login successful",
+        "user": {
+            "id": user.id,
+            "name": profile.full_name or user.first_name or user.username.split("@")[0],
+            "email": user.email,
+            "username": user.username,
+            "yearLevel": profile.year_level,
+            "role": profile.role,
+        },
+        "redirect": _redirect_for_role(profile.role),
+    }, status=201 if created else 200)
 
 
 @csrf_exempt

@@ -6,8 +6,9 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="images/kumpas_logo.png">
+    <link rel="icon" type="image/png" href="images/kumpas_logo.png">
     <title>Leaderboard - Kumpas</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260912">
     <link rel="stylesheet" href="css/pages.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/bg-orbs.css">
@@ -411,7 +412,13 @@
 
         .podium-section {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            /* repeat(3, 1fr) always reserved 3 equal columns even with
+               fewer than 3 players, leaving large empty tracks beside a
+               single podium card. auto-fit collapses unused tracks, and
+               capping the max (instead of 1fr) plus centering keeps cards
+               from stretching to fill the leftover width instead. */
+            grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
+            justify-content: center;
             gap: 1.5rem;
             padding: 2rem;
             background: linear-gradient(135deg, #eef4ff 0%, #e8eefc 100%);
@@ -953,8 +960,8 @@
             align-items: center;
             justify-content: center;
             border-radius: 26px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            box-shadow: 0 14px 28px rgba(37,99,235,0.32);
+            background: radial-gradient(circle, rgba(37,99,235,0.14) 0%, rgba(124,58,237,0.06) 65%, transparent 100%);
+            box-shadow: none;
         }
 
         .sidebar-logo {
