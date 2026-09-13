@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 
 from .models import (
@@ -109,10 +111,76 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         ]
 
 
+def _normalize_word_key(value):
+    cleaned = re.sub(r"[^a-z0-9\s']", " ", str(value or "").lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def build_sign_video_lookup(request=None):
+    """Maps normalized word -> current video URL, built fresh from SignVideo.
+
+    GameLevelItem.media_url (and each extra_data.pool entry's media_url) is a
+    plain string frozen at whatever moment a past migration/import wrote it --
+    Render's disk is ephemeral, so once that exact file is gone (wiped on a
+    later deploy, or replaced by a differently-named re-upload), the frozen
+    path 404s forever even though the same word's video still exists in
+    SignVideo, just under a different path. Resolving against the live table
+    at serialize time keeps game levels working without needing a one-off
+    data-repair pass every time SignVideo's storage/paths change.
+    """
+    lookup = {}
+    for video in SignVideo.objects.exclude(video="").only("word", "video"):
+        key = _normalize_word_key(video.word)
+        if not key or not video.video:
+            continue
+        try:
+            url = request.build_absolute_uri(video.video.url) if request else video.video.url
+        except Exception:
+            continue
+        lookup[key] = url
+    return lookup
+
+
 class GameLevelItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameLevelItem
         fields = ["id", "level", "prompt", "answer", "media_url", "extra_data", "order", "created_at", "updated_at"]
+
+    def _sign_video_lookup(self):
+        # Views pre-build this once per request and pass it via context
+        # (context is shared across every nested item serializer DRF creates
+        # for a many=True list), so the SignVideo table is queried once per
+        # request instead of once per item. Falls back to building it here
+        # for any call site that didn't pass one in.
+        if not hasattr(self, "_cached_sign_video_lookup"):
+            passed_in = self.context.get("sign_video_lookup")
+            self._cached_sign_video_lookup = (
+                passed_in if passed_in is not None else build_sign_video_lookup(self.context.get("request"))
+            )
+        return self._cached_sign_video_lookup
+
+    def _resolve_media_url(self, prompt, stored_url):
+        live_url = self._sign_video_lookup().get(_normalize_word_key(prompt))
+        return live_url or stored_url
+
+    # media_url/extra_data stay normal writable model fields (instructor CRUD
+    # endpoints save them directly) -- only the READ side is patched here, so
+    # writes are completely unaffected.
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["media_url"] = self._resolve_media_url(data.get("prompt"), data.get("media_url"))
+
+        extra = data.get("extra_data")
+        pool = extra.get("pool") if isinstance(extra, dict) else None
+        if isinstance(pool, list) and pool:
+            fixed_pool = []
+            for entry in pool:
+                if isinstance(entry, dict) and entry.get("media_url"):
+                    entry = {**entry, "media_url": self._resolve_media_url(entry.get("prompt"), entry.get("media_url"))}
+                fixed_pool.append(entry)
+            data["extra_data"] = {**extra, "pool": fixed_pool}
+
+        return data
 
 
 class GameLevelSerializer(serializers.ModelSerializer):

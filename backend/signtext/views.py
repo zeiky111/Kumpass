@@ -53,6 +53,7 @@ from .serializers import (
     AnnouncementSerializer,
     GameLevelItemSerializer,
     GameLevelSerializer,
+    build_sign_video_lookup,
     LearningModuleSerializer,
     LearningStateSerializer,
     LoginSerializer,
@@ -2352,7 +2353,8 @@ def instructor_game_levels(request: Any) -> Response:
         game_key = request.query_params.get("game_key")
         if game_key:
             levels = levels.filter(game_key=game_key)
-        return Response(GameLevelSerializer(levels, many=True).data)
+        context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+        return Response(GameLevelSerializer(levels, many=True, context=context).data)
 
     game_key = str(request.data.get("game_key") or "").strip()
     difficulty = str(request.data.get("difficulty") or GameLevel.DIFFICULTY_EASY).strip()
@@ -2381,7 +2383,8 @@ def instructor_game_levels(request: Any) -> Response:
             {"error": f"Level {level_number} ({difficulty}) already exists for this game. Choose a different level number or difficulty."},
             status=400,
         )
-    return Response(GameLevelSerializer(level).data, status=201)
+    context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+    return Response(GameLevelSerializer(level, context=context).data, status=201)
 
 
 @api_view(["GET", "PUT", "PATCH", "DELETE"])
@@ -2393,7 +2396,8 @@ def instructor_game_level_detail(request: Any, level_id: int) -> Response:
     level = get_object_or_404(GameLevel, pk=level_id)
 
     if request.method == "GET":
-        return Response(GameLevelSerializer(level).data)
+        context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+        return Response(GameLevelSerializer(level, context=context).data)
 
     if request.method == "DELETE":
         level.delete()
@@ -2433,7 +2437,8 @@ def instructor_game_level_detail(request: Any, level_id: int) -> Response:
             {"error": f"Level {new_level_number} ({new_difficulty}) already exists for this game. Choose a different level number or difficulty."},
             status=400,
         )
-    return Response(GameLevelSerializer(level).data)
+    context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+    return Response(GameLevelSerializer(level, context=context).data)
 
 
 @api_view(["GET", "POST"])
@@ -2446,7 +2451,8 @@ def game_level_items(request: Any, level_id: int) -> Response:
 
     if request.method == "GET":
         items = GameLevelItem.objects.filter(level=level).order_by("order", "id")
-        return Response(GameLevelItemSerializer(items, many=True).data)
+        context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+        return Response(GameLevelItemSerializer(items, many=True, context=context).data)
 
     payload = request.data.copy()
     serializer = GameLevelItemSerializer(data={
@@ -2461,7 +2467,7 @@ def game_level_items(request: Any, level_id: int) -> Response:
         return Response({"error": serializer.errors}, status=400)
 
     item = serializer.save()
-    return Response(GameLevelItemSerializer(item).data, status=201)
+    return Response(GameLevelItemSerializer(item, context={"request": request}).data, status=201)
 
 
 @api_view(["PATCH", "DELETE"])
@@ -2494,7 +2500,7 @@ def game_level_item_detail(request: Any, level_id: int, item_id: int) -> Respons
         return Response({"error": serializer.errors}, status=400)
 
     item = serializer.save()
-    return Response(GameLevelItemSerializer(item).data)
+    return Response(GameLevelItemSerializer(item, context={"request": request}).data)
 
 
 @api_view(["GET"])
@@ -2512,7 +2518,8 @@ def public_game_levels(request: Any, game_key: str) -> Response:
     difficulty = str(request.query_params.get("difficulty") or "").strip().lower()
     if difficulty:
         levels = levels.filter(difficulty=difficulty)
-    return Response(GameLevelSerializer(levels, many=True).data)
+    context = {"request": request, "sign_video_lookup": build_sign_video_lookup(request)}
+    return Response(GameLevelSerializer(levels, many=True, context=context).data)
 
 
 @api_view(["POST"])
