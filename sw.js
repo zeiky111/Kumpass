@@ -1,14 +1,15 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v4';
-// api-config.js, auth.js, main.js, and google-config.js are deliberately
-// excluded: they drive login/redirect logic, the API base/auth-token
-// plumbing, and Google Sign-In configuration, and a stale cache-first copy
-// of any of them can silently break login (a bug fix or config change ships
-// but the old cached script keeps running) with no way for the user to
-// recover short of manually clearing site data. CACHE_NAME was bumped
-// (v3 -> v4) so everyone who already has a stale api-config.js cached from
-// before it was added here gets it purged on next visit instead of being
-// stuck forever.
+var CACHE_NAME = 'kumpas-cache-v5';
+// api-config.js, auth.js, main.js, and google-config.js are excluded because
+// they drive login/redirect logic, the API base/auth-token plumbing, and
+// Google Sign-In configuration. games-common.js is excluded for the same
+// reason: it holds the shared game engine and completion-panel logic (score/
+// high score/stats), which keeps changing as game features are added -- a
+// stale cache-first copy of any of these can silently keep running an old
+// version with no way for the user to recover short of manually clearing
+// site data. CACHE_NAME was bumped again (v4 -> v5) so everyone who already
+// has a stale games-common.js cached from before it was added here gets it
+// purged on next visit instead of being stuck forever.
 var PRECACHE_URLS = [
   'css/style.css',
   'css/dashboard.css',
@@ -21,7 +22,7 @@ var PRECACHE_URLS = [
   'images/kumpas_logo.png',
   'images/kumpas_logo1.png'
 ];
-var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config)\.js$/;
+var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common)\.js$/;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
