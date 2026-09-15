@@ -263,6 +263,27 @@ class GameLevelSerializer(serializers.ModelSerializer):
         return obj.items.count()
 
 
+def _resolve_sign_video_url(obj, request):
+    """Same local-disk-first resolution as build_sign_video_lookup above,
+    for the single-object serializers (list/detail endpoints) that don't
+    go through that per-request lookup table.
+    """
+    if not obj.video:
+        return None
+
+    relative_name = _resolve_local_relative_name(obj)
+    if relative_name:
+        local_path = f"/{settings.MEDIA_URL.strip('/')}/{relative_name}"
+        return request.build_absolute_uri(local_path) if request else local_path
+
+    if hasattr(obj.video, "url"):
+        try:
+            return request.build_absolute_uri(obj.video.url) if request else obj.video.url
+        except Exception:
+            return None
+    return None
+
+
 class SignVideoSerializer(serializers.ModelSerializer):
     video_url = serializers.SerializerMethodField()
 
@@ -271,12 +292,7 @@ class SignVideoSerializer(serializers.ModelSerializer):
         fields = ["id", "key", "word", "category", "video_url", "order"]
 
     def get_video_url(self, obj):
-        request = self.context.get("request")
-        if obj.video and hasattr(obj.video, "url"):
-            if request:
-                return request.build_absolute_uri(obj.video.url)
-            return obj.video.url
-        return None
+        return _resolve_sign_video_url(obj, self.context.get("request"))
 
 
 class AdminSignVideoSerializer(serializers.ModelSerializer):
@@ -298,12 +314,7 @@ class AdminSignVideoSerializer(serializers.ModelSerializer):
         ]
 
     def get_video_url(self, obj):
-        request = self.context.get("request")
-        if obj.video and hasattr(obj.video, "url"):
-            if request:
-                return request.build_absolute_uri(obj.video.url)
-            return obj.video.url
-        return None
+        return _resolve_sign_video_url(obj, self.context.get("request"))
 
 
 class StudentQuizQuestionSerializer(serializers.ModelSerializer):
