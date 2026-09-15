@@ -839,12 +839,15 @@
                     });
                 } else {
                     KumpasGames.awardCertificateIfEarned('sign_match');
-                    KumpasGames.showCompletionModal({
-                        title: '🏆 Game Complete!',
-                        message: 'You completed every difficulty. Restarting at Easy so you can play again.',
-                        continueLabel: 'Play Again',
+                    KumpasGames.showGameResultScreen({
+                        gameKey: 'sign_match',
+                        gameLabel: 'Sign Match Game',
+                        score: engine.state.score,
+                        highScore: highScore,
+                        correct: engine.state.correct,
+                        difficultyLabel: engine.state.difficulty[0].toUpperCase() + engine.state.difficulty.slice(1),
                         reviewItems: missedQuestions,
-                        onContinue: () => {
+                        onPlayAgain: () => {
                             missedQuestions = [];
                             engine.setDifficulty('easy', true);
                             startLevel(false);

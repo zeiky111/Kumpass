@@ -337,6 +337,143 @@
 
   window.KumpasGames.showCompletionModal = showCompletionModal;
 
+  // ---- Game Result Screen (shown once a full game -- all three
+  // difficulties -- is finished, distinct from the lighter
+  // showCompletionModal used for the easy->medium->hard transitions) ----
+
+  // Canonical order/labels/urls, matching the cards on games.html -- used to
+  // resolve the "Next Game" button and to wrap back around to Sign Match
+  // after Scenario.
+  const GAME_SEQUENCE = [
+    { key: 'sign_match', label: 'Sign Match Game', url: 'sign-match-game.html' },
+    { key: 'typing', label: 'Sign-to-Word Typing', url: 'typing-game.html' },
+    { key: 'sentence', label: 'Sentence Builder', url: 'sentence-game.html' },
+    { key: 'scenario', label: 'Scenario-Based Game', url: 'scenario-game.html' },
+  ];
+
+  function nextGameInSequence(gameKey) {
+    const index = GAME_SEQUENCE.findIndex(g => g.key === gameKey);
+    if (index === -1) return GAME_SEQUENCE[0];
+    return GAME_SEQUENCE[(index + 1) % GAME_SEQUENCE.length];
+  }
+
+  // Persists this result into the student's progress record (UserLearningState
+  // via the same /learning/state/ read-merge-write endpoint the rest of the
+  // dashboard/profile already uses) so score/high score survive across
+  // devices and sessions, not just this browser's localStorage. Fire-and-
+  // forget: never blocks the result screen from showing, and a failed sync
+  // just means the next successful one catches up (localStorage remains the
+  // source of truth for the live in-page high score comparison).
+  function syncGameResult(gameKey, result) {
+    try {
+      if (!window.KumpasPortal || typeof window.KumpasPortal.updateState !== 'function') return;
+      window.KumpasPortal.updateState({
+        games: {
+          [gameKey]: {
+            score: result.score,
+            highScore: result.highScore,
+            correct: result.correct,
+            difficulty: result.difficulty,
+            lastPlayedAt: new Date().toISOString(),
+          },
+        },
+      });
+    } catch (_) {
+      // Best-effort only -- see comment above.
+    }
+  }
+
+  // config: { gameKey, gameLabel, score, highScore, correct, difficultyLabel,
+  //           reviewItems, onPlayAgain }
+  function showGameResultScreen(config) {
+    syncGameResult(config.gameKey, {
+      score: config.score,
+      highScore: config.highScore,
+      correct: config.correct,
+      difficulty: config.difficultyLabel,
+    });
+
+    let modal = document.getElementById('gameResultModal');
+    if (!modal) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="gameResultModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gameResultTitle">
+          <div class="modal-content game-result-content">
+            <button type="button" class="modal-close" aria-label="Close" onclick="KumpasGames.closeModal('gameResultModal')">&times;</button>
+            <div class="game-result-header">
+              <div class="game-result-icon">🏆</div>
+              <h2 id="gameResultTitle">Game Complete!</h2>
+              <p class="game-result-subtitle" id="gameResultSubtitle"></p>
+            </div>
+            <div class="game-result-score-row">
+              <div class="game-result-score-box game-result-score-primary">
+                <span class="game-result-score-label">Score</span>
+                <span class="game-result-score-value" id="gameResultScore">0</span>
+              </div>
+              <div class="game-result-score-box">
+                <span class="game-result-score-label">High Score</span>
+                <span class="game-result-score-value" id="gameResultHighScore">0</span>
+              </div>
+            </div>
+            <div class="game-instructions-levels" id="gameResultStats"></div>
+            <div id="gameResultReview" style="display:none; text-align:left; max-height:180px; overflow-y:auto; margin-top:4px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
+            <div class="game-result-buttons">
+              <button type="button" class="btn btn-primary" id="gameResultPlayAgain">Play Again</button>
+              <button type="button" class="btn btn-secondary" id="gameResultNextGame">Next Game</button>
+              <button type="button" class="btn btn-outline" id="gameResultBackToGames">Back to Games</button>
+            </div>
+          </div>
+        </div>`);
+      modal = document.getElementById('gameResultModal');
+    }
+
+    document.getElementById('gameResultSubtitle').textContent = config.gameLabel || '';
+    document.getElementById('gameResultScore').textContent = config.score;
+    document.getElementById('gameResultHighScore').textContent = config.highScore;
+    document.getElementById('gameResultStats').innerHTML = [
+      { label: 'Correct', value: config.correct },
+      { label: 'Difficulty', value: config.difficultyLabel },
+    ].map(s => `<div class="level-pill"><span>${s.label}</span><strong>${s.value}</strong></div>`).join('');
+
+    const reviewDiv = document.getElementById('gameResultReview');
+    if (Array.isArray(config.reviewItems) && config.reviewItems.length) {
+      reviewDiv.style.display = 'block';
+      reviewDiv.innerHTML = '<strong>Answers to review:</strong><ul style="margin:8px 0 0; padding-left:20px;">'
+        + config.reviewItems.map(item => `<li style="margin-bottom:4px;">${item.question} &rarr; <strong>${item.correctAnswer}</strong></li>`).join('')
+        + '</ul>';
+    } else {
+      reviewDiv.style.display = 'none';
+      reviewDiv.innerHTML = '';
+    }
+
+    const nextGame = nextGameInSequence(config.gameKey);
+    const nextGameBtn = document.getElementById('gameResultNextGame');
+    nextGameBtn.textContent = `Next Game: ${nextGame.label}`;
+    const newNextGameBtn = nextGameBtn.cloneNode(true);
+    nextGameBtn.parentNode.replaceChild(newNextGameBtn, nextGameBtn);
+    newNextGameBtn.addEventListener('click', () => {
+      window.location.href = nextGame.url;
+    });
+
+    const backBtn = document.getElementById('gameResultBackToGames');
+    const newBackBtn = backBtn.cloneNode(true);
+    backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+    newBackBtn.addEventListener('click', () => {
+      window.location.href = 'games.html';
+    });
+
+    const playAgainBtn = document.getElementById('gameResultPlayAgain');
+    const newPlayAgainBtn = playAgainBtn.cloneNode(true);
+    playAgainBtn.parentNode.replaceChild(newPlayAgainBtn, playAgainBtn);
+    newPlayAgainBtn.addEventListener('click', () => {
+      closeModal('gameResultModal');
+      if (typeof config.onPlayAgain === 'function') config.onPlayAgain();
+    });
+
+    openModal('gameResultModal');
+  }
+
+  window.KumpasGames.showGameResultScreen = showGameResultScreen;
+
   // ---- Difficulty / level engine ----
   // Creates a self-contained state machine each game page instantiates once.
   // choiceCounts: { easy, medium, hard } -- number of answer choices per difficulty.

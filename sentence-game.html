@@ -1020,11 +1020,14 @@
                     });
                 } else {
                     KumpasGames.awardCertificateIfEarned('sentence');
-                    KumpasGames.showCompletionModal({
-                        title: '🏆 Game Complete!',
-                        message: 'You completed every difficulty. Restarting at Easy so you can play again.',
-                        continueLabel: 'Play Again',
-                        onContinue: () => {
+                    KumpasGames.showGameResultScreen({
+                        gameKey: 'sentence',
+                        gameLabel: 'Sentence Builder',
+                        score: engine.state.score,
+                        highScore: highScore,
+                        correct: engine.state.correct,
+                        difficultyLabel: engine.state.difficulty[0].toUpperCase() + engine.state.difficulty.slice(1),
+                        onPlayAgain: () => {
                             engine.setDifficulty('easy', true);
                             startLevel(false);
                         },

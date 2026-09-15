@@ -930,6 +930,112 @@ tr:hover {
   border-color: var(--surface-border);
 }
 
+/* GAME RESULT SCREEN (shown once a full game -- all three difficulties -- is finished) */
+.game-result-content {
+  max-width: 460px;
+  text-align: center;
+  position: relative;
+}
+
+.game-result-content > .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+
+.game-result-header {
+  margin-bottom: 18px;
+}
+
+.game-result-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.game-result-header h2 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.game-result-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.game-result-score-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.game-result-score-box {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid rgba(148,163,184,0.25);
+  border-radius: 14px;
+  padding: 14px 10px;
+}
+
+.game-result-score-box.game-result-score-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  border-color: transparent;
+}
+
+.game-result-score-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.game-result-score-box.game-result-score-primary .game-result-score-label {
+  color: rgba(255,255,255,0.85);
+}
+
+.game-result-score-value {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: #2563eb;
+  margin-top: 4px;
+}
+
+.game-result-score-box.game-result-score-primary .game-result-score-value {
+  color: #fff;
+}
+
+.game-result-content .game-instructions-levels {
+  margin-bottom: 4px;
+}
+
+.game-result-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.game-result-buttons .btn {
+  width: 100%;
+}
+
+:root[data-theme="dark"] .game-result-subtitle {
+  color: var(--text-muted);
+}
+
+:root[data-theme="dark"] .game-result-score-box {
+  background: var(--surface-card-alt);
+  border-color: var(--surface-border);
+}
+
+:root[data-theme="dark"] .game-result-score-label {
+  color: var(--text-muted);
+}
+
 /* ALERT */
 .alert {
   padding: 15px;
