@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "signtext",
 ]
@@ -127,13 +128,16 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Trust local frontend dev servers for CSRF origin checks during development.
-# "null" is the literal Origin value browsers send for file:// pages (e.g.
-# double-clicking login.html) -- Django's CsrfViewMiddleware adds each
-# CSRF_TRUSTED_ORIGINS entry that isn't a wildcard subdomain to an exact-match
-# set, so the raw string "null" here really does match that Origin header
-# (mirrors the same "null" entry already in CORS_ALLOWED_ORIGINS above).
+# A bare "null" entry used to sit here to match the literal Origin value
+# browsers send for file:// pages, but Django 4.0+'s system checks (E001)
+# reject any CSRF_TRUSTED_ORIGINS entry without a scheme and hard-fail every
+# manage.py command (migrate, runserver, ...) as a result -- it never
+# actually matched anything valid under the current Django version, so it's
+# dropped rather than fixed. Doesn't matter for the token-authenticated flow
+# (login/signup/google-auth are already @csrf_exempt, and TokenAuthentication
+# bypasses CSRF checks entirely), only for still-cookie/session-based POSTs
+# tested from a raw file:// page.
 CSRF_TRUSTED_ORIGINS = [
-    "null",
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://127.0.0.1:5501",
@@ -166,7 +170,17 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
 
 REST_FRAMEWORK = {
+    # Token first: the frontend and backend live on different onrender.com
+    # subdomains, which browsers increasingly treat as cross-site for cookie
+    # purposes -- third-party-cookie blocking (Safari, Firefox strict mode,
+    # Brave, and a growing share of Chrome) silently dropped the session
+    # cookie, so login would succeed then immediately look logged-out on the
+    # very next request. A bearer token sent explicitly in the Authorization
+    # header isn't subject to any cookie policy at all. SessionAuthentication
+    # stays as a fallback for anything still relying on the cookie (e.g. the
+    # Django admin).
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],

@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -950,6 +951,7 @@ def login(request: Any) -> Response:
         return Response({"error": "Invalid username/email or password"}, status=401)
 
     django_login(request, user)
+    token, _ = Token.objects.get_or_create(user=user)
 
     profile, _ = UserProfile.objects.get_or_create(
         user=user,
@@ -966,6 +968,7 @@ def login(request: Any) -> Response:
     return Response(
         {
             "message": "Login successful",
+            "token": token.key,
             "user": {
                 "id": user.id,
                 "name": profile.full_name or user.first_name or user.username.split("@")[0],
@@ -1066,10 +1069,12 @@ def google_auth(request: Any) -> Response:
     # be used here -- tell django_login() which backend vouches for this user.
     user.backend = "django.contrib.auth.backends.ModelBackend"
     django_login(request, user)
+    token, _ = Token.objects.get_or_create(user=user)
     _get_learning_state_for_user(user)
 
     return Response({
         "message": "Account created" if created else "Login successful",
+        "token": token.key,
         "user": {
             "id": user.id,
             "name": profile.full_name or user.first_name or user.username.split("@")[0],
@@ -2271,8 +2276,10 @@ def csrf_token(request: Any) -> Response:
 
 @api_view(["POST"])
 def logout(request: Any) -> Response:
-    """Log out the user by clearing the session."""
+    """Log out the user by clearing the session and revoking their token."""
     from django.contrib.auth import logout as django_logout
+    if request.user.is_authenticated:
+        Token.objects.filter(user=request.user).delete()
     django_logout(request)
     return Response({"message": "Logged out successfully"})
 

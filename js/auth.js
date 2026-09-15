@@ -1,4 +1,9 @@
-// Session-based authentication using HTTP-only cookies
+// Token-based authentication: login/google-auth return a bearer token that's
+// stored in localStorage (see js/api-config.js) and sent as an Authorization
+// header on every authenticated request. This intentionally does NOT depend
+// on the session cookie, since the frontend and backend are different
+// onrender.com subdomains and browsers increasingly block that cookie as
+// third-party.
 const DEFAULT_API_BASE = window.KUMPAS_API_BASE;
 
 function getCookie(name) {
@@ -116,6 +121,7 @@ async function logoutUser() {
     } catch (_) {
         // Continue logout even if request fails
     }
+    window.setKumpasToken(null);
     window.location.replace('index.html');
 }
 
@@ -288,6 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!credential) return;
         try {
             const result = await postJson('/auth/google/', { credential });
+            window.setKumpasToken(result.token || null);
             const redirectTarget = new URL(result.redirect || 'dashboard.html', window.location.href).href;
             window.location.replace(redirectTarget);
         } catch (error) {
@@ -439,6 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
+                window.setKumpasToken(result.token || null);
                 const redirectTarget = new URL(result.redirect || 'dashboard.html', window.location.href).href;
                 window.location.replace(redirectTarget);
             } catch (error) {
