@@ -74,6 +74,28 @@
 
     <!-- Main Content -->
     <div class="translator-container" id="translatorMain">
+        <!-- Translate a Sentence -->
+        <section class="browse-section translate-section">
+            <div class="browse-header-title">
+                <h2><span class="panel-icon"><i class="fas fa-keyboard"></i></span> Translate a Sentence</h2>
+                <p class="browse-subtitle">Type a word or sentence and watch it signed, phrase by phrase, using the sign video dataset.</p>
+            </div>
+            <div class="translate-input-row">
+                <input type="text" id="translateInput" class="browse-search-input translate-text-input" placeholder="e.g. Good morning, thank you" autocomplete="off">
+                <button type="button" class="btn btn-primary" id="translateBtn"><i class="fas fa-wand-magic-sparkles"></i> Translate</button>
+            </div>
+
+            <div class="translate-player hidden" id="translatePlayer">
+                <div class="translate-media" id="translateMedia"></div>
+                <div class="translate-controls">
+                    <button type="button" class="browse-page-btn" id="translatePrev" aria-label="Previous"><i class="fas fa-backward-step"></i></button>
+                    <button type="button" class="browse-page-btn" id="translatePlayPause" aria-label="Play/Pause"><i class="fas fa-pause"></i></button>
+                    <button type="button" class="browse-page-btn" id="translateNext" aria-label="Next"><i class="fas fa-forward-step"></i></button>
+                </div>
+                <div class="translate-word-strip" id="translateWordStrip"></div>
+            </div>
+        </section>
+
         <!-- Browse All Signs -->
         <section class="browse-section">
             <div class="browse-header">
@@ -611,6 +633,134 @@
             box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
         }
 
+        /* ---- Translate a Sentence ---- */
+        .translate-input-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .translate-text-input {
+            max-width: none;
+            flex: 1;
+            min-width: 220px;
+            padding: 12px 16px;
+            border-radius: 999px;
+            border: 2px solid #e0e0e0;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .translate-text-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+
+        .translate-player {
+            margin-top: 1.5rem;
+        }
+
+        .translate-player.hidden {
+            display: none;
+        }
+
+        .translate-media {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            aspect-ratio: 4 / 3;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e5e7eb;
+        }
+
+        .translate-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .translate-no-match {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .translate-no-match .demo-icon {
+            margin: 0;
+            opacity: 1;
+        }
+
+        .translate-controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .translate-word-strip {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.1rem;
+        }
+
+        .translate-word-chip {
+            padding: 0.4rem 0.85rem;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: capitalize;
+        }
+
+        .translate-word-chip:hover {
+            background: #e2e8f0;
+        }
+
+        .translate-word-chip.active {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: #fff;
+        }
+
+        .translate-word-chip.no-match {
+            border: 1.5px dashed #cbd5e1;
+        }
+
+        .translate-word-chip.active.no-match {
+            border-color: transparent;
+        }
+
+        :root[data-theme="dark"] .translate-text-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-body);
+        }
+
+        :root[data-theme="dark"] .translate-word-chip {
+            background: var(--surface-card-alt);
+            color: var(--text-muted-2);
+        }
+
+        :root[data-theme="dark"] .translate-word-chip.active {
+            color: #fff;
+        }
+
         .word-browse-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1122,6 +1272,150 @@
                 closeSignPreview();
             }
         });
+
+        // ---- Translate a Sentence ----
+        // Greedy longest-match against the fetched sign dataset so multi-word
+        // dataset entries (e.g. "good morning", "thank you") are recognized as
+        // one sign instead of being split into unmatched single words.
+        const MAX_PHRASE_WORDS = 5;
+        const UNMATCHED_DISPLAY_MS = 1400;
+
+        const translateInput = document.getElementById('translateInput');
+        const translateBtn = document.getElementById('translateBtn');
+        const translatePlayer = document.getElementById('translatePlayer');
+        const translateMedia = document.getElementById('translateMedia');
+        const translateWordStrip = document.getElementById('translateWordStrip');
+        const translatePrevBtn = document.getElementById('translatePrev');
+        const translateNextBtn = document.getElementById('translateNext');
+        const translatePlayPauseBtn = document.getElementById('translatePlayPause');
+
+        let translateQueue = [];
+        let translateIndex = -1;
+        let translatePlaying = false;
+        let translateAdvanceTimer = null;
+
+        function tokenizeSentence(text) {
+            return text
+                .split(/\s+/)
+                .map(w => w.replace(/^[^a-zA-Z0-9']+|[^a-zA-Z0-9']+$/g, ''))
+                .filter(Boolean);
+        }
+
+        function buildTranslateQueue(text) {
+            const words = tokenizeSentence(text);
+            const queue = [];
+            let i = 0;
+            while (i < words.length) {
+                let matched = null;
+                let matchedLen = 1;
+                const maxLen = Math.min(MAX_PHRASE_WORDS, words.length - i);
+                for (let len = maxLen; len >= 1; len--) {
+                    const sign = lookupSign(words.slice(i, i + len).join(' '));
+                    if (sign) {
+                        matched = sign;
+                        matchedLen = len;
+                        break;
+                    }
+                }
+                queue.push({ label: words.slice(i, i + matchedLen).join(' '), sign: matched });
+                i += matchedLen;
+            }
+            return queue;
+        }
+
+        function updateTranslatePlayPauseIcon() {
+            if (!translatePlayPauseBtn) return;
+            translatePlayPauseBtn.innerHTML = translatePlaying
+                ? '<i class="fas fa-pause"></i>'
+                : '<i class="fas fa-play"></i>';
+        }
+
+        function renderTranslateWordStrip() {
+            if (!translateWordStrip) return;
+            translateWordStrip.innerHTML = translateQueue.map((item, i) => {
+                const classes = ['translate-word-chip'];
+                if (i === translateIndex) classes.push('active');
+                if (!item.sign) classes.push('no-match');
+                return `<span class="${classes.join(' ')}" data-index="${i}">${escapeHtml(item.label)}</span>`;
+            }).join('');
+            translateWordStrip.querySelectorAll('.translate-word-chip').forEach(chip => {
+                chip.addEventListener('click', () => playTranslateIndex(Number(chip.dataset.index)));
+            });
+        }
+
+        function playTranslateIndex(index) {
+            clearTimeout(translateAdvanceTimer);
+            if (index < 0 || index >= translateQueue.length) {
+                translateIndex = -1;
+                translatePlaying = false;
+                updateTranslatePlayPauseIcon();
+                renderTranslateWordStrip();
+                return;
+            }
+
+            translateIndex = index;
+            translatePlaying = true;
+            updateTranslatePlayPauseIcon();
+            renderTranslateWordStrip();
+
+            const item = translateQueue[index];
+            if (item.sign && item.sign.video) {
+                translateMedia.innerHTML = `<video autoplay muted playsinline><source src="${escapeHtml(item.sign.video)}" type="${videoMimeType(item.sign.video)}"></video>`;
+                const video = translateMedia.querySelector('video');
+                video.addEventListener('ended', () => {
+                    if (translatePlaying) playTranslateIndex(translateIndex + 1);
+                });
+            } else {
+                translateMedia.innerHTML = `<div class="translate-no-match"><span class="demo-icon">🤟</span><span>No sign found for "${escapeHtml(item.label)}"</span></div>`;
+                translateAdvanceTimer = setTimeout(() => {
+                    if (translatePlaying) playTranslateIndex(translateIndex + 1);
+                }, UNMATCHED_DISPLAY_MS);
+            }
+        }
+
+        function runTranslate() {
+            if (!translateInput) return;
+            const text = translateInput.value.trim();
+            if (!text) return;
+
+            if (!signLibraryReady) {
+                alert('The sign dictionary is still loading. Try again in a moment.');
+                return;
+            }
+
+            translateQueue = buildTranslateQueue(text);
+            if (!translateQueue.length) return;
+
+            translatePlayer.classList.remove('hidden');
+            playTranslateIndex(0);
+        }
+
+        if (translateBtn) translateBtn.addEventListener('click', runTranslate);
+        if (translateInput) {
+            translateInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') runTranslate();
+            });
+        }
+        if (translatePrevBtn) translatePrevBtn.addEventListener('click', () => playTranslateIndex(translateIndex - 1));
+        if (translateNextBtn) translateNextBtn.addEventListener('click', () => playTranslateIndex(translateIndex + 1));
+        if (translatePlayPauseBtn) {
+            translatePlayPauseBtn.addEventListener('click', () => {
+                const video = translateMedia.querySelector('video');
+                if (translatePlaying) {
+                    translatePlaying = false;
+                    clearTimeout(translateAdvanceTimer);
+                    if (video) video.pause();
+                } else {
+                    translatePlaying = true;
+                    if (video) {
+                        video.play();
+                    } else if (translateIndex >= 0) {
+                        translateAdvanceTimer = setTimeout(() => playTranslateIndex(translateIndex + 1), UNMATCHED_DISPLAY_MS);
+                    }
+                }
+                updateTranslatePlayPauseIcon();
+            });
+        }
 
         renderWordBrowse();
 
