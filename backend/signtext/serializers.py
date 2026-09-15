@@ -1,3 +1,7 @@
+import os
+import re
+
+from django.conf import settings
 from rest_framework import serializers
 
 from .models import (
@@ -109,10 +113,131 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         ]
 
 
+def _normalize_word_key(value):
+    cleaned = re.sub(r"[^a-z0-9\s']", " ", str(value or "").lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _local_media_path_exists(relative_name):
+    """Cheap on-disk check (no network) against MEDIA_ROOT."""
+    if not relative_name:
+        return False
+    try:
+        return os.path.isfile(os.path.join(settings.MEDIA_ROOT, relative_name))
+    except Exception:
+        return False
+
+
+def _resolve_local_relative_name(video):
+    """Finds the actual on-disk filename for a SignVideo row.
+
+    SignVideo.video.name is itself sometimes wrong: the FSL-105 import
+    saved each clip through Django's storage API, which appends a random
+    suffix (e.g. "fsl105_april_qpiwLrj.mp4") whenever it detects a naming
+    collision -- but that particular suffixed file was never actually
+    persisted anywhere (not locally, not on Cloudinary), only the plain
+    "fsl105_april.mp4" from the original import is real, and it's what's
+    committed under backend/media/. Falls back to reconstructing that clean
+    name (<key>.mp4, same folder) when the stored name doesn't check out.
+    """
+    stored_name = getattr(video.video, "name", "") or ""
+    if _local_media_path_exists(stored_name):
+        return stored_name
+
+    if video.key:
+        directory = os.path.dirname(stored_name) if stored_name else "sign_videos"
+        candidate = f"{directory}/{video.key}.mp4" if directory else f"{video.key}.mp4"
+        if _local_media_path_exists(candidate):
+            return candidate
+
+    return None
+
+
+def build_sign_video_lookup(request=None):
+    """Maps normalized word -> current video URL, built fresh from SignVideo.
+
+    GameLevelItem.media_url (and each extra_data.pool entry's media_url) is a
+    plain string frozen at whatever moment a past migration/import wrote it --
+    Render's disk is ephemeral, so once that exact file is gone (wiped on a
+    later deploy, or replaced by a differently-named re-upload), the frozen
+    path 404s forever even though the same word's video still exists in
+    SignVideo, just under a different path.
+
+    Prefers serving straight from Django's local /media/ (checked against
+    disk, not trusted blindly) over SignVideo.video.url: the actual video
+    bytes for these words are committed under backend/media/ and deployed
+    with the code, so they survive Render's ephemeral disk regardless of
+    whether the separate Cloudinary backfill has actually finished uploading
+    them yet -- SignVideo's Cloudinary storage class computes a
+    res.cloudinary.com URL for every row unconditionally, even one that was
+    never actually uploaded there, so trusting it blindly would silently
+    swap a working local video for a 404. Falls back to that computed URL
+    only when no matching local file exists, for anything genuinely
+    Cloudinary-only (e.g. a future teacher upload that isn't in the repo).
+    """
+    lookup = {}
+    for video in SignVideo.objects.exclude(video="").only("key", "word", "video"):
+        key = _normalize_word_key(video.word)
+        if not key or not video.video:
+            continue
+
+        relative_name = _resolve_local_relative_name(video)
+        if relative_name:
+            # Leading "/" is required -- build_absolute_uri() treats a path
+            # without one as relative to the current request path (which is
+            # /api/games/... here), not root-relative.
+            local_path = f"/{settings.MEDIA_URL.strip('/')}/{relative_name}"
+            lookup[key] = request.build_absolute_uri(local_path) if request else local_path
+            continue
+
+        try:
+            url = request.build_absolute_uri(video.video.url) if request else video.video.url
+        except Exception:
+            continue
+        lookup[key] = url
+    return lookup
+
+
 class GameLevelItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameLevelItem
         fields = ["id", "level", "prompt", "answer", "media_url", "extra_data", "order", "created_at", "updated_at"]
+
+    def _sign_video_lookup(self):
+        # Views pre-build this once per request and pass it via context
+        # (context is shared across every nested item serializer DRF creates
+        # for a many=True list), so the SignVideo table is queried once per
+        # request instead of once per item. Falls back to building it here
+        # for any call site that didn't pass one in.
+        if not hasattr(self, "_cached_sign_video_lookup"):
+            passed_in = self.context.get("sign_video_lookup")
+            self._cached_sign_video_lookup = (
+                passed_in if passed_in is not None else build_sign_video_lookup(self.context.get("request"))
+            )
+        return self._cached_sign_video_lookup
+
+    def _resolve_media_url(self, prompt, stored_url):
+        live_url = self._sign_video_lookup().get(_normalize_word_key(prompt))
+        return live_url or stored_url
+
+    # media_url/extra_data stay normal writable model fields (instructor CRUD
+    # endpoints save them directly) -- only the READ side is patched here, so
+    # writes are completely unaffected.
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["media_url"] = self._resolve_media_url(data.get("prompt"), data.get("media_url"))
+
+        extra = data.get("extra_data")
+        pool = extra.get("pool") if isinstance(extra, dict) else None
+        if isinstance(pool, list) and pool:
+            fixed_pool = []
+            for entry in pool:
+                if isinstance(entry, dict) and entry.get("media_url"):
+                    entry = {**entry, "media_url": self._resolve_media_url(entry.get("prompt"), entry.get("media_url"))}
+                fixed_pool.append(entry)
+            data["extra_data"] = {**extra, "pool": fixed_pool}
+
+        return data
 
 
 class GameLevelSerializer(serializers.ModelSerializer):
