@@ -341,22 +341,6 @@
   // difficulties -- is finished, distinct from the lighter
   // showCompletionModal used for the easy->medium->hard transitions) ----
 
-  // Canonical order/labels/urls, matching the cards on games.html -- used to
-  // resolve the "Next Game" button and to wrap back around to Sign Match
-  // after Scenario.
-  const GAME_SEQUENCE = [
-    { key: 'sign_match', label: 'Sign Match Game', url: 'sign-match-game.html' },
-    { key: 'typing', label: 'Sign-to-Word Typing', url: 'typing-game.html' },
-    { key: 'sentence', label: 'Sentence Builder', url: 'sentence-game.html' },
-    { key: 'scenario', label: 'Scenario-Based Game', url: 'scenario-game.html' },
-  ];
-
-  function nextGameInSequence(gameKey) {
-    const index = GAME_SEQUENCE.findIndex(g => g.key === gameKey);
-    if (index === -1) return GAME_SEQUENCE[0];
-    return GAME_SEQUENCE[(index + 1) % GAME_SEQUENCE.length];
-  }
-
   // Persists this result into the student's progress record (UserLearningState
   // via the same /learning/state/ read-merge-write endpoint the rest of the
   // dashboard/profile already uses) so score/high score survive across
@@ -418,7 +402,6 @@
             <div id="gameResultReview" style="display:none; text-align:left; max-height:180px; overflow-y:auto; margin-top:4px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
             <div class="game-result-buttons">
               <button type="button" class="btn btn-primary" id="gameResultPlayAgain">Play Again</button>
-              <button type="button" class="btn btn-secondary" id="gameResultNextGame">Next Game</button>
               <button type="button" class="btn btn-outline" id="gameResultBackToGames">Back to Games</button>
             </div>
           </div>
@@ -444,15 +427,6 @@
       reviewDiv.style.display = 'none';
       reviewDiv.innerHTML = '';
     }
-
-    const nextGame = nextGameInSequence(config.gameKey);
-    const nextGameBtn = document.getElementById('gameResultNextGame');
-    nextGameBtn.textContent = `Next Game: ${nextGame.label}`;
-    const newNextGameBtn = nextGameBtn.cloneNode(true);
-    nextGameBtn.parentNode.replaceChild(newNextGameBtn, nextGameBtn);
-    newNextGameBtn.addEventListener('click', () => {
-      window.location.href = nextGame.url;
-    });
 
     const backBtn = document.getElementById('gameResultBackToGames');
     const newBackBtn = backBtn.cloneNode(true);
