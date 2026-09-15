@@ -158,6 +158,7 @@
     </style>
 </head>
 <body class="pro-dashboard instructor-theme pro-standalone">
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth(['instructor', 'admin']);
@@ -239,7 +240,7 @@
     </main>
 
     <script>
-        const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+        const API_BASE = window.KUMPAS_API_BASE;
         const moduleId = new URLSearchParams(window.location.search).get('module');
         let currentQuizQuestions = [];
         let editingQuestionId = '';

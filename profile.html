@@ -23,6 +23,7 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth();
@@ -1176,7 +1177,7 @@
             }
 
             try {
-                const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+                const apiBase = window.KUMPAS_API_BASE;
                 const response = await fetchWithAuth(`${apiBase}/profile/update/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

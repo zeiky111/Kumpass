@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
-    <link rel="icon" type="image/png" href="images/kumpas_logo.png">
+    <link rel="apple-touch-icon" href="images/logo_transparent.png">
+    <link rel="icon" type="image/png" href="images/logo_transparent.png">
     <title>Instructor Dashboard - Kumpas</title>
     <link rel="stylesheet" href="css/style.css?v=20260912">
     <link rel="stylesheet" href="css/pages.css">
@@ -52,6 +52,32 @@
             to {
                 opacity: 1;
             }
+        }
+
+         /* ============ SIDEBAR LOGO ============ */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .sidebar-logo-badge {
+            width: 160px;
+            height: 104px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            box-shadow: none;
+        }
+
+        .sidebar-logo {
+            width: 150px;
+            height: 76px;
+            object-fit: contain;
         }
         
         .announcement-item {
@@ -147,11 +173,12 @@
     </style>
 </head>
 <body class="pro-dashboard instructor-theme">
+    <script src="js/api-config.js"></script>
     <script>
         // Check authentication with backend (session cookie)
         (async function() {
             try {
-                const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+                const apiBase = window.KUMPAS_API_BASE;
                 const response = await fetch(`${apiBase}/auth/me/`, {
                     method: 'GET',
                     credentials: 'include'
@@ -168,7 +195,7 @@
     <nav class="navbar">
         <div class="container navbar-container">
             <a href="instructor-dashboard.html" class="logo">
-                <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
+                <img src="images/logo_transparent.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
                 <span>Kumpas</span>
             </a>
             <ul class="nav-menu" id="navMenu">
@@ -191,7 +218,7 @@
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo-badge">
-                    <img src="images/kumpas_logo.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
+                    <img src="images/logo_transparent.png" alt="Kumpas Logo" class="sidebar-logo" loading="lazy">
                 </div>
             </div>
             <ul class="sidebar-menu">
@@ -671,7 +698,7 @@
     <script src="js/main.js"></script>
     <script src="js/portal.js"></script>
     <script>
-        const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+        const API_BASE = window.KUMPAS_API_BASE;
         let currentUserPromise = null;
 
         async function getSessionCurrentUser() {

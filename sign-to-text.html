@@ -23,6 +23,7 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth();
@@ -1318,7 +1319,7 @@
         let wordCandidateSince = 0;
         let wordCandidateCount = 0;
 
-        const API_BASE = 'https://kumpass.onrender.com/api';
+        const API_BASE = window.KUMPAS_API_BASE;
         const LETTER_STABLE_MS = 300;
         const LETTER_COOLDOWN_MS = 360;
         const WORD_PAUSE_MS = 1300;

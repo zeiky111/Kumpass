@@ -14,7 +14,7 @@
   if (!previewLevelId) return;
 
   const previewActor = params.get('previewActor') || '';
-  const API_BASE = 'https://kumpass.onrender.com/api';
+  const API_BASE = window.KUMPAS_API_BASE;
 
   window.KumpasGamePreview = {
     active: true,

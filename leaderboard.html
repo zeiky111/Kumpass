@@ -23,6 +23,7 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth();
@@ -973,7 +974,7 @@
 
     <script>
         (function () {
-            const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+            const API_BASE = window.KUMPAS_API_BASE;
             const FETCH_LIMIT = 100;
             const ROWS_PER_PAGE = 10;
 

@@ -23,6 +23,7 @@
         <span></span>
         <span></span>
     </div>
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth();
@@ -1050,7 +1051,7 @@
         // FSL-105/Mendeley videos, already imported as SignVideo rows keyed
         // "fsl105_..."). Both the Games and Text-to-Sign modules read from
         // this same API endpoint.
-        const SIGN_VIDEOS_API = 'https://kumpass.onrender.com/api/sign-videos/';
+        const SIGN_VIDEOS_API = `${window.KUMPAS_API_BASE}/sign-videos/`;
 
         const BACKEND_TO_UI_CATEGORY = {
             alphabet: 'school',

@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 </head>
 <body class="pro-dashboard admin-theme">
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script>
         requireAuth(['admin']);
@@ -338,7 +339,7 @@
     <script src="js/main.js?v=20260908"></script>
     <script src="js/portal.js?v=20260908"></script>
     <script>
-        const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+        const API_BASE = window.KUMPAS_API_BASE;
         let adminPayload = null;
         let currentUserPromise = null;
 
@@ -1243,7 +1244,7 @@
 
         function doLogout(e) {
             e.preventDefault();
-            fetch('https://kumpass.onrender.com/api/auth/logout/', {
+            fetch(`${API_BASE}/auth/logout/`, {
                 method: 'POST',
                 credentials: 'include'
             }).catch(function () {

@@ -2,7 +2,7 @@
 // Basic features only
 
 (function () {
-  const API_BASE = 'https://kumpass.onrender.com/api';
+  const API_BASE = window.KUMPAS_API_BASE;
   let currentUserCache = null;
   let currentUserPromise = null;
 
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
       link.addEventListener('click', function(e) {
         e.preventDefault();
         // Call backend logout endpoint
-        fetch('https://kumpass.onrender.com/api/auth/logout/', {
+        fetch(`${API_BASE}/auth/logout/`, {
           method: 'POST',
           credentials: 'include'
         }).catch(_ => {
@@ -160,7 +160,7 @@ function initNavbarUserMenu() {
   logoutItem.addEventListener('click', function(e) {
     e.preventDefault();
     // Call backend logout endpoint
-    fetch('https://kumpass.onrender.com/api/auth/logout/', {
+    fetch(`${API_BASE}/auth/logout/`, {
       method: 'POST',
       credentials: 'include'
     }).catch(_ => {

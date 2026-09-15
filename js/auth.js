@@ -1,5 +1,5 @@
 // Session-based authentication using HTTP-only cookies
-const DEFAULT_API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+const DEFAULT_API_BASE = window.KUMPAS_API_BASE;
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;

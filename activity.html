@@ -563,6 +563,7 @@
         }
     </style>
 
+    <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/portal.js"></script>
     <script>
@@ -690,7 +691,7 @@
             }
 
             const currentUser = window.KumpasPortal.getCurrentUser();
-            const apiBase = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+            const apiBase = window.KUMPAS_API_BASE;
             const quizModuleId = Number.isFinite(module.numericId) ? module.numericId : module.id;
 
             if (submitBtn) {

@@ -7,7 +7,7 @@
 // switchDifficulty being globals and .difficulty-btn[data-level] existing in the
 // DOM -- that contract is preserved here.
 (function () {
-  const API_BASE = localStorage.getItem('kumpasApiBase') || 'https://kumpass.onrender.com/api';
+  const API_BASE = window.KUMPAS_API_BASE;
   window.KumpasGames = window.KumpasGames || {};
   window.KumpasGames.API_BASE = API_BASE;
 
