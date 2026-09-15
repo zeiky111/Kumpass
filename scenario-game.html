@@ -905,6 +905,12 @@
                         message: `You finished all levels on ${engine.state.difficulty}. Moving on to ${nextDifficulty}.`,
                         continueLabel: `Starting ${nextDifficulty[0].toUpperCase()}${nextDifficulty.slice(1)}...`,
                         autoContinueAfterMs: 1400,
+                        stats: [
+                            { label: 'Score', value: engine.state.score },
+                            { label: 'High Score', value: highScore },
+                            { label: 'Correct', value: engine.state.correct },
+                            { label: 'Difficulty', value: engine.state.difficulty[0].toUpperCase() + engine.state.difficulty.slice(1) },
+                        ],
                         onContinue: () => {
                             engine.setDifficulty(nextDifficulty, false);
                             startLevel(false);
@@ -916,6 +922,12 @@
                         title: '🏆 Game Complete!',
                         message: 'You completed every difficulty. Restarting at Easy so you can play again.',
                         continueLabel: 'Play Again',
+                        stats: [
+                            { label: 'Score', value: engine.state.score },
+                            { label: 'High Score', value: highScore },
+                            { label: 'Correct', value: engine.state.correct },
+                            { label: 'Difficulty', value: engine.state.difficulty[0].toUpperCase() + engine.state.difficulty.slice(1) },
+                        ],
                         onContinue: () => {
                             engine.setDifficulty('easy', true);
                             startLevel(false);

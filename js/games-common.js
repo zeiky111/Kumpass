@@ -267,12 +267,15 @@
   }
 
   // Shows an in-page "Difficulty/Game Complete" panel instead of a jarring alert().
+  // stats (optional): [{ label, value }, ...] -- rendered as a row of pills
+  // (score, high score, correct count, etc.) so the player sees how they did
+  // right on the completion panel instead of just a congratulatory sentence.
   // reviewItems (optional): [{ question, correctAnswer }, ...] -- missed
   // questions to reveal now that the game has actually ended. Answers are
   // intentionally withheld during play (no per-question reveal) so a wrong
   // guess doesn't hand the player the answer for next time; this is the one
   // place they're shown, once there's no more of that difficulty left to play.
-  function showCompletionModal({ title, message, onContinue, continueLabel, autoContinueAfterMs = 0, reviewItems }) {
+  function showCompletionModal({ title, message, stats, onContinue, continueLabel, autoContinueAfterMs = 0, reviewItems }) {
     let modal = document.getElementById('gameCompleteModal');
     if (!modal) {
       document.body.insertAdjacentHTML('beforeend', `
@@ -283,6 +286,7 @@
               <button type="button" class="modal-close" aria-label="Close" onclick="KumpasGames.closeModal('gameCompleteModal')">&times;</button>
             </div>
             <p id="gameCompleteMessage"></p>
+            <div id="gameCompleteStats" class="game-instructions-levels" style="display:none;"></div>
             <div id="gameCompleteReview" style="display:none; text-align:left; max-height:220px; overflow-y:auto; margin-top:12px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
             <div class="button-group" style="margin-top:18px;">
               <button type="button" class="btn btn-primary" id="gameCompleteContinueBtn">Continue</button>
@@ -293,6 +297,18 @@
     }
     document.getElementById('gameCompleteTitle').textContent = title || 'Great job!';
     document.getElementById('gameCompleteMessage').textContent = message || '';
+    const statsDiv = document.getElementById('gameCompleteStats');
+    if (statsDiv) {
+      if (Array.isArray(stats) && stats.length) {
+        statsDiv.style.display = 'flex';
+        statsDiv.innerHTML = stats
+          .map(s => `<div class="level-pill"><span>${s.label}</span><strong>${s.value}</strong></div>`)
+          .join('');
+      } else {
+        statsDiv.style.display = 'none';
+        statsDiv.innerHTML = '';
+      }
+    }
     const reviewDiv = document.getElementById('gameCompleteReview');
     if (reviewDiv) {
       if (Array.isArray(reviewItems) && reviewItems.length) {
