@@ -180,7 +180,7 @@ REST_FRAMEWORK = {
     # stays as a fallback for anything still relying on the cookie (e.g. the
     # Django admin).
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "signtext.authentication.LenientTokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
