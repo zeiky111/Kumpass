@@ -18,3 +18,16 @@ try:
     call_command("migrate", interactive=False, verbosity=1)
 except Exception:
     logging.getLogger(__name__).exception("Startup migrate failed")
+
+# If the database comes up with no sign videos at all (fresh/reset DB), put
+# the bundled library back so Browse Signs, Text-to-Sign and the Games
+# aren't left empty. Skipped whenever any row exists, so it never fights
+# admin edits or deletions.
+try:
+    from signtext.management.commands.restore_sign_videos import restore_sign_videos
+
+    restored = restore_sign_videos(only_if_empty=True)
+    if restored:
+        logging.getLogger(__name__).warning("Restored %d sign videos into an empty database", restored)
+except Exception:
+    logging.getLogger(__name__).exception("Startup sign video restore failed")

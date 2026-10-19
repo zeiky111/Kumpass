@@ -1,0 +1,1213 @@
+[
+ {
+  "key": "a",
+  "word": "A",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/A.mp4",
+  "order": 1
+ },
+ {
+  "key": "b",
+  "word": "B",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/B.mp4",
+  "order": 2
+ },
+ {
+  "key": "c",
+  "word": "C",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/C.mp4",
+  "order": 3
+ },
+ {
+  "key": "d",
+  "word": "D",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/D.mp4",
+  "order": 4
+ },
+ {
+  "key": "e",
+  "word": "E",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/E.mp4",
+  "order": 5
+ },
+ {
+  "key": "f",
+  "word": "F",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/F.mp4",
+  "order": 6
+ },
+ {
+  "key": "g",
+  "word": "G",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/G.mp4",
+  "order": 7
+ },
+ {
+  "key": "h",
+  "word": "H",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/H.mp4",
+  "order": 8
+ },
+ {
+  "key": "i",
+  "word": "I",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/I.mp4",
+  "order": 9
+ },
+ {
+  "key": "j",
+  "word": "J",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/J.mp4",
+  "order": 10
+ },
+ {
+  "key": "k",
+  "word": "K",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/K.mp4",
+  "order": 11
+ },
+ {
+  "key": "l",
+  "word": "L",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/L.mp4",
+  "order": 12
+ },
+ {
+  "key": "m",
+  "word": "M",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/M.mp4",
+  "order": 13
+ },
+ {
+  "key": "n",
+  "word": "N",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/N.mp4",
+  "order": 14
+ },
+ {
+  "key": "o",
+  "word": "O",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/O.mp4",
+  "order": 15
+ },
+ {
+  "key": "p",
+  "word": "P",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/P.mp4",
+  "order": 16
+ },
+ {
+  "key": "q",
+  "word": "Q",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/Q.mp4",
+  "order": 17
+ },
+ {
+  "key": "r",
+  "word": "R",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/R.mp4",
+  "order": 18
+ },
+ {
+  "key": "s",
+  "word": "S",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/S.mp4",
+  "order": 19
+ },
+ {
+  "key": "t",
+  "word": "T",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/T.mp4",
+  "order": 20
+ },
+ {
+  "key": "u",
+  "word": "U",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/U.mp4",
+  "order": 21
+ },
+ {
+  "key": "v",
+  "word": "V",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/V.mp4",
+  "order": 22
+ },
+ {
+  "key": "w",
+  "word": "W",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/W.mp4",
+  "order": 23
+ },
+ {
+  "key": "x",
+  "word": "X",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/X.mp4",
+  "order": 24
+ },
+ {
+  "key": "y",
+  "word": "Y",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/Y.mp4",
+  "order": 25
+ },
+ {
+  "key": "z",
+  "word": "Z",
+  "category": "alphabet",
+  "video": "sign_videos/2026/07/22/Z.mp4",
+  "order": 26
+ },
+ {
+  "key": "afraid",
+  "word": "Afraid",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Afraid.mp4",
+  "order": 1
+ },
+ {
+  "key": "angry",
+  "word": "Angry",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Angry.mp4",
+  "order": 2
+ },
+ {
+  "key": "excited",
+  "word": "Excited",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Excited.mp4",
+  "order": 3
+ },
+ {
+  "key": "happy",
+  "word": "Happy",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Happy.mp4",
+  "order": 4
+ },
+ {
+  "key": "love",
+  "word": "Love",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Love.mp4",
+  "order": 5
+ },
+ {
+  "key": "sad",
+  "word": "Sad",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Sad.mp4",
+  "order": 6
+ },
+ {
+  "key": "tired",
+  "word": "Tired",
+  "category": "emotions",
+  "video": "sign_videos/2026/07/22/Tired.mp4",
+  "order": 7
+ },
+ {
+  "key": "drink",
+  "word": "Drink",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Drink.mp4",
+  "order": 1
+ },
+ {
+  "key": "eat",
+  "word": "Eat",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Eat.mp4",
+  "order": 2
+ },
+ {
+  "key": "food",
+  "word": "Food",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Food.mp4",
+  "order": 3
+ },
+ {
+  "key": "read",
+  "word": "Read",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Read.mp4",
+  "order": 4
+ },
+ {
+  "key": "sleep",
+  "word": "Sleep",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Sleep.mp4",
+  "order": 5
+ },
+ {
+  "key": "study",
+  "word": "Study",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Study.mp4",
+  "order": 6
+ },
+ {
+  "key": "water",
+  "word": "Water",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Water.mp4",
+  "order": 7
+ },
+ {
+  "key": "work",
+  "word": "Work",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Work.mp4",
+  "order": 8
+ },
+ {
+  "key": "write",
+  "word": "Write",
+  "category": "everyday_words",
+  "video": "sign_videos/2026/07/22/Write.mp4",
+  "order": 9
+ },
+ {
+  "key": "excuse me",
+  "word": "Excuse me",
+  "category": "expressions",
+  "video": "sign_videos/2026/07/22/Excuse_me.mp4",
+  "order": 1
+ },
+ {
+  "key": "please",
+  "word": "Please",
+  "category": "expressions",
+  "video": "sign_videos/2026/07/22/Please.mp4",
+  "order": 2
+ },
+ {
+  "key": "sorry",
+  "word": "Sorry",
+  "category": "expressions",
+  "video": "sign_videos/2026/07/22/Sorry.mp4",
+  "order": 3
+ },
+ {
+  "key": "thank you",
+  "word": "Thank you",
+  "category": "expressions",
+  "video": "sign_videos/2026/07/22/Thank_you.mp4",
+  "order": 4
+ },
+ {
+  "key": "you're welcome",
+  "word": "You're welcome",
+  "category": "expressions",
+  "video": "sign_videos/2026/07/22/You_re_welcome.mp4",
+  "order": 5
+ },
+ {
+  "key": "good afternoon",
+  "word": "Good afternoon",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Good_afternoon.mp4",
+  "order": 1
+ },
+ {
+  "key": "good evening",
+  "word": "Good evening",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Good_evening.mp4",
+  "order": 2
+ },
+ {
+  "key": "good morning",
+  "word": "Good morning",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Good_morning.mp4",
+  "order": 3
+ },
+ {
+  "key": "goodbye",
+  "word": "Goodbye",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Goodbye.mp4",
+  "order": 4
+ },
+ {
+  "key": "hello",
+  "word": "Hello",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Hello.mp4",
+  "order": 5
+ },
+ {
+  "key": "welcome",
+  "word": "Welcome",
+  "category": "greetings",
+  "video": "sign_videos/2026/07/22/Welcome.mp4",
+  "order": 6
+ },
+ {
+  "key": "can you repeat that",
+  "word": "Can you repeat that",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/Can_you_repeat_that.mp4",
+  "order": 1
+ },
+ {
+  "key": "how are you",
+  "word": "How are you",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/How_are_you.mp4",
+  "order": 2
+ },
+ {
+  "key": "i need help",
+  "word": "I need help",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/I_need_help.mp4",
+  "order": 3
+ },
+ {
+  "key": "i'm fine",
+  "word": "I'm fine",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/Im_fine.mp4",
+  "order": 4
+ },
+ {
+  "key": "my name is",
+  "word": "My name is",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/My_name_is.mp4",
+  "order": 5
+ },
+ {
+  "key": "nice to meet you",
+  "word": "Nice to meet you",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/Nice_to_meet_you.mp4",
+  "order": 6
+ },
+ {
+  "key": "what is your name",
+  "word": "What is your name",
+  "category": "phrases",
+  "video": "sign_videos/2026/07/22/What_is_your_name.mp4",
+  "order": 7
+ },
+ {
+  "key": "again",
+  "word": "Again",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/Again.mp4",
+  "order": 1
+ },
+ {
+  "key": "help",
+  "word": "Help",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/Help.mp4",
+  "order": 2
+ },
+ {
+  "key": "i don't understand",
+  "word": "I don't understand",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/I_dont_understand.mp4",
+  "order": 3
+ },
+ {
+  "key": "i understand",
+  "word": "I understand",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/I_understand.mp4",
+  "order": 4
+ },
+ {
+  "key": "maybe",
+  "word": "Maybe",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/Maybe.mp4",
+  "order": 5
+ },
+ {
+  "key": "no",
+  "word": "No",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/No.mp4",
+  "order": 6
+ },
+ {
+  "key": "wait",
+  "word": "Wait",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/Wait.mp4",
+  "order": 7
+ },
+ {
+  "key": "yes",
+  "word": "Yes",
+  "category": "responses",
+  "video": "sign_videos/2026/07/22/Yes.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_good_morning",
+  "word": "Good Morning",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_good_morning.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_good_afternoon",
+  "word": "Good Afternoon",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_good_afternoon.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_good_evening",
+  "word": "Good Evening",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_good_evening.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_hello",
+  "word": "Hello",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_hello.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_how_are_you",
+  "word": "How Are You",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_how_are_you.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_im_fine",
+  "word": "I'm Fine",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_im_fine.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_nice_to_meet_you",
+  "word": "Nice To Meet You",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_nice_to_meet_you.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_thank_you",
+  "word": "Thank You",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_thank_you.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_youre_welcome",
+  "word": "You're Welcome",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_youre_welcome.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_see_you_tomorrow",
+  "word": "See You Tomorrow",
+  "category": "greetings",
+  "video": "sign_videos/2026/09/02/fsl105_see_you_tomorrow.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_understand",
+  "word": "Understand",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_understand.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_don_t_understand",
+  "word": "Don't Understand",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_don_t_understand.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_know",
+  "word": "Know",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_know.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_don_t_know",
+  "word": "Don't Know",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_don_t_know.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_no",
+  "word": "No",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_no.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_yes",
+  "word": "Yes",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_yes.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_wrong",
+  "word": "Wrong",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_wrong.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_correct",
+  "word": "Correct",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_correct.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_slow",
+  "word": "Slow",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_slow.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_fast",
+  "word": "Fast",
+  "category": "survival",
+  "video": "sign_videos/2026/09/02/fsl105_fast.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_one",
+  "word": "One",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_one.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_two",
+  "word": "Two",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_two.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_three",
+  "word": "Three",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_three.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_four",
+  "word": "Four",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_four.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_five",
+  "word": "Five",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_five.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_six",
+  "word": "Six",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_six.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_seven",
+  "word": "Seven",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_seven.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_eight",
+  "word": "Eight",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_eight.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_nine",
+  "word": "Nine",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_nine.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_ten",
+  "word": "Ten",
+  "category": "numbers",
+  "video": "sign_videos/2026/09/02/fsl105_ten.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_january",
+  "word": "January",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_january.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_february",
+  "word": "February",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_february.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_march",
+  "word": "March",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_march.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_april",
+  "word": "April",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_april.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_may",
+  "word": "May",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_may.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_june",
+  "word": "June",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_june.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_july",
+  "word": "July",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_july.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_august",
+  "word": "August",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_august.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_september",
+  "word": "September",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_september.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_october",
+  "word": "October",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_october.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_november",
+  "word": "November",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_november.mp4",
+  "order": 11
+ },
+ {
+  "key": "fsl105_december",
+  "word": "December",
+  "category": "calendar",
+  "video": "sign_videos/2026/09/02/fsl105_december.mp4",
+  "order": 12
+ },
+ {
+  "key": "fsl105_monday",
+  "word": "Monday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_monday.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_tuesday",
+  "word": "Tuesday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_tuesday.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_wednesday",
+  "word": "Wednesday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_wednesday.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_thursday",
+  "word": "Thursday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_thursday.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_friday",
+  "word": "Friday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_friday.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_saturday",
+  "word": "Saturday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_saturday.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_sunday",
+  "word": "Sunday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_sunday.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_today",
+  "word": "Today",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_today.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_tomorrow",
+  "word": "Tomorrow",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_tomorrow.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_yesterday",
+  "word": "Yesterday",
+  "category": "days",
+  "video": "sign_videos/2026/09/02/fsl105_yesterday.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_father",
+  "word": "Father",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_father.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_mother",
+  "word": "Mother",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_mother.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_son",
+  "word": "Son",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_son.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_daughter",
+  "word": "Daughter",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_daughter.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_grandfather",
+  "word": "Grandfather",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_grandfather.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_grandmother",
+  "word": "Grandmother",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_grandmother.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_uncle",
+  "word": "Uncle",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_uncle.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_auntie",
+  "word": "Auntie",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_auntie.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_cousin",
+  "word": "Cousin",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_cousin.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_parents",
+  "word": "Parents",
+  "category": "family",
+  "video": "sign_videos/2026/09/02/fsl105_parents.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_boy",
+  "word": "Boy",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_boy.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_girl",
+  "word": "Girl",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_girl.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_man",
+  "word": "Man",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_man.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_woman",
+  "word": "Woman",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_woman.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_deaf",
+  "word": "Deaf",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_deaf.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_hard_of_hearing",
+  "word": "Hard Of Hearing",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_hard_of_hearing.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_deaf_blind",
+  "word": "Deaf-Blind",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_deaf_blind.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_blind",
+  "word": "Blind",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_blind.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_weelchair_person",
+  "word": "Wheelchair Person",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_weelchair_person.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_married",
+  "word": "Married",
+  "category": "relationships",
+  "video": "sign_videos/2026/09/02/fsl105_married.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_blue",
+  "word": "Blue",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_blue.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_green",
+  "word": "Green",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_green.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_red",
+  "word": "Red",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_red.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_brown",
+  "word": "Brown",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_brown.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_black",
+  "word": "Black",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_black.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_white",
+  "word": "White",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_white.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_yellow",
+  "word": "Yellow",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_yellow.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_orange",
+  "word": "Orange",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_orange.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_gray",
+  "word": "Gray",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_gray.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_pink",
+  "word": "Pink",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_pink.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_violet",
+  "word": "Violet",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_violet.mp4",
+  "order": 11
+ },
+ {
+  "key": "fsl105_light",
+  "word": "Light",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_light.mp4",
+  "order": 12
+ },
+ {
+  "key": "fsl105_dark",
+  "word": "Dark",
+  "category": "colors",
+  "video": "sign_videos/2026/09/02/fsl105_dark.mp4",
+  "order": 13
+ },
+ {
+  "key": "fsl105_bread",
+  "word": "Bread",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_bread.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_egg",
+  "word": "Egg",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_egg.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_fish",
+  "word": "Fish",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_fish.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_meat",
+  "word": "Meat",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_meat.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_chicken",
+  "word": "Chicken",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_chicken.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_spaghetti",
+  "word": "Spaghetti",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_spaghetti.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_rice",
+  "word": "Rice",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_rice.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_longanisa",
+  "word": "Longanisa",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_longanisa.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_shrimp",
+  "word": "Shrimp",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_shrimp.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_crab",
+  "word": "Crab",
+  "category": "food",
+  "video": "sign_videos/2026/09/02/fsl105_crab.mp4",
+  "order": 10
+ },
+ {
+  "key": "fsl105_hot",
+  "word": "Hot",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_hot.mp4",
+  "order": 1
+ },
+ {
+  "key": "fsl105_cold",
+  "word": "Cold",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_cold.mp4",
+  "order": 2
+ },
+ {
+  "key": "fsl105_juice",
+  "word": "Juice",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_juice.mp4",
+  "order": 3
+ },
+ {
+  "key": "fsl105_milk",
+  "word": "Milk",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_milk.mp4",
+  "order": 4
+ },
+ {
+  "key": "fsl105_coffee",
+  "word": "Coffee",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_coffee.mp4",
+  "order": 5
+ },
+ {
+  "key": "fsl105_tea",
+  "word": "Tea",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_tea.mp4",
+  "order": 6
+ },
+ {
+  "key": "fsl105_beer",
+  "word": "Beer",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_beer.mp4",
+  "order": 7
+ },
+ {
+  "key": "fsl105_wine",
+  "word": "Wine",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_wine.mp4",
+  "order": 8
+ },
+ {
+  "key": "fsl105_sugar",
+  "word": "Sugar",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_sugar.mp4",
+  "order": 9
+ },
+ {
+  "key": "fsl105_no_sugar",
+  "word": "No Sugar",
+  "category": "drink",
+  "video": "sign_videos/2026/09/02/fsl105_no_sugar.mp4",
+  "order": 10
+ }
+]
