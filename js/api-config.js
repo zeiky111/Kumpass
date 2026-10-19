@@ -38,15 +38,37 @@ window.setKumpasToken = function (token) {
 // Reuse that exact marker to transparently attach the bearer token instead,
 // so none of those call sites (spread across many pages and shared scripts)
 // need to be rewritten individually.
+//
+// Public auth endpoints (login, Google sign-in, signup, verification,
+// password reset) never get the token: they don't need one, and a stale
+// token left in localStorage must never be able to block signing back in.
+// Any 401 that says the caller isn't authenticated also clears the stored
+// token, so a dead token can't linger and break later requests.
 (function () {
     const nativeFetch = window.fetch.bind(window);
+    const PUBLIC_AUTH_PATH = /\/auth\/(login|google|signup|csrf|verify-email|resend-verification|request-password-reset|resend-password-reset-code|reset-password)\/?(\?|$)/;
+
     window.fetch = function (input, init) {
         const token = window.getKumpasToken();
-        if (token && init && init.credentials === 'include') {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        const attachToken = Boolean(token && init && init.credentials === 'include' && !PUBLIC_AUTH_PATH.test(url));
+        if (attachToken) {
             init = Object.assign({}, init, {
                 headers: Object.assign({}, init.headers || {}, { Authorization: `Token ${token}` }),
             });
         }
-        return nativeFetch(input, init);
+        const request = nativeFetch(input, init);
+        if (!attachToken) return request;
+
+        return request.then((response) => {
+            if (response.status === 401) {
+                response.clone().json().then((data) => {
+                    if (data && data.authenticated === false && window.getKumpasToken() === token) {
+                        window.setKumpasToken(null);
+                    }
+                }).catch(() => {});
+            }
+            return response;
+        });
     };
 })();
