@@ -31,3 +31,13 @@ try:
         logging.getLogger(__name__).warning("Restored %d sign videos into an empty database", restored)
 except Exception:
     logging.getLogger(__name__).exception("Startup sign video restore failed")
+
+# The default game levels are built from those videos by data migrations,
+# which find nothing on a database migrated while empty -- rebuild them.
+try:
+    from signtext.game_level_seed import rebuild_game_levels_if_missing
+
+    if rebuild_game_levels_if_missing():
+        logging.getLogger(__name__).warning("Rebuilt default game levels from sign videos")
+except Exception:
+    logging.getLogger(__name__).exception("Startup game level rebuild failed")
