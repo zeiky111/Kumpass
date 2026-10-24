@@ -346,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     size: 'large',
                     shape: 'rectangular',
                     text: 'continue_with',
+                    locale: 'en',
                     width: renderWidth
                 });
                 const renderedButton = googleSignInContainer.firstElementChild;
