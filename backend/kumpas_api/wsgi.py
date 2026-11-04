@@ -41,3 +41,15 @@ try:
         logging.getLogger(__name__).warning("Rebuilt default game levels from sign videos")
 except Exception:
     logging.getLogger(__name__).exception("Startup game level rebuild failed")
+
+# Public registration only makes students. Create/reset the admin and
+# instructor accounts named in KUMPAS_{ADMIN,INSTRUCTOR}_{EMAIL,PASSWORD}
+# so staff can sign in on hosts without a shell.
+try:
+    from signtext.management.commands.create_staff_account import ensure_staff_accounts_from_env
+
+    applied = ensure_staff_accounts_from_env()
+    if applied:
+        logging.getLogger(__name__).warning("Ensured staff accounts from env: %s", ", ".join(applied))
+except Exception:
+    logging.getLogger(__name__).exception("Startup staff account setup failed")
