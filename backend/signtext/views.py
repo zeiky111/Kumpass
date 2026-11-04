@@ -1028,6 +1028,18 @@ def google_auth(request: Any) -> Response:
     if not user:
         user = User.objects.select_related("profile").filter(username__iexact=email).first()
 
+    # Google gives no year level, so a new student (or an existing Google
+    # student who never set one) must pick 1st-4th year before signing in.
+    # The frontend re-sends the same credential with yearLevel.
+    year_level = str(request.data.get("yearLevel") or "").strip()
+    if year_level not in {"1", "2", "3", "4"}:
+        year_level = ""
+    existing_profile = getattr(user, "profile", None) if user else None
+    is_student = existing_profile is None or str(existing_profile.role or "student").lower() == "student"
+    has_year = bool(existing_profile and str(existing_profile.year_level or "").strip())
+    if is_student and not has_year and not year_level:
+        return Response({"needsYearLevel": True, "email": email}, status=200)
+
     created = False
     if not user:
         user = User.objects.create_user(
@@ -1062,8 +1074,11 @@ def google_auth(request: Any) -> Response:
             last_name=family_name,
             # Public sign-in only ever creates student accounts, same as signup().
             role="student",
-            year_level="",
+            year_level=year_level,
         )
+    elif is_student and not has_year and year_level:
+        profile.year_level = year_level
+        profile.save(update_fields=["year_level"])
 
     # No password was checked (there may not be one), so authenticate() can't
     # be used here -- tell django_login() which backend vouches for this user.

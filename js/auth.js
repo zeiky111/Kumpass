@@ -289,11 +289,76 @@ document.addEventListener('DOMContentLoaded', function() {
     const googleSignInContainer = document.getElementById('googleSignInContainer');
     const configuredClientId = typeof GOOGLE_CLIENT_ID === 'string' ? GOOGLE_CLIENT_ID.trim() : '';
 
+    // Google gives no year level, so a student without one picks it here
+    // before the account is created/signed in. Resolves to "1"-"4", or null
+    // if the student cancels.
+    function askGoogleYearLevel() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h2 style="font-size: 1.25rem;">Select your year level</h2>
+                        <button type="button" class="modal-close" aria-label="Cancel">&times;</button>
+                    </div>
+                    <form>
+                        <div class="form-group">
+                            <label for="googleYearLevel" class="form-label">Year Level</label>
+                            <select id="googleYearLevel" class="form-select" required>
+                                <option value="">Select your year level</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Continue</button>
+                    </form>
+                </div>`;
+
+            const close = (value) => {
+                modal.remove();
+                resolve(value);
+            };
+            modal.querySelector('.modal-close').addEventListener('click', () => close(null));
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) close(null);
+            });
+            modal.querySelector('form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                const value = modal.querySelector('#googleYearLevel').value;
+                if (!value) {
+                    alert('Please select your year level');
+                    return;
+                }
+                close(value);
+            });
+
+            document.body.appendChild(modal);
+            modal.querySelector('#googleYearLevel').focus();
+        });
+    }
+
     async function handleGoogleCredentialResponse(googleResponse) {
         const credential = googleResponse && googleResponse.credential;
         if (!credential) return;
         try {
-            const result = await postJson('/auth/google/', { credential });
+            // On the register page, use the year level already picked there.
+            const registerYearSelect = document.getElementById('yearLevel');
+            const preselectedYear = registerYearSelect ? String(registerYearSelect.value || '').trim() : '';
+            let result = await postJson('/auth/google/', preselectedYear
+                ? { credential, yearLevel: preselectedYear }
+                : { credential });
+
+            if (result && result.needsYearLevel) {
+                const yearLevel = await askGoogleYearLevel();
+                if (!yearLevel) return;
+                result = await postJson('/auth/google/', { credential, yearLevel });
+            }
+
             window.setKumpasToken(result.token || null);
             const redirectTarget = new URL(result.redirect || 'dashboard.html', window.location.href).href;
             window.location.replace(redirectTarget);
