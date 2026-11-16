@@ -787,6 +787,12 @@
             items.forEach(item => {
                 map[String(item.key || '').toLowerCase()] = item.video_url;
             });
+            // Also index by word (e.g. key "fsl105_father" -> "father") so
+            // sign names resolve, without overriding an exact key match.
+            items.forEach(item => {
+                const wordKey = String(item.word || '').toLowerCase();
+                if (wordKey && !map[wordKey]) map[wordKey] = item.video_url;
+            });
             signVideoByKey = map;
             signVideoWords = items.map(item => item.word).filter(Boolean);
         }
@@ -955,14 +961,19 @@
                     .map(item => ({ ...item, correct: false }));
 
                 opts.push(...extras);
-                opts = KumpasGames.shuffle(opts);
             }
+            // Always shuffle -- authored options list the correct one first,
+            // so skipping this (when no extras were needed) leaked the answer.
+            opts = KumpasGames.shuffle(opts);
 
             opts.forEach((opt) => {
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.dataset.correct = opt.correct;
-                btn.appendChild(KumpasGames.buildVideoElement(opt.video));
+                // Prefer the live SignVideo URL for this option's name; the
+                // level's stored opt.video can be stale/broken seed data.
+                const liveVideo = signVideoByKey[String(opt.name || '').toLowerCase()];
+                btn.appendChild(KumpasGames.buildVideoElement(liveVideo || opt.video));
                 btn.onclick = () => selectOption(btn);
                 optionsDiv.appendChild(btn);
             });

@@ -230,19 +230,24 @@ class GameLevelItemSerializer(serializers.ModelSerializer):
         return live_url or _repair_doubled_host(stored_url)
 
     def _resolve_signs(self, extra):
-        # Sentence Builder stores its clips as extra_data.signs[{name, video}],
-        # frozen at seed time -- some were saved with the backend host glued
-        # in front of a never-uploaded res.cloudinary.com URL, so resolve each
-        # one live by its sign name the same way media_url is.
-        signs = extra.get("signs") if isinstance(extra, dict) else None
-        if not isinstance(signs, list) or not signs:
+        # Sentence Builder (extra_data.signs) and Scenario (extra_data.options)
+        # store clips as [{name, video}], frozen at seed time -- some were
+        # saved with the backend host glued in front of a never-uploaded
+        # res.cloudinary.com URL, so resolve each one live by its sign name
+        # the same way media_url is.
+        if not isinstance(extra, dict):
             return extra
-        fixed_signs = []
-        for sign in signs:
-            if isinstance(sign, dict):
-                sign = {**sign, "video": self._resolve_media_url(sign.get("name"), sign.get("video"))}
-            fixed_signs.append(sign)
-        return {**extra, "signs": fixed_signs}
+        for field in ("signs", "options"):
+            clips = extra.get(field)
+            if not isinstance(clips, list) or not clips:
+                continue
+            fixed = []
+            for clip in clips:
+                if isinstance(clip, dict) and "video" in clip:
+                    clip = {**clip, "video": self._resolve_media_url(clip.get("name"), clip.get("video"))}
+                fixed.append(clip)
+            extra = {**extra, field: fixed}
+        return extra
 
     # media_url/extra_data stay normal writable model fields (instructor CRUD
     # endpoints save them directly) -- only the READ side is patched here, so
