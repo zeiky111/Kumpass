@@ -320,12 +320,13 @@
         /* Feedback */
         .feedback {
             flex: 0 0 auto;
-            padding: 10px 14px;
+            margin-top: 12px;
+            padding: 12px 16px;
             border-radius: 14px;
-            font-weight: 600;
+            font-weight: 700;
             text-align: center;
             display: none;
-            font-size: 15px;
+            font-size: 16px;
         }
 
         .feedback.show {
@@ -833,9 +834,9 @@
                         <strong>Your Sentence:</strong>
                         <div id="sentence-answer"></div>
                     </div>
-
-                    <div class="feedback" id="feedback"></div>
                 </div>
+                <!-- Outside .choices-scroll so the result is never scrolled out of view -->
+                <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
                 <div class="panel-actions">
                     <div class="panel-actions-row">
                         <button class="btn btn-primary" onclick="submitAnswer()">Check Answer</button>
@@ -895,6 +896,12 @@
             items.forEach(item => {
                 map[String(item.key || '').toLowerCase()] = item.video_url;
                 allWordsPool.push(item.word);
+            });
+            // Also index by word (e.g. key "fsl105_father" -> "father") so
+            // sign names resolve, without overriding an exact key match.
+            items.forEach(item => {
+                const wordKey = String(item.word || '').toLowerCase();
+                if (wordKey && !map[wordKey]) map[wordKey] = item.video_url;
             });
             signVideoByKey = map;
         }
@@ -1049,7 +1056,9 @@
             question.signs.forEach(sign => {
                 const signCard = document.createElement('div');
                 signCard.className = 'sign-card';
-                signCard.appendChild(KumpasGames.buildVideoElement(sign.video));
+                // Prefer the live SignVideo URL for this sign's name; the
+                // level's stored sign.video can be stale/broken seed data.
+                signCard.appendChild(KumpasGames.buildVideoElement(videoFor(sign.name || '') || sign.video));
                 signsDiv.appendChild(signCard);
             });
 
@@ -1156,7 +1165,7 @@
                 engine.state.score += points;
                 feedbackDiv.classList.remove('incorrect');
                 feedbackDiv.classList.add('correct', 'show');
-                feedbackDiv.textContent = '✓ Correct! Perfect sentence about sign language!';
+                feedbackDiv.textContent = `✓ Correct! +${points} points`;
                 awardGameProgress(points, 15, currentIndex + 1 >= activeQuestions.length && !engine.hasNextLevel());
             } else {
                 feedbackDiv.classList.remove('correct');
@@ -1168,11 +1177,12 @@
 
             updateScores();
             if (advanceTimer) clearTimeout(advanceTimer);
+            // Wrong answers stay up longer so the correct order can be read.
             advanceTimer = setTimeout(() => {
                 advanceTimer = null;
                 currentIndex++;
                 nextQuestion();
-            }, 1400);
+            }, isCorrect ? 1800 : 3200);
         }
 
         function updateScores() {
