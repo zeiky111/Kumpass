@@ -1811,6 +1811,9 @@ def admin_users(request: Any) -> Response:
     profiles_qs = UserProfile.objects.select_related("user").all().order_by("role", "full_name", "user__username")
     if role_filter in {"student", "instructor", "admin"}:
         profiles_qs = profiles_qs.filter(role=role_filter)
+    year_filter = str(request.query_params.get("yearLevel") or "all").strip()
+    if year_filter in {"1", "2", "3", "4"}:
+        profiles_qs = profiles_qs.filter(year_level=year_filter)
 
     total = profiles_qs.count()
     start = (page - 1) * page_size

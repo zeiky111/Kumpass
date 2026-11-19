@@ -154,6 +154,13 @@
                                     <option value="instructor">Instructors</option>
                                     <option value="admin">Admins</option>
                                 </select>
+                                <select id="adminYearFilter" class="form-input" style="width: 150px; display: inline-block; margin-left: 8px;" aria-label="Filter by year level">
+                                    <option value="all">All Years</option>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
+                                </select>
                                 <button class="btn btn-secondary btn-sm" onclick="refreshAdminDashboard()" style="margin-left: 10px;">Refresh</button>
                                 <button class="btn btn-primary btn-sm" id="showCreateUserBtn" onclick="toggleCreateUserForm()" style="margin-left: 8px;">Create Instructor</button>
                             </div>
@@ -765,11 +772,12 @@
             }
 
             const roleFilter = String((document.getElementById('adminRoleFilter') || {}).value || 'all');
+            const yearFilter = String((document.getElementById('adminYearFilter') || {}).value || 'all');
             const page = getAdminUsersPage();
 
             try {
                 const dashboard = await requestJson(`/instructor/dashboard/?adminEmail=${encodeURIComponent(actorId)}`);
-                const usersPayload = await requestJson(`/admin/users/?adminEmail=${encodeURIComponent(actorId)}&role=${encodeURIComponent(roleFilter)}&page=${encodeURIComponent(page)}&pageSize=5`);
+                const usersPayload = await requestJson(`/admin/users/?adminEmail=${encodeURIComponent(actorId)}&role=${encodeURIComponent(roleFilter)}&yearLevel=${encodeURIComponent(yearFilter)}&page=${encodeURIComponent(page)}&pageSize=5`);
 
                 dashboard.users = usersPayload.users || [];
                 dashboard.pagination = usersPayload.pagination || { page, pageSize: 5, total: Array.isArray(usersPayload.users) ? usersPayload.users.length : 0 };
@@ -1234,13 +1242,15 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
-            const roleFilter = document.getElementById('adminRoleFilter');
-            if (roleFilter) {
-                roleFilter.addEventListener('change', function () {
-                    setAdminUsersPage(1);
-                    void refreshAdminDashboard();
-                });
-            }
+            ['adminRoleFilter', 'adminYearFilter'].forEach(function (id) {
+                const filter = document.getElementById(id);
+                if (filter) {
+                    filter.addEventListener('change', function () {
+                        setAdminUsersPage(1);
+                        void refreshAdminDashboard();
+                    });
+                }
+            });
 
             const signVideosTable = document.getElementById('signVideosTable');
             if (signVideosTable) {
