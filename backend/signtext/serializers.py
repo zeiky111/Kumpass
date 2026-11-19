@@ -4,6 +4,7 @@ import re
 from django.conf import settings
 from rest_framework import serializers
 
+from .file_downloads import download_url
 from .models import (
     Announcement,
     GameLevel,
@@ -89,12 +90,14 @@ class ModuleFileSerializer(serializers.ModelSerializer):
 
     def get_file_url(self, obj):
         """Get the full URL for the file"""
-        request = self.context.get("request")
-        if obj.file and hasattr(obj.file, "url"):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
-            return obj.file.url
-        return None
+        if not obj.file:
+            return None
+        # Videos are streamed by <video> tags and aren't affected by
+        # Cloudinary's PDF/ZIP delivery block, so keep their direct URL.
+        if obj.file_type == "video":
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+        return download_url(self.context.get("request"), "module", obj.id)
 
 
 class QuizQuestionSerializer(serializers.ModelSerializer):

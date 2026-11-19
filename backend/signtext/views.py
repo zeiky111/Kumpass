@@ -29,6 +29,7 @@ from .ai_word_inference import get_last_ai_error, predict_with_openrouter
 from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
+from .file_downloads import download_url
 from .certificates import award_certificate_if_earned, award_module_certificate_if_earned, send_certificate_email_async
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
@@ -1335,7 +1336,7 @@ def award_certificate(request: Any) -> Response:
             "gameKey": user_certificate.certificate.game_key,
             "title": user_certificate.certificate.title,
             "issuedAt": user_certificate.issued_at,
-            "downloadUrl": request.build_absolute_uri(user_certificate.file.url),
+            "downloadUrl": download_url(request, "certificate", user_certificate.id),
         },
         "alreadyEarned": False,
     })
@@ -1356,7 +1357,7 @@ def user_certificates(request: Any) -> Response:
                 "gameKey": item.certificate.game_key,
                 "title": item.certificate.title,
                 "issuedAt": item.issued_at,
-                "downloadUrl": request.build_absolute_uri(item.file.url),
+                "downloadUrl": download_url(request, "certificate", item.id),
             }
             for item in earned
         ]
@@ -2191,7 +2192,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             certificate_payload = {
                 "title": user_certificate.certificate.title,
                 "issuedAt": user_certificate.issued_at,
-                "downloadUrl": request.build_absolute_uri(user_certificate.file.url),
+                "downloadUrl": download_url(request, "certificate", user_certificate.id),
             }
 
         state["recentActivity"] = recent_activity[:10]

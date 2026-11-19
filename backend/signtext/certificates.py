@@ -18,6 +18,8 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 from PIL import Image, ImageDraw, ImageFont
 
+from .file_downloads import read_file_bytes
+
 from .models import Certificate, LearningModule, UserCertificate
 
 logger = logging.getLogger(__name__)
@@ -217,8 +219,7 @@ def _send_certificate_email_sync(user_certificate_id: int) -> None:
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
 
     try:
-        with user_certificate.file.open("rb") as pdf_file:
-            pdf_bytes = pdf_file.read()
+        pdf_bytes = read_file_bytes(user_certificate.file)
         message = EmailMessage(subject, body, from_email, [recipient])
         message.attach(f"{certificate.title}.pdf", pdf_bytes, "application/pdf")
         message.send(fail_silently=False)

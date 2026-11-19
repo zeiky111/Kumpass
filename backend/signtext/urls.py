@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .file_downloads import file_download
 from .views import (
     admin_sign_video_detail,
     admin_sign_videos,
@@ -78,6 +79,7 @@ urlpatterns = [
     path("instructor/modules/<int:module_id>/quiz/", module_quiz_questions, name="module-quiz-questions"),
     path("instructor/modules/<int:module_id>/quiz/<int:question_id>/", module_quiz_question_detail, name="module-quiz-question-detail"),
     path("modules/<int:module_id>/submit_quiz/", module_quiz_submit, name="module-quiz-submit"),
+    path("files/<str:token>/", file_download, name="file-download"),
     path("instructor/modules/<int:module_id>/files/", module_files, name="module-files"),
     path("instructor/modules/<int:module_id>/files/<int:file_id>/", module_file_detail, name="module-file-detail"),
     path("instructor/announcements/", instructor_announcements, name="instructor-announcements"),
