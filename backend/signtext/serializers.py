@@ -153,6 +153,15 @@ def _resolve_local_relative_name(video):
     return None
 
 
+def _repair_doubled_host(url):
+    """"https://hosthttps://other/..." -> "https://other/..." (bad seed data)."""
+    if isinstance(url, str):
+        last = max(url.rfind("http://"), url.rfind("https://"))
+        if last > 0:
+            return url[last:]
+    return url
+
+
 def build_sign_video_lookup(request=None):
     """Maps normalized word -> current video URL, built fresh from SignVideo.
 
@@ -218,7 +227,27 @@ class GameLevelItemSerializer(serializers.ModelSerializer):
 
     def _resolve_media_url(self, prompt, stored_url):
         live_url = self._sign_video_lookup().get(_normalize_word_key(prompt))
-        return live_url or stored_url
+        return live_url or _repair_doubled_host(stored_url)
+
+    def _resolve_signs(self, extra):
+        # Sentence Builder (extra_data.signs) and Scenario (extra_data.options)
+        # store clips as [{name, video}], frozen at seed time -- some were
+        # saved with the backend host glued in front of a never-uploaded
+        # res.cloudinary.com URL, so resolve each one live by its sign name
+        # the same way media_url is.
+        if not isinstance(extra, dict):
+            return extra
+        for field in ("signs", "options"):
+            clips = extra.get(field)
+            if not isinstance(clips, list) or not clips:
+                continue
+            fixed = []
+            for clip in clips:
+                if isinstance(clip, dict) and "video" in clip:
+                    clip = {**clip, "video": self._resolve_media_url(clip.get("name"), clip.get("video"))}
+                fixed.append(clip)
+            extra = {**extra, field: fixed}
+        return extra
 
     # media_url/extra_data stay normal writable model fields (instructor CRUD
     # endpoints save them directly) -- only the READ side is patched here, so
@@ -227,15 +256,18 @@ class GameLevelItemSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["media_url"] = self._resolve_media_url(data.get("prompt"), data.get("media_url"))
 
-        extra = data.get("extra_data")
+        extra = self._resolve_signs(data.get("extra_data"))
         pool = extra.get("pool") if isinstance(extra, dict) else None
         if isinstance(pool, list) and pool:
             fixed_pool = []
             for entry in pool:
                 if isinstance(entry, dict) and entry.get("media_url"):
                     entry = {**entry, "media_url": self._resolve_media_url(entry.get("prompt"), entry.get("media_url"))}
+                if isinstance(entry, dict) and isinstance(entry.get("extra_data"), dict):
+                    entry = {**entry, "extra_data": self._resolve_signs(entry["extra_data"])}
                 fixed_pool.append(entry)
-            data["extra_data"] = {**extra, "pool": fixed_pool}
+            extra = {**extra, "pool": fixed_pool}
+        data["extra_data"] = extra
 
         return data
 
