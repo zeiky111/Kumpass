@@ -11,15 +11,15 @@ from django.contrib.auth.models import User
 # Cloudinary is actually configured, since the package raises
 # ImproperlyConfigured at import time otherwise.
 if getattr(settings, "CLOUDINARY_URL", ""):
-    from cloudinary_storage.storage import RawMediaCloudinaryStorage, VideoMediaCloudinaryStorage
-    RAW_FILE_STORAGE = RawMediaCloudinaryStorage()
+    from .storage import LocalFirstRawStorage, LocalFirstVideoStorage
+    RAW_FILE_STORAGE = LocalFirstRawStorage()
     # Actual video files (SignVideo.video) must use resource_type="video", not
     # "raw" -- Cloudinary's raw uploads are for arbitrary binary files and
     # don't serve back correctly as playable video, which is why sign videos
     # were 404ing on the Text-to-Sign/Games pages in production even though
     # the same files play fine locally (plain filesystem storage, no
     # resource_type concept).
-    VIDEO_FILE_STORAGE = VideoMediaCloudinaryStorage()
+    VIDEO_FILE_STORAGE = LocalFirstVideoStorage()
 else:
     RAW_FILE_STORAGE = None
     VIDEO_FILE_STORAGE = None

@@ -12,6 +12,10 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if host.strip()]
 
+# Render terminates HTTPS at its proxy, so trust its X-Forwarded-Proto header;
+# otherwise build_absolute_uri() hands out http:// links to /media/ files.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
 
 # OAuth 2.0 Web client ID from Google Cloud Console (Credentials > OAuth client
