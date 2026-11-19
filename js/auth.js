@@ -517,7 +517,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.replace(redirectTarget);
             } catch (error) {
                 restoreButton();
-                alert(`Login failed: ${error.message}`);
+                const hint = error.status === 401
+                    ? '\n\nIf you had an account before, it may have been lost during a recent system update. Use "Sign in with Google", or sign up again with the same email.'
+                    : '';
+                alert(`Login failed: ${error.message}${hint}`);
             }
         });
     }
