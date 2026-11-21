@@ -21,8 +21,8 @@ def fix_admin_account():
     print("FIXING ADMIN ACCOUNT")
     print("="*60)
     
-    admin_username = 'admin1'
-    admin_email = 'admin1@kumpas'
+    admin_username = 'admin1@kumpas.com'
+    admin_email = 'admin1@kumpas.com'
     admin_password = 'admin123'
     
     try:

@@ -190,13 +190,16 @@ def main():
         else:
             print("✓ Default instructor already exists")
 
-    # Ensure admin account exists (username: admin1, password: admin123)
-    admin_username = 'admin1'
-    admin_email = 'admin1@kumpas.local'
+    # Ensure admin account exists (username: admin1@kumpas.com, password: admin123)
+    admin_username = 'admin1@kumpas.com'
+    admin_email = 'admin1@kumpas.com'
     existing_admin = User.objects.filter(username=admin_username).first()
     if not existing_admin:
         # Backward compatibility: previously seeded admin may use email as username.
-        legacy_admin = User.objects.filter(email=admin_email).first()
+        legacy_admin = (
+            User.objects.filter(email=admin_email).first()
+            or User.objects.filter(username__iexact='admin1').first()
+        )
         if legacy_admin and not User.objects.filter(username=admin_username).exists():
             legacy_admin.username = admin_username
             legacy_admin.email = admin_email
@@ -205,7 +208,7 @@ def main():
             legacy_admin.is_superuser = True
             legacy_admin.save(update_fields=['username', 'email', 'password', 'is_staff', 'is_superuser'])
             existing_admin = legacy_admin
-            print("✓ Updated legacy admin account to username: admin1 (password: admin123)")
+            print("✓ Updated legacy admin account to username: admin1@kumpas.com (password: admin123)")
 
     if not existing_admin:
         try:
@@ -233,7 +236,7 @@ def main():
         existing_admin.is_staff = True
         existing_admin.is_superuser = True
         existing_admin.save(update_fields=['email', 'password', 'is_staff', 'is_superuser'])
-        print("✓ Admin account already exists: username=admin1, password=admin123")
+        print("✓ Admin account already exists: username=admin1@kumpas.com, password=admin123")
     
     # Create some test students
     test_students = [

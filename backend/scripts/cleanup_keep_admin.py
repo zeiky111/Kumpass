@@ -16,7 +16,7 @@ from django.contrib.auth.models import User
 
 
 def main():
-    admin_email = os.environ.get('ADMIN_EMAIL', 'admin1@kumpas.local').strip().lower()
+    admin_email = os.environ.get('ADMIN_EMAIL', 'admin1@kumpas.com').strip().lower()
     print('Preserving admin_email:', admin_email)
 
     admins = list(User.objects.filter(is_superuser=True))
