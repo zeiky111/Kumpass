@@ -207,6 +207,8 @@
       // Pre-test: taken before the materials unlock.
       preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
       preTestCount: Number((module && module.preTestCount) || 0),
+      // Intermediate modules stay locked until every Beginner module is finished.
+      levelLocked: Boolean(module && module.levelLocked),
       preTestAttempt: module && module.preTestAttempt && typeof module.preTestAttempt === 'object' ? {
         score: Number(module.preTestAttempt.score || 0),
         total: Number(module.preTestAttempt.total || 0),
@@ -218,6 +220,15 @@
   // Flow per module: pre-test -> open every material -> post-test.
   function isPreTestPending(module) {
     return Boolean(module) && Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+  }
+
+  function getBeginnerRemaining() {
+    return Number((studentContentCache && studentContentCache.beginnerRemaining) || 0);
+  }
+
+  function getLevelLockMessage() {
+    const remaining = getBeginnerRemaining();
+    return `🔒 Finish all Beginner modules first${remaining ? ` (${remaining} left)` : ''} to unlock Intermediate modules.`;
   }
 
   // Updates the cached backend copy of a module so buttons refresh without a reload.
@@ -234,7 +245,7 @@
   }
 
   function isQuizLocked(module) {
-    return Boolean(module) && !module.quizAttempt && (isPreTestPending(module) || !module.materialsComplete);
+    return Boolean(module) && !module.quizAttempt && (module.levelLocked || isPreTestPending(module) || !module.materialsComplete);
   }
 
   // Tells the backend this student opened a material, then updates the
@@ -243,7 +254,7 @@
     const module = getModuleById(moduleId);
     if (!module || !Number.isFinite(module.numericId)) return;
     if ((module.viewedFileIds || []).includes(Number(fileId))) return;
-    if (isPreTestPending(module)) return;
+    if (isPreTestPending(module) || module.levelLocked) return;
 
     try {
       const response = await window.fetchWithAuth(
@@ -644,9 +655,12 @@
 
     if (files) {
       const viewedIds = new Set((module.viewedFileIds || []).map(Number));
-      const materialsLocked = isPreTestPending(module);
+      const materialsLocked = module.levelLocked || isPreTestPending(module);
+      const lockText = module.levelLocked
+        ? getLevelLockMessage()
+        : `🔒 Take the pre-test first to unlock this module's ${moduleFiles.length} material${moduleFiles.length === 1 ? '' : 's'}.`;
       files.innerHTML = moduleFiles.length && materialsLocked
-        ? `<div style="padding:14px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;margin-bottom:10px;">🔒 Take the pre-test first to unlock this module's ${moduleFiles.length} material${moduleFiles.length === 1 ? '' : 's'}.</div>`
+        ? `<div style="padding:14px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;margin-bottom:10px;">${lockText}</div>`
           + moduleFiles.map(file => `
             <div class="learning-file-row" style="opacity:0.6;">
               <div>
@@ -698,7 +712,7 @@
           actions.insertBefore(preTestBtn, openQuizBtn || null);
         }
         if (preTestBtn) {
-          preTestBtn.style.display = Number(module.preTestCount || 0) > 0 ? 'inline-flex' : 'none';
+          preTestBtn.style.display = Number(module.preTestCount || 0) > 0 && !module.levelLocked ? 'inline-flex' : 'none';
           preTestBtn.textContent = module.preTestAttempt
             ? `✓ Pre-test done (${module.preTestAttempt.score}/${module.preTestAttempt.total})`
             : '1. Take Pre-test';
@@ -715,7 +729,9 @@
             : '';
           openQuizBtn.textContent = module.quizAttempt
             ? 'View Post-test Results'
-            : isPreTestPending(module)
+            : module.levelLocked
+              ? '🔒 Finish Beginner modules first'
+              : isPreTestPending(module)
               ? '🔒 Post-test (take the pre-test first)'
               : locked
                 ? `🔒 Open all materials to unlock post-test (${getOpenedMaterialsCount(module)}/${moduleFiles.length})`
@@ -728,8 +744,14 @@
 
     if (startButton) {
       const needsPreTest = isPreTestPending(module);
-      startButton.textContent = needsPreTest ? 'Take Pre-test to Start' : completed ? 'Review Module' : 'Start Learning';
+      startButton.disabled = module.levelLocked;
+      startButton.style.opacity = module.levelLocked ? '0.6' : '';
+      startButton.style.cursor = module.levelLocked ? 'not-allowed' : '';
+      startButton.textContent = module.levelLocked
+        ? '🔒 Finish Beginner modules first'
+        : needsPreTest ? 'Take Pre-test to Start' : completed ? 'Review Module' : 'Start Learning';
       startButton.onclick = () => {
+        if (module.levelLocked) return;
         if (needsPreTest) {
           openQuiz(module.id, 'pre');
           return;
@@ -788,6 +810,11 @@
       : (Array.isArray(module.quizzes) ? module.quizzes : []);
     if (!moduleQuizzes.length) {
       showMessage(`<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No ${testLabel.toLowerCase()} available for this module.</div>`);
+      return;
+    }
+
+    if (module.levelLocked) {
+      showMessage(`<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">${getLevelLockMessage()}</div>`);
       return;
     }
 
@@ -1236,6 +1263,7 @@
             </td>
             <td>
               <span class="module-chip" style="background:#eef2ff;color:#2563eb;">${safeText(module.levelLabel)}</span>
+              ${module.levelLocked ? '<div style="margin-top:6px;color:#92400e;font-size:0.82rem;font-weight:600;">🔒 Finish Beginner first</div>' : ''}
             </td>
             <td>
               <div class="learning-module-meta">
@@ -1252,7 +1280,7 @@
             </td>
             <td>
               <div class="learning-module-actions" onclick="event.stopPropagation();">
-                <button class="btn btn-primary" onclick="event.stopPropagation(); openModuleDetails('${safeText(module.id)}')">${completed ? 'Review' : progress > 0 ? 'Continue Learning' : 'Open Module'}</button>
+                <button class="btn btn-primary" onclick="event.stopPropagation(); openModuleDetails('${safeText(module.id)}')">${module.levelLocked ? '🔒 Locked' : completed ? 'Review' : progress > 0 ? 'Continue Learning' : 'Open Module'}</button>
               </div>
             </td>
           </tr>

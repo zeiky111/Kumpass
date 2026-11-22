@@ -604,10 +604,12 @@
 
             const videoFile = files.find(f => f.file_type === 'video' && f.file_url);
             const preTestPending = Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
-            if (videoFile && preTestPending) {
+            if (videoFile && (preTestPending || module.levelLocked)) {
                 const container = document.getElementById('activityVideoContainer');
                 if (container) {
-                    container.innerHTML = '<div style="padding:18px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:16px;">🔒 Take this module\'s pre-test first (on the Learning page) to unlock the materials.</div>';
+                    container.innerHTML = module.levelLocked
+                        ? '<div style="padding:18px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:16px;">🔒 Finish all Beginner modules first to unlock Intermediate modules.</div>'
+                        : '<div style="padding:18px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:16px;">🔒 Take this module\'s pre-test first (on the Learning page) to unlock the materials.</div>';
                 }
             } else if (videoFile) {
                 const container = document.getElementById('activityVideoContainer');

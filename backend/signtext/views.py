@@ -1384,6 +1384,42 @@ def _normalize_test_type(value: Any) -> str:
     return QuizQuestion.TEST_PRE if str(value or "").strip().lower() == QuizQuestion.TEST_PRE else QuizQuestion.TEST_POST
 
 
+def _beginner_modules_remaining(user: User) -> int:
+    """How many published Beginner modules the student hasn't finished yet.
+
+    A module is finished once its post-test has been taken. Intermediate
+    modules stay locked until this reaches zero.
+    """
+    beginner_ids = list(
+        LearningModule.objects.filter(
+            status=LearningModule.STATUS_PUBLISHED, year_level=LearningModule.LEVEL_BEGINNER
+        ).values_list("id", flat=True)
+    )
+    if not beginner_ids:
+        return 0
+    finished = (
+        QuizAttempt.objects.filter(user=user, test_type=QuizQuestion.TEST_POST, module_id__in=beginner_ids)
+        .values("module_id")
+        .distinct()
+        .count()
+    )
+    return max(0, len(beginner_ids) - finished)
+
+
+def _level_locked_response(user: User, module: LearningModule) -> Response | None:
+    """403 response when an Intermediate module is still locked for this student."""
+    if module.year_level != LearningModule.LEVEL_INTERMEDIATE:
+        return None
+    remaining = _beginner_modules_remaining(user)
+    if remaining <= 0:
+        return None
+    return Response({
+        "error": "Finish all Beginner modules before starting Intermediate modules.",
+        "levelLocked": True,
+        "beginnerRemaining": remaining,
+    }, status=403)
+
+
 def _pre_test_pending(user: User, module: LearningModule) -> bool:
     """True when the module has a pre-test the student hasn't taken yet."""
     if not module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).exists():
@@ -1446,6 +1482,8 @@ def student_content(request: Any) -> Response:
     viewed_file_ids = _viewed_file_ids(
         user, [file.id for module in modules for file in module.files.all()]
     )
+    # Intermediate modules unlock only after every Beginner module is finished.
+    beginner_remaining = _beginner_modules_remaining(user)
 
     serialized = []
     for module in modules:
@@ -1455,6 +1493,9 @@ def student_content(request: Any) -> Response:
         # The quiz unlocks once every material in the module has been opened.
         module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
         module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)
+        module_data["levelLocked"] = (
+            module.year_level == LearningModule.LEVEL_INTERMEDIATE and beginner_remaining > 0
+        )
         # include quiz count and student-safe quiz payload
         all_questions = list(module.quiz_questions.all().order_by("order", "created_at"))
         questions = [q for q in all_questions if q.test_type != QuizQuestion.TEST_PRE]
@@ -1487,6 +1528,7 @@ def student_content(request: Any) -> Response:
         "limit": limit,
         "yearLevel": year_level,
         "ownYearLevel": own_year_level,
+        "beginnerRemaining": beginner_remaining,
     })
 
 
@@ -2169,6 +2211,9 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
 def module_file_viewed(request: Any, module_id: int, file_id: int) -> Response:
     """Records that the signed-in student opened a module material."""
     module_file = get_object_or_404(ModuleFile, pk=file_id, module_id=module_id)
+    locked = _level_locked_response(request.user, module_file.module)
+    if locked is not None:
+        return locked
     if _pre_test_pending(request.user, module_file.module):
         return Response({"error": "Take the pre-test before opening the module materials.", "preTestRequired": True}, status=403)
     ModuleFileView.objects.get_or_create(user=request.user, file=module_file)
@@ -2213,6 +2258,10 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             "score": existing_attempt.score,
             "total": existing_attempt.total,
         }, status=409)
+
+    locked = _level_locked_response(user, module)
+    if locked is not None:
+        return locked
 
     if not is_pre_test and _pre_test_pending(user, module):
         return Response({
