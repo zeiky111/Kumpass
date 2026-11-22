@@ -892,7 +892,7 @@
                             <td>${Number(module.studentCount || 0)}</td>
                             <td>${Number(module.activities_count || 0)}</td>
                             <td>${filesCount}</td>
-                            <td>${Number(module.quizCount || 0)}</td>
+                            <td title="Post-test / Pre-test questions">${Number(module.quizCount || 0)} post · ${Number(module.preTestCount || 0)} pre</td>
                             <td onclick="event.stopPropagation();">
                                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                                     <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>

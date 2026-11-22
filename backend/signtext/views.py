@@ -464,7 +464,7 @@ def _skill_breakdown_for_user(user: User) -> list:
     last N = focus areas).
     """
     rows = (
-        QuizAttempt.objects.filter(user=user)
+        QuizAttempt.objects.filter(user=user, test_type=QuizQuestion.TEST_POST)
         .values("module_id", "module__title")
         .annotate(total_score=Sum("score"), total_total=Sum("total"))
     )
@@ -489,7 +489,7 @@ def _evaluate_achievements(user: User, state: dict) -> list:
     points_total = _safe_int(state.get("points"))
     streak_days = _safe_int(state.get("streak"))
 
-    quiz_attempts = QuizAttempt.objects.filter(user=user)
+    quiz_attempts = QuizAttempt.objects.filter(user=user, test_type=QuizQuestion.TEST_POST)
     quiz_count = quiz_attempts.count()
     has_perfect_quiz = quiz_attempts.filter(total__gt=0, score=F("total")).exists()
 
@@ -1380,6 +1380,17 @@ def user_certificates(request: Any) -> Response:
     })
 
 
+def _normalize_test_type(value: Any) -> str:
+    return QuizQuestion.TEST_PRE if str(value or "").strip().lower() == QuizQuestion.TEST_PRE else QuizQuestion.TEST_POST
+
+
+def _pre_test_pending(user: User, module: LearningModule) -> bool:
+    """True when the module has a pre-test the student hasn't taken yet."""
+    if not module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).exists():
+        return False
+    return not QuizAttempt.objects.filter(user=user, module=module, test_type=QuizQuestion.TEST_PRE).exists()
+
+
 def _viewed_file_ids(user: User, file_ids: list[int]) -> set[int]:
     if not file_ids:
         return set()
@@ -1427,10 +1438,11 @@ def student_content(request: Any) -> Response:
     start = (page - 1) * limit
     end = start + limit
     modules = list(modules_qs[start:end])
-    attempts_by_module = {
-        attempt.module_id: attempt
-        for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at")
-    }
+    attempts_by_module = {}
+    pre_attempts_by_module = {}
+    for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at"):
+        target = pre_attempts_by_module if attempt.test_type == QuizQuestion.TEST_PRE else attempts_by_module
+        target[attempt.module_id] = attempt
     viewed_file_ids = _viewed_file_ids(
         user, [file.id for module in modules for file in module.files.all()]
     )
@@ -1444,9 +1456,20 @@ def student_content(request: Any) -> Response:
         module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
         module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)
         # include quiz count and student-safe quiz payload
-        questions = list(module.quiz_questions.all().order_by("order", "created_at"))
+        all_questions = list(module.quiz_questions.all().order_by("order", "created_at"))
+        questions = [q for q in all_questions if q.test_type != QuizQuestion.TEST_PRE]
+        pre_questions = [q for q in all_questions if q.test_type == QuizQuestion.TEST_PRE]
         module_data["quizCount"] = len(questions)
         module_data["quizzes"] = StudentQuizQuestionSerializer(questions, many=True).data
+        # Pre-test: taken before the materials unlock.
+        module_data["preTestCount"] = len(pre_questions)
+        module_data["preTests"] = StudentQuizQuestionSerializer(pre_questions, many=True).data
+        pre_attempt = pre_attempts_by_module.get(module.id)
+        module_data["preTestAttempt"] = {
+            "score": pre_attempt.score,
+            "total": pre_attempt.total,
+            "submittedAt": pre_attempt.created_at,
+        } if pre_attempt is not None else None
 
         attempt = attempts_by_module.get(module.id)
         module_data["quizAttempt"] = {
@@ -1678,7 +1701,8 @@ def instructor_dashboard(request: Any) -> Response:
                     context={"request": request},
                 ).data,
                 "studentCount": module_counts.get(module.module_key, 0),
-                "quizCount": module.quiz_questions.count(),
+                "quizCount": module.quiz_questions.filter(test_type=QuizQuestion.TEST_POST).count(),
+                "preTestCount": module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).count(),
             }
             for module in modules
         ],
@@ -1720,13 +1744,13 @@ def instructor_quiz_reports(request: Any) -> Response:
 
     modules = list(
         LearningModule.objects
-        .filter(status=LearningModule.STATUS_PUBLISHED, quiz_questions__isnull=False)
+        .filter(status=LearningModule.STATUS_PUBLISHED, quiz_questions__test_type=QuizQuestion.TEST_POST)
         .distinct()
         .order_by("sort_order", "title")
     )
     attempts = list(
         QuizAttempt.objects
-        .filter(module__in=modules)
+        .filter(module__in=modules, test_type=QuizQuestion.TEST_POST)
         .select_related("user", "user__profile", "module")
         .order_by("-created_at")
     )
@@ -1750,7 +1774,7 @@ def instructor_quiz_reports(request: Any) -> Response:
             "moduleKey": module.module_key,
             "title": module.title,
             "yearLevel": module.year_level,
-            "quizCount": module.quiz_questions.count(),
+            "quizCount": module.quiz_questions.filter(test_type=QuizQuestion.TEST_POST).count(),
             "attemptCount": attempt_count,
             "passedCount": passed_count,
             "passRate": round(passed_count / attempt_count * 100) if attempt_count else 0,
@@ -1989,7 +2013,8 @@ def instructor_modules(request: Any) -> Response:
                             context={"request": request},
                         ).data,
                         "studentCount": module_counts.get(module.module_key, 0),
-                        "quizCount": module.quiz_questions.count(),
+                        "quizCount": module.quiz_questions.filter(test_type=QuizQuestion.TEST_POST).count(),
+                        "preTestCount": module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).count(),
                     }
                     for module in modules
                 ],
@@ -2083,7 +2108,7 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     if update_data["module_key"] != module.module_key and LearningModule.objects.exclude(pk=module.pk).filter(module_key=update_data["module_key"]).exists():
         return Response({"error": "Module key already exists"}, status=409)
 
-    if update_data["status"] == LearningModule.STATUS_PUBLISHED and module.quiz_questions.count() == 0:
+    if update_data["status"] == LearningModule.STATUS_PUBLISHED and not module.quiz_questions.filter(test_type=QuizQuestion.TEST_POST).exists():
         return Response(
             {"error": "Add at least one quiz question before publishing this module."},
             status=400,
@@ -2117,11 +2142,15 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
 
     if request.method == "GET":
         questions = QuizQuestion.objects.filter(module=module).order_by("order", "created_at")
+        test_type = str(request.query_params.get("testType") or "").strip().lower()
+        if test_type in {QuizQuestion.TEST_PRE, QuizQuestion.TEST_POST}:
+            questions = questions.filter(test_type=test_type)
         return Response(QuizQuestionSerializer(questions, many=True).data)
 
     payload = request.data.copy()
     serializer = QuizQuestionSerializer(data={
         "module": module.id,
+        "test_type": _normalize_test_type(payload.get("test_type") or payload.get("testType")),
         "question_text": str(payload.get("question_text") or "").strip(),
         "question_type": str(payload.get("question_type") or QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE).strip(),
         "choices": payload.get("choices") or [],
@@ -2140,6 +2169,8 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
 def module_file_viewed(request: Any, module_id: int, file_id: int) -> Response:
     """Records that the signed-in student opened a module material."""
     module_file = get_object_or_404(ModuleFile, pk=file_id, module_id=module_id)
+    if _pre_test_pending(request.user, module_file.module):
+        return Response({"error": "Take the pre-test before opening the module materials.", "preTestRequired": True}, status=403)
     ModuleFileView.objects.get_or_create(user=request.user, file=module_file)
     unopened = _unopened_module_files(request.user, module_file.module)
     return Response({
@@ -2155,27 +2186,41 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     """Endpoint for students to submit quiz answers for grading, identified
     by the session (not a client-supplied email).
 
-    Expects JSON: { "answers": [{"question_id": 1, "answer": "A"}, ...] }
+    Expects JSON: { "testType": "pre"|"post", "answers": [{"question_id": 1, "answer": "A"}, ...] }
+    testType defaults to "post" (the module quiz). Flow per module:
+    pre-test -> open every material -> post-test.
     Returns: { score: int, total: int, details: [{question_id, correct, expected, given}] }
     """
     user = request.user
     answers = request.data.get("answers") or []
+    test_type = _normalize_test_type(request.data.get("testType") or request.data.get("test_type"))
+    is_pre_test = test_type == QuizQuestion.TEST_PRE
 
     try:
         module = LearningModule.objects.get(pk=module_id)
     except LearningModule.DoesNotExist:
         return Response({"error": "Module not found"}, status=404)
 
-    existing_attempt = QuizAttempt.objects.filter(user=user, module=module).order_by("-created_at").first()
+    existing_attempt = QuizAttempt.objects.filter(user=user, module=module, test_type=test_type).order_by("-created_at").first()
     if existing_attempt is not None:
         return Response({
-            "error": "You have already completed this quiz. Each quiz can only be taken once.",
+            "error": (
+                "You have already taken this pre-test. It can only be taken once."
+                if is_pre_test
+                else "You have already completed this quiz. Each quiz can only be taken once."
+            ),
             "alreadyCompleted": True,
             "score": existing_attempt.score,
             "total": existing_attempt.total,
         }, status=409)
 
-    unopened = _unopened_module_files(user, module)
+    if not is_pre_test and _pre_test_pending(user, module):
+        return Response({
+            "error": "Take this module's pre-test first.",
+            "preTestRequired": True,
+        }, status=403)
+
+    unopened = [] if is_pre_test else _unopened_module_files(user, module)
     if unopened:
         return Response({
             "error": "Open all of this module's materials before taking the quiz.",
@@ -2184,7 +2229,9 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         }, status=403)
 
     # Build lookup of correct answers
-    questions = list(QuizQuestion.objects.filter(module=module).all())
+    questions = list(QuizQuestion.objects.filter(module=module, test_type=test_type).all())
+    if not questions:
+        return Response({"error": "This module has no pre-test." if is_pre_test else "This module has no quiz."}, status=400)
     question_map = {q.id: q for q in questions}
 
     if not isinstance(answers, list):
@@ -2219,13 +2266,35 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     total = len(questions)
     score = correct_count
 
+    if is_pre_test:
+        # The pre-test only unlocks the materials: no points, progress or
+        # certificate, and the correct answers stay hidden.
+        QuizAttempt.objects.create(user=user, module=module, test_type=QuizQuestion.TEST_PRE, score=score, total=total)
+        updated_state = None
+        try:
+            learning_state = _get_learning_state_for_user(user)
+            state = dict(learning_state.state or {})
+            recent_activity = list(state.get("recentActivity") or [])
+            recent_activity.insert(0, {
+                "icon": "🧭",
+                "text": f"Took the pre-test: {module.title}",
+                "meta": f"{score}/{total} correct",
+            })
+            state["recentActivity"] = recent_activity[:10]
+            learning_state.state = state
+            learning_state.save(update_fields=["state", "updated_at"])
+            updated_state = state
+        except Exception:
+            logger.exception("Failed to record pre-test activity for %s / module %s", user.username, module_id)
+        return Response({"testType": "pre", "score": score, "total": total, "state": updated_state})
+
     # Any submission completes the module, regardless of score, and updates
     # the student's progress/recent-activity state authoritatively here so
     # completion is guaranteed correct even if the client never re-syncs.
     updated_state = None
     certificate_payload = None
     try:
-        QuizAttempt.objects.create(user=user, module=module, score=score, total=total)
+        QuizAttempt.objects.create(user=user, module=module, test_type=QuizQuestion.TEST_POST, score=score, total=total)
 
         learning_state = _get_learning_state_for_user(user)
         state = dict(learning_state.state or {})

@@ -106,6 +106,7 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "module",
+            "test_type",
             "question_text",
             "question_type",
             "choices",
@@ -359,6 +360,7 @@ class StudentQuizQuestionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "module",
+            "test_type",
             "question_text",
             "question_type",
             "choices",

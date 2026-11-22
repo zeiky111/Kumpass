@@ -203,8 +203,29 @@
       quizAttempt: quizAttempt,
       // The quiz unlocks once the student has opened every material.
       viewedFileIds: Array.isArray(module && module.viewedFileIds) ? module.viewedFileIds.map(Number) : [],
-      materialsComplete: module && typeof module.materialsComplete === 'boolean' ? module.materialsComplete : true
+      materialsComplete: module && typeof module.materialsComplete === 'boolean' ? module.materialsComplete : true,
+      // Pre-test: taken before the materials unlock.
+      preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
+      preTestCount: Number((module && module.preTestCount) || 0),
+      preTestAttempt: module && module.preTestAttempt && typeof module.preTestAttempt === 'object' ? {
+        score: Number(module.preTestAttempt.score || 0),
+        total: Number(module.preTestAttempt.total || 0),
+        submittedAt: module.preTestAttempt.submittedAt || null,
+      } : null
     };
+  }
+
+  // Flow per module: pre-test -> open every material -> post-test.
+  function isPreTestPending(module) {
+    return Boolean(module) && Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+  }
+
+  // Updates the cached backend copy of a module so buttons refresh without a reload.
+  function updateCachedModule(numericId, update) {
+    const raw = studentContentCache && Array.isArray(studentContentCache.modules)
+      ? studentContentCache.modules.find(item => Number(item.id) === Number(numericId))
+      : null;
+    if (raw) update(raw);
   }
 
   function getOpenedMaterialsCount(module) {
@@ -213,7 +234,7 @@
   }
 
   function isQuizLocked(module) {
-    return Boolean(module) && !module.quizAttempt && !module.materialsComplete;
+    return Boolean(module) && !module.quizAttempt && (isPreTestPending(module) || !module.materialsComplete);
   }
 
   // Tells the backend this student opened a material, then updates the
@@ -222,6 +243,7 @@
     const module = getModuleById(moduleId);
     if (!module || !Number.isFinite(module.numericId)) return;
     if ((module.viewedFileIds || []).includes(Number(fileId))) return;
+    if (isPreTestPending(module)) return;
 
     try {
       const response = await window.fetchWithAuth(
@@ -231,15 +253,12 @@
       if (!response.ok) return;
       const result = await response.json().catch(() => ({}));
 
-      const raw = studentContentCache && Array.isArray(studentContentCache.modules)
-        ? studentContentCache.modules.find(item => Number(item.id) === module.numericId)
-        : null;
-      if (raw) {
+      updateCachedModule(module.numericId, raw => {
         const viewed = new Set((raw.viewedFileIds || []).map(Number));
         viewed.add(Number(fileId));
         raw.viewedFileIds = Array.from(viewed);
         raw.materialsComplete = Boolean(result.materialsComplete);
-      }
+      });
 
       const modal = document.getElementById('learningModuleModal');
       if (modal && modal.classList.contains('active')) {
@@ -625,7 +644,19 @@
 
     if (files) {
       const viewedIds = new Set((module.viewedFileIds || []).map(Number));
-      files.innerHTML = moduleFiles.length
+      const materialsLocked = isPreTestPending(module);
+      files.innerHTML = moduleFiles.length && materialsLocked
+        ? `<div style="padding:14px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;margin-bottom:10px;">🔒 Take the pre-test first to unlock this module's ${moduleFiles.length} material${moduleFiles.length === 1 ? '' : 's'}.</div>`
+          + moduleFiles.map(file => `
+            <div class="learning-file-row" style="opacity:0.6;">
+              <div>
+                <div class="learning-file-name">${safeText(file.file_name)}</div>
+                <small>${safeText(file.description || 'Teacher-uploaded material')}</small>
+              </div>
+              <span style="color:#6b7280;font-size:0.85rem;">🔒 Locked</span>
+            </div>
+          `).join('')
+        : moduleFiles.length
         ? moduleFiles.map(file => `
             <div class="learning-file-row">
               <div>
@@ -658,18 +689,37 @@
           openQuizBtn.textContent = 'Open Quiz';
           actions.appendChild(openQuizBtn);
         }
+        let preTestBtn = document.getElementById('learningModulePreTestButton');
+        if (!preTestBtn && actions) {
+          preTestBtn = document.createElement('button');
+          preTestBtn.type = 'button';
+          preTestBtn.id = 'learningModulePreTestButton';
+          preTestBtn.className = 'btn-primary';
+          actions.insertBefore(preTestBtn, openQuizBtn || null);
+        }
+        if (preTestBtn) {
+          preTestBtn.style.display = Number(module.preTestCount || 0) > 0 ? 'inline-flex' : 'none';
+          preTestBtn.textContent = module.preTestAttempt
+            ? `✓ Pre-test done (${module.preTestAttempt.score}/${module.preTestAttempt.total})`
+            : '1. Take Pre-test';
+          preTestBtn.onclick = (e) => { e.stopPropagation(); openQuiz(module.id, 'pre'); };
+        }
         if (openQuizBtn) {
           openQuizBtn.style.display = module && (Number(module.quizCount || 0) > 0) ? 'inline-flex' : 'none';
           const locked = isQuizLocked(module);
           openQuizBtn.disabled = locked;
           openQuizBtn.style.opacity = locked ? '0.6' : '';
           openQuizBtn.style.cursor = locked ? 'not-allowed' : '';
-          openQuizBtn.title = locked ? 'Open every material in this module to unlock the quiz.' : '';
+          openQuizBtn.title = locked
+            ? (isPreTestPending(module) ? 'Take the pre-test first.' : 'Open every material in this module to unlock the post-test.')
+            : '';
           openQuizBtn.textContent = module.quizAttempt
-            ? 'View Quiz Results'
-            : locked
-              ? `🔒 Open all materials to unlock quiz (${getOpenedMaterialsCount(module)}/${moduleFiles.length})`
-              : 'Open Quiz';
+            ? 'View Post-test Results'
+            : isPreTestPending(module)
+              ? '🔒 Post-test (take the pre-test first)'
+              : locked
+                ? `🔒 Open all materials to unlock post-test (${getOpenedMaterialsCount(module)}/${moduleFiles.length})`
+                : 'Take Post-test';
           openQuizBtn.onclick = (e) => { e.stopPropagation(); if (!isQuizLocked(module)) openQuiz(module.id); };
         }
       } catch (e) {
@@ -677,8 +727,13 @@
       }
 
     if (startButton) {
-      startButton.textContent = completed ? 'Review Module' : 'Start Learning';
+      const needsPreTest = isPreTestPending(module);
+      startButton.textContent = needsPreTest ? 'Take Pre-test to Start' : completed ? 'Review Module' : 'Start Learning';
       startButton.onclick = () => {
+        if (needsPreTest) {
+          openQuiz(module.id, 'pre');
+          return;
+        }
         window.location.href = completed ? `activity.html?module=${module.id}&review=true` : `activity.html?module=${module.id}`;
       };
     }
@@ -703,7 +758,7 @@
     if (modal) modal.classList.remove('active');
   }
 
-  async function openQuiz(moduleId) {
+  async function openQuiz(moduleId, testType) {
     const module = getModuleById(moduleId);
     if (!module) return;
 
@@ -711,30 +766,50 @@
     const body = document.getElementById('quizModalBody');
     if (!modal || !body) return;
 
-    const moduleQuizzes = Array.isArray(module.quizzes) ? module.quizzes : [];
+    const isPreTest = testType === 'pre';
+    const testLabel = isPreTest ? 'Pre-test' : 'Post-test';
+    const modalTitle = document.getElementById('quizModalTitle');
+    if (modalTitle) modalTitle.textContent = `${testLabel}: ${module.title || 'Module'}`;
+    const submitBtn = document.getElementById('quizSubmitButton');
+    const showSubmit = (visible) => {
+      if (!submitBtn) return;
+      submitBtn.style.display = visible ? '' : 'none';
+      submitBtn.disabled = false;
+      submitBtn.textContent = `Submit ${testLabel}`;
+    };
+    const showMessage = (html) => {
+      body.innerHTML = html;
+      showSubmit(false);
+      modal.classList.add('active');
+    };
+
+    const moduleQuizzes = isPreTest
+      ? (Array.isArray(module.preTests) ? module.preTests : [])
+      : (Array.isArray(module.quizzes) ? module.quizzes : []);
     if (!moduleQuizzes.length) {
-      body.innerHTML = '<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No quizzes available for this module.</div>';
-      modal.classList.add('active');
+      showMessage(`<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No ${testLabel.toLowerCase()} available for this module.</div>`);
       return;
     }
 
-    if (isQuizLocked(module)) {
-      body.innerHTML = `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Finish this module first: open all of its materials (${getOpenedMaterialsCount(module)}/${(module.files || []).length} opened) to unlock the quiz.</div>`;
-      modal.classList.add('active');
+    if (!isPreTest && isQuizLocked(module)) {
+      showMessage(isPreTestPending(module)
+        ? '<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Take the pre-test first, then go through the module materials to unlock the post-test.</div>'
+        : `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Finish this module first: open all of its materials (${getOpenedMaterialsCount(module)}/${(module.files || []).length} opened) to unlock the post-test.</div>`);
       return;
     }
 
-    if (module.quizAttempt) {
-      const { score, total, submittedAt } = module.quizAttempt;
+    const previousAttempt = isPreTest ? module.preTestAttempt : module.quizAttempt;
+    if (previousAttempt) {
+      const { score, total, submittedAt } = previousAttempt;
       const submittedLabel = submittedAt ? new Date(submittedAt).toLocaleString() : '';
-      body.innerHTML = `
+      showMessage(`
         <div class="quiz-results">
           <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
-          <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}</div>
-        </div>`;
-      modal.classList.add('active');
+          <div style="margin-top:8px;color:#6b7280;">This ${testLabel.toLowerCase()} can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}</div>
+        </div>`);
       return;
     }
+    showSubmit(true);
 
     const totalQuestions = moduleQuizzes.length;
     const progressLabel = document.getElementById('quizProgressLabel');
@@ -800,7 +875,7 @@
         });
 
         const currentUser = getCurrentUser();
-        const payload = { email: currentUser.email || '', answers };
+        const payload = { email: currentUser.email || '', testType: isPreTest ? 'pre' : 'post', answers };
         const quizModuleId = Number.isFinite(module.numericId) ? module.numericId : module.id;
 
         submitButton.disabled = true;
@@ -818,13 +893,14 @@
               body.innerHTML = `
                 <div class="quiz-results">
                   <div class="quiz-results-score">Score: <strong>${Number(err.score || 0)}</strong> / ${Number(err.total || 0)}</div>
-                  <div style="margin-top:8px;color:#6b7280;">This quiz can only be taken once.</div>
+                  <div style="margin-top:8px;color:#6b7280;">This ${testLabel.toLowerCase()} can only be taken once.</div>
                 </div>`;
+              submitButton.style.display = 'none';
               return;
             }
-            alert(err && err.error ? `Quiz submission failed: ${err.error}` : 'Quiz submission failed');
+            alert(err && err.error ? `${testLabel} submission failed: ${err.error}` : `${testLabel} submission failed`);
             submitButton.disabled = false;
-            submitButton.textContent = 'Submit Quiz';
+            submitButton.textContent = `Submit ${testLabel}`;
             return;
           }
           const result = await resp.json();
@@ -839,6 +915,26 @@
 
           if (progressLabel) progressLabel.textContent = 'Completed';
           if (progressFill) progressFill.style.width = '100%';
+
+          const attemptRecord = { score, total, submittedAt: new Date().toISOString() };
+          updateCachedModule(module.numericId, raw => {
+            if (isPreTest) raw.preTestAttempt = attemptRecord;
+            else raw.quizAttempt = attemptRecord;
+          });
+
+          if (isPreTest) {
+            body.innerHTML = `
+              <div class="quiz-results">
+                <div class="quiz-results-score">Pre-test score: <strong>${score}</strong> / ${total}</div>
+                <div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">
+                  ✓ Pre-test done. The module materials are now unlocked. Open all of them, then take the post-test.
+                </div>
+              </div>`;
+            submitButton.style.display = 'none';
+            if (typeof renderLearning === 'function') renderLearning();
+            if (typeof openModuleDetails === 'function') openModuleDetails(module.id);
+            return;
+          }
 
           body.innerHTML = `
             <div class="quiz-results">
@@ -863,9 +959,9 @@
           if (typeof renderLearning === 'function') renderLearning();
           if (typeof openModuleDetails === 'function') openModuleDetails(module.id);
         } catch (e) {
-          alert('Quiz submission failed. Try again later.');
+          alert(`${testLabel} submission failed. Try again later.`);
           submitButton.disabled = false;
-          submitButton.textContent = 'Submit Quiz';
+          submitButton.textContent = `Submit ${testLabel}`;
         }
       };
     }

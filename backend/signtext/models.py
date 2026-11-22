@@ -147,11 +147,21 @@ class QuizQuestion(models.Model):
         (QUESTION_TYPE_IDENTIFICATION, "Identification"),
     ]
 
+    # A module has a pre-test (taken before the materials) and a post-test
+    # (the original module quiz, taken after the materials).
+    TEST_PRE = "pre"
+    TEST_POST = "post"
+    TEST_TYPE_CHOICES = [
+        (TEST_PRE, "Pre-test"),
+        (TEST_POST, "Post-test"),
+    ]
+
     module = models.ForeignKey(
         LearningModule,
         on_delete=models.CASCADE,
         related_name="quiz_questions",
     )
+    test_type = models.CharField(max_length=10, choices=TEST_TYPE_CHOICES, default=TEST_POST)
     question_text = models.TextField()
     question_type = models.CharField(
         max_length=30,
@@ -399,6 +409,9 @@ class QuizAttempt(models.Model):
     per-module accuracy (skill breakdown) and quiz-based achievements."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="quiz_attempts")
     module = models.ForeignKey(LearningModule, on_delete=models.CASCADE, related_name="quiz_attempts")
+    # "pre" or "post" (see QuizQuestion.TEST_TYPE_CHOICES). Only post-test
+    # attempts count toward accuracy, achievements, reports and certificates.
+    test_type = models.CharField(max_length=10, default="post")
     score = models.PositiveIntegerField(default=0)
     total = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
