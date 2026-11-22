@@ -19,16 +19,17 @@ try:
 except Exception:
     logging.getLogger(__name__).exception("Startup migrate failed")
 
-# If the database comes up with no sign videos at all (fresh/reset DB), put
-# the bundled library back so Browse Signs, Text-to-Sign and the Games
-# aren't left empty. Skipped whenever any row exists, so it never fights
-# admin edits or deletions.
+# If the database is missing a whole group of sign videos (the original
+# library or the FSL-105 clips -- e.g. a fresh/reset DB, or one that only
+# got the originals back), put that group back from the bundled seed so
+# Browse Signs, Text-to-Sign and the Games aren't left half-empty. A group
+# with any rows left is skipped, so individual admin deletions stick.
 try:
     from signtext.management.commands.restore_sign_videos import restore_sign_videos
 
-    restored = restore_sign_videos(only_if_empty=True)
+    restored = restore_sign_videos(only_missing_groups=True)
     if restored:
-        logging.getLogger(__name__).warning("Restored %d sign videos into an empty database", restored)
+        logging.getLogger(__name__).warning("Restored %d missing sign videos from the seed file", restored)
 except Exception:
     logging.getLogger(__name__).exception("Startup sign video restore failed")
 
