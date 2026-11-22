@@ -137,6 +137,18 @@
     return '1';
   }
 
+  // Modules are grouped by learner level (Beginner / Intermediate), not by
+  // school year. Legacy 1st-4th year values map onto the two levels.
+  function getModuleLevelKey(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (['intermediate', '3', '3rd', '4', '4th'].includes(normalized)) return 'intermediate';
+    return 'beginner';
+  }
+
+  function getModuleLevelLabel(value) {
+    return getModuleLevelKey(value) === 'intermediate' ? 'Intermediate' : 'Beginner';
+  }
+
   function getLevelTextFromYear(yearLevel) {
     const normalized = String(yearLevel || '').trim();
     const map = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th' };
@@ -157,8 +169,8 @@
     const title = String((module && module.title) || `Module ${index + 1}`).trim();
     const description = String((module && module.description) || 'Structured sign language practice.').trim();
     const activities = Number((module && module.activities_count) || 4);
-    const yearLevel = String((module && module.year_level) || '1').trim();
-    const level = getLevelTextFromYear(yearLevel);
+    const level = getModuleLevelKey(module && module.year_level);
+    const levelLabel = getModuleLevelLabel(level);
     const files = Array.isArray(module && module.files) ? module.files : [];
     const quizCount = Number((module && (module.quizCount || module.quiz_count)) || 0);
     const quizzes = Array.isArray(module && module.quizzes) ? module.quizzes : [];
@@ -175,8 +187,9 @@
       id: key,
       numericId: Number.isFinite(numericId) ? numericId : null,
       level,
+      levelLabel,
       title,
-      outcome: `Focus area for ${getYearLabel(yearLevel)} learners.`,
+      outcome: `Focus area for ${levelLabel} learners.`,
       description,
       activities: Number.isFinite(activities) ? activities : 4,
       minutes: Math.max(20, (Number.isFinite(activities) ? activities : 4) * 15),
@@ -556,7 +569,7 @@
     if (description) description.textContent = module.description || 'No description available.';
     if (meta) {
       meta.innerHTML = `
-        <span class="module-chip">${safeText(module.level)} Year</span>
+        <span class="module-chip">${safeText(module.levelLabel)}</span>
         <span class="module-chip">📚 ${Number(module.activities || 0)} activities</span>
         <span class="module-chip">⏱️ ${Number(module.minutes || 0)} min</span>
         <span class="module-chip">📎 ${Number(module.filesCount || 0)} materials</span>
@@ -1058,7 +1071,7 @@
               <p class="learning-module-outcome"><strong>Outcome:</strong> ${safeText(module.outcome)}</p>
             </td>
             <td>
-              <span class="module-chip" style="background:#eef2ff;color:#2563eb;">${safeText(module.level)} Year</span>
+              <span class="module-chip" style="background:#eef2ff;color:#2563eb;">${safeText(module.levelLabel)}</span>
             </td>
             <td>
               <div class="learning-module-meta">
@@ -1087,7 +1100,7 @@
           <thead>
             <tr>
               <th>Module</th>
-              <th>Year</th>
+              <th>Level</th>
               <th>Details</th>
               <th>Progress</th>
               <th>Action</th>
@@ -1166,7 +1179,7 @@
 
     const subtitle = document.getElementById('activitiesPageSubtitle');
     if (subtitle) {
-      subtitle.textContent = 'Practice FSL through interactive games and exercises organized by year level';
+      subtitle.textContent = 'Practice FSL through interactive games and exercises organized by level';
     }
 
     const yearFilter = document.getElementById('activitiesYearFilter');
@@ -1206,7 +1219,7 @@
         if (filterYear === 'all') {
           return true;
         }
-        return String(module.level || '').includes(String(getLevelTextFromYear(filterYear)));
+        return module.level === getModuleLevelKey(filterYear);
       });
 
       // If a category other than 'all' is selected, show curated quick cards for that category
@@ -1228,7 +1241,7 @@
         ? filteredModules.map((module, index) => {
             const progress = getModuleProgress(state, module.id);
             const completed = progress >= 100;
-            const yearText = String(module.level || yearLabel).trim();
+            const yearText = module.levelLabel || yearLabel;
             return `
               <div class="activity-card card" data-year="${safeText(String(module.level || ''))}">
                 <div class="activity-header">
@@ -1295,12 +1308,12 @@
           buttons.forEach(b => b.classList.remove('active'));
           this.classList.add('active');
           activitiesSelectedCategory = String(this.getAttribute('data-category') || 'all');
-          renderActivitiesContent(currentYear, activitiesSelectedCategory);
+          renderActivitiesContent('all', activitiesSelectedCategory);
         });
       });
     }
 
-    renderActivitiesContent(currentYear, activitiesSelectedCategory);
+    renderActivitiesContent('all', activitiesSelectedCategory);
   }
 
   function clearViewedProfile() {

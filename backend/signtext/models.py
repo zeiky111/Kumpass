@@ -97,6 +97,11 @@ class LearningModule(models.Model):
     STATUS_PUBLISHED = "published"
     STATUS_ARCHIVED = "archived"
 
+    # Modules are grouped by learner level, not school year. Stored in the
+    # (historically named) year_level column.
+    LEVEL_BEGINNER = "beginner"
+    LEVEL_INTERMEDIATE = "intermediate"
+
     STATUS_CHOICES = [
         (STATUS_DRAFT, "Draft"),
         (STATUS_PUBLISHED, "Published"),
@@ -105,7 +110,7 @@ class LearningModule(models.Model):
 
     module_key = models.CharField(max_length=64, unique=True)
     title = models.CharField(max_length=180)
-    year_level = models.CharField(max_length=20, default="1")
+    year_level = models.CharField(max_length=20, default="beginner")
     description = models.TextField(blank=True, default="")
     activities_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)

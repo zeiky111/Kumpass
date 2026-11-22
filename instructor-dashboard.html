@@ -271,11 +271,9 @@
                             </div>
                             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                                 <select id="moduleYearFilter" class="form-input" style="width:auto;" onchange="changeModuleYearFilter(this.value)">
-                                    <option value="all">All Years</option>
-                                    <option value="1">1st Year</option>
-                                    <option value="2">2nd Year</option>
-                                    <option value="3">3rd Year</option>
-                                    <option value="4">4th Year</option>
+                                    <option value="all">All Levels</option>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
                                 </select>
                                 <button class="btn btn-primary btn-sm" onclick="openModuleModal()">+ Add Module</button>
                             </div>
@@ -286,7 +284,7 @@
                                     <thead>
                                         <tr>
                                             <th>Module</th>
-                                            <th>Year</th>
+                                            <th>Level</th>
                                             <th>Status</th>
                                             <th>Students</th>
                                             <th>Activities</th>
@@ -349,7 +347,7 @@
                                 <thead>
                                     <tr>
                                         <th>Module</th>
-                                        <th>Year Level</th>
+                                        <th>Level</th>
                                         <th>Attempts</th>
                                         <th>Passed</th>
                                         <th>Pass Rate</th>
@@ -412,12 +410,10 @@
                     <input type="text" id="moduleTitle" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Year Level</label>
+                    <label class="form-label">Level</label>
                     <select id="moduleYearLevel" class="form-input" required>
-                        <option value="1">1st Year</option>
-                        <option value="2">2nd Year</option>
-                        <option value="3">3rd Year</option>
-                        <option value="4">4th Year</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -801,6 +797,16 @@
             return labels[normalized] || normalized || 'Student';
         }
 
+        // Modules use learner levels; legacy 1st-4th year values map onto them.
+        function getModuleLevelKey(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+            return ['intermediate', '3', '4'].includes(normalized) ? 'intermediate' : 'beginner';
+        }
+
+        function formatModuleLevel(value) {
+            return getModuleLevelKey(value) === 'intermediate' ? 'Intermediate' : 'Beginner';
+        }
+
         function formatDateTime(value) {
             if (!value) return '';
             const date = new Date(value);
@@ -881,7 +887,7 @@
                                 <div style="font-weight:600;color:#111827;">${safeText(module.title)}</div>
                                 <small style="color:#6b7280;">${safeText(module.description || 'No module description yet.')}</small>
                             </td>
-                            <td>${safeText(formatYearLabel(module.year_level))}</td>
+                            <td>${safeText(formatModuleLevel(module.year_level))}</td>
                             <td>${getStatusBadge(module.status)}</td>
                             <td>${Number(module.studentCount || 0)}</td>
                             <td>${Number(module.activities_count || 0)}</td>
@@ -988,7 +994,7 @@
         function populateModuleForm(module) {
             document.getElementById('moduleId').value = module ? module.id : '';
             document.getElementById('moduleTitle').value = module ? module.title || '' : '';
-            document.getElementById('moduleYearLevel').value = module ? module.year_level || '1' : '1';
+            document.getElementById('moduleYearLevel').value = getModuleLevelKey(module ? module.year_level : 'beginner');
             document.getElementById('moduleStatus').value = module ? module.status || 'draft' : 'draft';
             document.getElementById('moduleDescription').value = module ? module.description || '' : '';
             window.__currentModuleQuizCount = module ? Number(module.quizCount || 0) : 0;
@@ -1045,7 +1051,7 @@
             tableBody.innerHTML = filtered.map(report => `
                 <tr>
                     <td>${safeText(report.title)}</td>
-                    <td>${safeText(formatYearLabel(report.yearLevel))}</td>
+                    <td>${safeText(formatModuleLevel(report.yearLevel))}</td>
                     <td>${Number(report.attemptCount || 0)}</td>
                     <td>${Number(report.passedCount || 0)} / ${Number(report.attemptCount || 0)}</td>
                     <td>${Number(report.passRate || 0)}%</td>

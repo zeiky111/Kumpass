@@ -411,6 +411,21 @@ def _normalize_year_level_filter(value: str) -> str:
     return mapping.get(normalized, normalized if normalized in {"1", "2", "3", "4"} else "all")
 
 
+def _normalize_module_level(value: Any, default: str = "beginner") -> str:
+    """Maps a module level (or a legacy 1st-4th year value) to beginner/intermediate."""
+    normalized = str(value or "").strip().lower()
+    if normalized in {"beginner", "1", "1st", "1st year", "2", "2nd", "2nd year"}:
+        return "beginner"
+    if normalized in {"intermediate", "3", "3rd", "3rd year", "4", "4th", "4th year"}:
+        return "intermediate"
+    return default
+
+
+def _module_level_filter(request: Any) -> str:
+    raw = request.query_params.get("level") or request.query_params.get("yearLevel") or "all"
+    return _normalize_module_level(raw, default="all")
+
+
 def _safe_int(value: Any, default: int = 0) -> int:
     try:
         return int(float(value))
@@ -1370,7 +1385,7 @@ def student_content(request: Any) -> Response:
     user = User.objects.select_related("profile").get(pk=request.user.pk)
     profile = getattr(user, "profile", None)
     own_year_level = str(getattr(profile, "year_level", "1") or "1").strip()
-    year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
+    year_level = _module_level_filter(request)
 
     try:
         page = max(1, int(request.query_params.get("page") or 1))
@@ -1381,8 +1396,8 @@ def student_content(request: Any) -> Response:
     except Exception:
         limit = 10
 
-    # Return published modules for all year levels, optionally narrowed to one
-    # via the ?yearLevel= query param, with attached files.
+    # Return published modules for all levels, optionally narrowed to one
+    # (beginner/intermediate) via the ?level= query param, with attached files.
     modules_qs = (
         LearningModule.objects
         .select_related("created_by", "updated_by")
@@ -1925,7 +1940,7 @@ def instructor_modules(request: Any) -> Response:
     if request.method == "GET":
         try:
             modules_qs = LearningModule.objects.select_related("created_by", "updated_by").prefetch_related("files", "quiz_questions").order_by("sort_order", "title").all()
-            year_level = _normalize_year_level_filter(request.query_params.get("yearLevel"))
+            year_level = _module_level_filter(request)
             if year_level != "all":
                 modules_qs = modules_qs.filter(year_level=year_level)
             try:
@@ -1985,7 +2000,7 @@ def instructor_modules(request: Any) -> Response:
     serializer = LearningModuleSerializer(data={
         "module_key": module_key,
         "title": title,
-        "year_level": str(payload.get("year_level") or payload.get("yearLevel") or "1").strip(),
+        "year_level": _normalize_module_level(payload.get("level") or payload.get("year_level") or payload.get("yearLevel")),
         "description": str(payload.get("description") or "").strip(),
         "activities_count": _safe_int(payload.get("activities_count") or payload.get("activitiesCount") or 0),
         "status": status_value,
@@ -2037,7 +2052,7 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     update_data = {
         "module_key": str(payload.get("module_key") or module.module_key).strip() or module.module_key,
         "title": str(payload.get("title") or module.title).strip(),
-        "year_level": str(payload.get("year_level") or payload.get("yearLevel") or module.year_level).strip(),
+        "year_level": _normalize_module_level(payload.get("level") or payload.get("year_level") or payload.get("yearLevel") or module.year_level),
         "description": str(payload.get("description") or module.description).strip(),
         "activities_count": _safe_int(payload.get("activities_count") or payload.get("activitiesCount") or module.activities_count),
         "status": str(payload.get("status") or module.status).strip(),
