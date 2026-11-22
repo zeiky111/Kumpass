@@ -1,5 +1,5 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v5';
+var CACHE_NAME = 'kumpas-cache-v6';
 // api-config.js, auth.js, main.js, and google-config.js are excluded because
 // they drive login/redirect logic, the API base/auth-token plumbing, and
 // Google Sign-In configuration. games-common.js is excluded for the same
@@ -10,6 +10,9 @@ var CACHE_NAME = 'kumpas-cache-v5';
 // site data. CACHE_NAME was bumped again (v4 -> v5) so everyone who already
 // has a stale games-common.js cached from before it was added here gets it
 // purged on next visit instead of being stuck forever.
+// portal.js (Learning page, module levels, pre/post-tests) joined that list
+// in v6 for the same reason: a cached copy kept showing "1st Year" on the
+// modules after the switch to Beginner/Intermediate.
 var PRECACHE_URLS = [
   'css/style.css',
   'css/dashboard.css',
@@ -18,11 +21,10 @@ var PRECACHE_URLS = [
   'css/quiz.css',
   'css/bg-orbs.css',
   'js/theme.js',
-  'js/portal.js',
   'images/kumpas_logo.png',
   'images/kumpas_logo1.png'
 ];
-var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common)\.js$/;
+var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common|portal)\.js$/;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
