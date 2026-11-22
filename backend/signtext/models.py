@@ -211,6 +211,23 @@ class ModuleFile(models.Model):
         return f"{self.file_name} (in {self.module.title})"
 
 
+class ModuleFileView(models.Model):
+    """Records that a student opened one of a module's materials.
+
+    A module's quiz stays locked until the student has opened every
+    material attached to that module.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="module_file_views")
+    file = models.ForeignKey(ModuleFile, on_delete=models.CASCADE, related_name="views")
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "file")
+
+    def __str__(self) -> str:
+        return f"{self.user.username} opened {self.file.file_name}"
+
+
 class Announcement(models.Model):
     title = models.CharField(max_length=180)
     message = models.TextField()

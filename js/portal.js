@@ -200,8 +200,54 @@
       quizCount: Number.isFinite(quizCount) ? quizCount : 0
       ,
       quizzes: quizzes,
-      quizAttempt: quizAttempt
+      quizAttempt: quizAttempt,
+      // The quiz unlocks once the student has opened every material.
+      viewedFileIds: Array.isArray(module && module.viewedFileIds) ? module.viewedFileIds.map(Number) : [],
+      materialsComplete: module && typeof module.materialsComplete === 'boolean' ? module.materialsComplete : true
     };
+  }
+
+  function getOpenedMaterialsCount(module) {
+    const viewed = new Set((module.viewedFileIds || []).map(Number));
+    return (module.files || []).filter(file => viewed.has(Number(file.id))).length;
+  }
+
+  function isQuizLocked(module) {
+    return Boolean(module) && !module.quizAttempt && !module.materialsComplete;
+  }
+
+  // Tells the backend this student opened a material, then updates the
+  // cached module so the quiz button unlocks without a page reload.
+  async function markMaterialOpened(moduleId, fileId) {
+    const module = getModuleById(moduleId);
+    if (!module || !Number.isFinite(module.numericId)) return;
+    if ((module.viewedFileIds || []).includes(Number(fileId))) return;
+
+    try {
+      const response = await window.fetchWithAuth(
+        `${API_BASE}/modules/${encodeURIComponent(module.numericId)}/files/${encodeURIComponent(fileId)}/viewed/`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      if (!response.ok) return;
+      const result = await response.json().catch(() => ({}));
+
+      const raw = studentContentCache && Array.isArray(studentContentCache.modules)
+        ? studentContentCache.modules.find(item => Number(item.id) === module.numericId)
+        : null;
+      if (raw) {
+        const viewed = new Set((raw.viewedFileIds || []).map(Number));
+        viewed.add(Number(fileId));
+        raw.viewedFileIds = Array.from(viewed);
+        raw.materialsComplete = Boolean(result.materialsComplete);
+      }
+
+      const modal = document.getElementById('learningModuleModal');
+      if (modal && modal.classList.contains('active')) {
+        openModuleDetails(moduleId);
+      }
+    } catch (_) {
+      // Not recorded this time; opening it again will retry.
+    }
   }
 
   function getVisibleModules() {
@@ -578,6 +624,7 @@
     }
 
     if (files) {
+      const viewedIds = new Set((module.viewedFileIds || []).map(Number));
       files.innerHTML = moduleFiles.length
         ? moduleFiles.map(file => `
             <div class="learning-file-row">
@@ -586,11 +633,17 @@
                 <small>${safeText(file.description || 'Teacher-uploaded material')}</small>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                ${file.file_url ? `<a class="learning-file-link" href="${safeText(file.file_url)}" target="_blank" rel="noopener">Open</a>` : ''}
+                ${viewedIds.has(Number(file.id)) ? '<span style="color:#059669;font-size:0.85rem;font-weight:600;">✓ Opened</span>' : ''}
+                ${file.file_url ? `<a class="learning-file-link" href="${safeText(file.file_url)}" target="_blank" rel="noopener" data-file-id="${Number(file.id)}">Open</a>` : ''}
               </div>
             </div>
           `).join('')
           : '<div style="padding:14px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No uploaded files yet.</div>';
+      files.querySelectorAll('.learning-file-link[data-file-id]').forEach(link => {
+        link.addEventListener('click', () => {
+          markMaterialOpened(module.id, Number(link.getAttribute('data-file-id')));
+        });
+      });
       }
 
       // Show Open Quiz button if module has quizzes
@@ -607,8 +660,17 @@
         }
         if (openQuizBtn) {
           openQuizBtn.style.display = module && (Number(module.quizCount || 0) > 0) ? 'inline-flex' : 'none';
-          openQuizBtn.textContent = module && module.quizAttempt ? 'View Quiz Results' : 'Open Quiz';
-          openQuizBtn.onclick = (e) => { e.stopPropagation(); openQuiz(module.id); };
+          const locked = isQuizLocked(module);
+          openQuizBtn.disabled = locked;
+          openQuizBtn.style.opacity = locked ? '0.6' : '';
+          openQuizBtn.style.cursor = locked ? 'not-allowed' : '';
+          openQuizBtn.title = locked ? 'Open every material in this module to unlock the quiz.' : '';
+          openQuizBtn.textContent = module.quizAttempt
+            ? 'View Quiz Results'
+            : locked
+              ? `🔒 Open all materials to unlock quiz (${getOpenedMaterialsCount(module)}/${moduleFiles.length})`
+              : 'Open Quiz';
+          openQuizBtn.onclick = (e) => { e.stopPropagation(); if (!isQuizLocked(module)) openQuiz(module.id); };
         }
       } catch (e) {
         // ignore
@@ -652,6 +714,12 @@
     const moduleQuizzes = Array.isArray(module.quizzes) ? module.quizzes : [];
     if (!moduleQuizzes.length) {
       body.innerHTML = '<div style="padding:12px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No quizzes available for this module.</div>';
+      modal.classList.add('active');
+      return;
+    }
+
+    if (isQuizLocked(module)) {
+      body.innerHTML = `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Finish this module first: open all of its materials (${getOpenedMaterialsCount(module)}/${(module.files || []).length} opened) to unlock the quiz.</div>`;
       modal.classList.add('active');
       return;
     }
@@ -2421,7 +2489,8 @@
     renderAvatarMarkup,
     getVisibleModules,
     getModuleById,
-    getModuleProgress
+    getModuleProgress,
+    markMaterialOpened
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html
   window.uploadPhoto = function () {

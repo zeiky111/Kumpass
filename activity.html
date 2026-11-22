@@ -607,6 +607,11 @@
                 const container = document.getElementById('activityVideoContainer');
                 if (container) {
                     container.innerHTML = `<video controls style="width:100%; border-radius:16px;" src="${videoFile.file_url}"></video>`;
+                    // Watching the video counts as opening that material (unlocks the quiz once all are opened).
+                    const video = container.querySelector('video');
+                    if (video && window.KumpasPortal && window.KumpasPortal.markMaterialOpened) {
+                        video.addEventListener('play', () => window.KumpasPortal.markMaterialOpened(module.id, Number(videoFile.id)), { once: true });
+                    }
                 }
             }
         }

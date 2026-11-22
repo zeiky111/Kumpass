@@ -40,6 +40,7 @@ from .models import (
     GameLevelItem,
     LearningModule,
     ModuleFile,
+    ModuleFileView,
     QuizAttempt,
     QuizQuestion,
     SignPredictionLog,
@@ -1379,6 +1380,21 @@ def user_certificates(request: Any) -> Response:
     })
 
 
+def _viewed_file_ids(user: User, file_ids: list[int]) -> set[int]:
+    if not file_ids:
+        return set()
+    return set(
+        ModuleFileView.objects.filter(user=user, file_id__in=file_ids).values_list("file_id", flat=True)
+    )
+
+
+def _unopened_module_files(user: User, module: LearningModule) -> list[int]:
+    """IDs of this module's materials the student hasn't opened yet."""
+    file_ids = list(module.files.values_list("id", flat=True))
+    viewed = _viewed_file_ids(user, file_ids)
+    return [file_id for file_id in file_ids if file_id not in viewed]
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def student_content(request: Any) -> Response:
@@ -1415,12 +1431,18 @@ def student_content(request: Any) -> Response:
         attempt.module_id: attempt
         for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at")
     }
+    viewed_file_ids = _viewed_file_ids(
+        user, [file.id for module in modules for file in module.files.all()]
+    )
 
     serialized = []
     for module in modules:
         module_data = LearningModuleSerializer(module).data
         module_files = list(module.files.all().order_by("-created_at"))
         module_data["files"] = ModuleFileSerializer(module_files, many=True, context={"request": request}).data
+        # The quiz unlocks once every material in the module has been opened.
+        module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
+        module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)
         # include quiz count and student-safe quiz payload
         questions = list(module.quiz_questions.all().order_by("order", "created_at"))
         module_data["quizCount"] = len(questions)
@@ -2115,6 +2137,20 @@ def module_quiz_questions(request: Any, module_id: int) -> Response:
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+def module_file_viewed(request: Any, module_id: int, file_id: int) -> Response:
+    """Records that the signed-in student opened a module material."""
+    module_file = get_object_or_404(ModuleFile, pk=file_id, module_id=module_id)
+    ModuleFileView.objects.get_or_create(user=request.user, file=module_file)
+    unopened = _unopened_module_files(request.user, module_file.module)
+    return Response({
+        "fileId": module_file.id,
+        "materialsComplete": not unopened,
+        "remaining": len(unopened),
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
     """Endpoint for students to submit quiz answers for grading, identified
     by the session (not a client-supplied email).
@@ -2138,6 +2174,14 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             "score": existing_attempt.score,
             "total": existing_attempt.total,
         }, status=409)
+
+    unopened = _unopened_module_files(user, module)
+    if unopened:
+        return Response({
+            "error": "Open all of this module's materials before taking the quiz.",
+            "materialsIncomplete": True,
+            "remaining": len(unopened),
+        }, status=403)
 
     # Build lookup of correct answers
     questions = list(QuizQuestion.objects.filter(module=module).all())
