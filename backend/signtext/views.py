@@ -1393,6 +1393,24 @@ def _normalize_test_type(value: Any) -> str:
 LEVEL_LABELS = {"beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced"}
 
 
+def _attempt_percent(attempt: QuizAttempt) -> float:
+    return (attempt.score / attempt.total * 100) if attempt.total else 0
+
+
+def _attempt_passed(attempt: QuizAttempt | None) -> bool:
+    """A post-test is passed at QUIZ_PASSING_PERCENT (75%) or higher."""
+    return attempt is not None and _attempt_percent(attempt) >= QUIZ_PASSING_PERCENT
+
+
+def _best_attempt(attempts: list) -> QuizAttempt | None:
+    """Highest-scoring attempt (latest wins a tie)."""
+    best = None
+    for attempt in attempts:
+        if best is None or _attempt_percent(attempt) >= _attempt_percent(best):
+            best = attempt
+    return best
+
+
 def _level_rank_ordering():
     """ORDER BY expression that sorts modules Beginner -> Intermediate -> Advanced."""
     return Case(
@@ -1405,16 +1423,18 @@ def _level_rank_ordering():
 def _modules_remaining_by_level(user: User) -> dict[str, int]:
     """How many published modules per level the student hasn't finished yet.
 
-    A module is finished once its post-test has been taken.
+    A module is finished once its post-test has been passed (75%+).
     """
     published = list(
         LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).values_list("id", "year_level")
     )
-    finished_ids = set(
-        QuizAttempt.objects.filter(
+    finished_ids = {
+        attempt.module_id
+        for attempt in QuizAttempt.objects.filter(
             user=user, test_type=QuizQuestion.TEST_POST, module_id__in=[mid for mid, _ in published]
-        ).values_list("module_id", flat=True)
-    )
+        ).only("module_id", "score", "total")
+        if _attempt_passed(attempt)
+    }
     remaining = {level: 0 for level in LearningModule.LEVEL_ORDER}
     for module_id, level in published:
         if module_id not in finished_ids:
@@ -1587,9 +1607,15 @@ def student_content(request: Any) -> Response:
     modules = list(modules_qs[start:end])
     attempts_by_module = {}
     pre_attempts_by_module = {}
+    post_attempts_by_module: dict[int, list] = {}
     for attempt in QuizAttempt.objects.filter(user=user, module__in=modules).order_by("created_at"):
-        target = pre_attempts_by_module if attempt.test_type == QuizQuestion.TEST_PRE else attempts_by_module
-        target[attempt.module_id] = attempt
+        if attempt.test_type == QuizQuestion.TEST_PRE:
+            pre_attempts_by_module[attempt.module_id] = attempt
+        else:
+            post_attempts_by_module.setdefault(attempt.module_id, []).append(attempt)
+    # Post-tests can be retaken until passed; report the best attempt.
+    for module_id, attempts in post_attempts_by_module.items():
+        attempts_by_module[module_id] = _best_attempt(attempts)
     viewed_file_ids = _viewed_file_ids(
         user, [file.id for module in modules for file in module.files.all()]
     )
@@ -1650,7 +1676,11 @@ def student_content(request: Any) -> Response:
             "score": attempt.score,
             "total": attempt.total,
             "submittedAt": attempt.created_at,
+            "passed": _attempt_passed(attempt),
         } if attempt is not None else None
+        module_data["quizPassed"] = _attempt_passed(attempt)
+        module_data["quizAttemptCount"] = len(post_attempts_by_module.get(module.id, []))
+        module_data["passingPercent"] = QUIZ_PASSING_PERCENT
 
         serialized.append(module_data)
 
@@ -2480,17 +2510,24 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except LearningModule.DoesNotExist:
         return Response({"error": "Module not found"}, status=404)
 
-    existing_attempt = QuizAttempt.objects.filter(user=user, module=module, test_type=test_type).order_by("-created_at").first()
-    if existing_attempt is not None:
+    # The pre-test is taken once. The post-test can be retaken until it is
+    # passed (75%+); after that it is done.
+    previous_attempts = list(QuizAttempt.objects.filter(user=user, module=module, test_type=test_type))
+    blocking_attempt = (
+        (previous_attempts[0] if previous_attempts else None)
+        if is_pre_test
+        else next((a for a in previous_attempts if _attempt_passed(a)), None)
+    )
+    if blocking_attempt is not None:
         return Response({
             "error": (
                 "You have already taken this pre-test. It can only be taken once."
                 if is_pre_test
-                else "You have already completed this quiz. Each quiz can only be taken once."
+                else "You have already passed this quiz."
             ),
             "alreadyCompleted": True,
-            "score": existing_attempt.score,
-            "total": existing_attempt.total,
+            "score": blocking_attempt.score,
+            "total": blocking_attempt.total,
         }, status=409)
 
     locked = _level_locked_response(user, module)
@@ -2579,31 +2616,39 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             logger.exception("Failed to record pre-test activity for %s / module %s", user.username, module_id)
         return Response({"testType": "pre", "score": score, "total": total, "state": updated_state})
 
-    # Any submission completes the module, regardless of score, and updates
-    # the student's progress/recent-activity state authoritatively here so
-    # completion is guaranteed correct even if the client never re-syncs.
+    # Passing the post-test (75%+) completes the module: progress 100%,
+    # points, and the Certificate of Achievement. A failed attempt is recorded
+    # and the student can retake it. State is updated authoritatively here so
+    # completion is correct even if the client never re-syncs.
     updated_state = None
     certificate_payload = None
+    passed = total > 0 and (score / total * 100) >= QUIZ_PASSING_PERCENT
     try:
         QuizAttempt.objects.create(user=user, module=module, test_type=QuizQuestion.TEST_POST, score=score, total=total)
 
         learning_state = _get_learning_state_for_user(user)
         state = dict(learning_state.state or {})
-        module_progress = dict(state.get("moduleProgress") or {})
-        module_progress[module.module_key] = 100
-        state["moduleProgress"] = module_progress
-
-        state["points"] = int(state.get("points") or 0) + 50
-        state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
-
         recent_activity = list(state.get("recentActivity") or [])
-        recent_activity.insert(0, {
-            "icon": "📝",
-            "text": f"Completed quiz: {module.title}",
-            "meta": f"{score}/{total} correct",
-        })
 
-        user_certificate = award_module_certificate_if_earned(user, module)
+        if passed:
+            module_progress = dict(state.get("moduleProgress") or {})
+            module_progress[module.module_key] = 100
+            state["moduleProgress"] = module_progress
+            state["points"] = int(state.get("points") or 0) + 50
+            state["completedActivities"] = int(state.get("completedActivities") or 0) + 1
+            recent_activity.insert(0, {
+                "icon": "📝",
+                "text": f"Passed the post-test: {module.title}",
+                "meta": f"{score}/{total} correct",
+            })
+        else:
+            recent_activity.insert(0, {
+                "icon": "🔁",
+                "text": f"Post-test not passed yet: {module.title}",
+                "meta": f"{score}/{total} correct — {QUIZ_PASSING_PERCENT}% needed",
+            })
+
+        user_certificate = award_module_certificate_if_earned(user, module) if passed else None
         if user_certificate is not None:
             send_certificate_email_async(user_certificate)
             recent_activity.insert(0, {
@@ -2628,7 +2673,16 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     except Exception:
         logger.exception("Failed to persist quiz completion state for %s / module %s", user.username, module_id)
 
-    return Response({"score": score, "total": total, "details": details, "state": updated_state, "certificate": certificate_payload})
+    return Response({
+        "score": score,
+        "total": total,
+        "passed": passed,
+        "passingPercent": QUIZ_PASSING_PERCENT,
+        # Answers are revealed only once passed, so a retake isn't just copying them.
+        "details": details if passed else [{"question_id": d["question_id"], "correct": d["correct"]} for d in details],
+        "state": updated_state,
+        "certificate": certificate_payload,
+    })
 
 
 @api_view(["PATCH", "DELETE"])

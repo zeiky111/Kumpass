@@ -39,10 +39,13 @@ INK_COLOR = (26, 57, 135)
 MAX_FONT_SIZE = 92
 MIN_FONT_SIZE = 36
 
-# Module completion template (images/modulecert.png) reuses the same
-# 1491x1055 canvas and name band as the game templates, plus a second blank
-# band below for the issue date line ("issued this Nth day of Month YYYY.").
-MODULE_CERT_TEMPLATE_PATH = "images/modulecert.png"
+# Module certificate template reuses the same 1491x1055 canvas and name band
+# as the game templates, plus a second blank band below for the issue date
+# line ("issued this Nth day of Month YYYY."). modulecert-achievement.png is
+# images/modulecert.png with the heading changed to "CERTIFICATE OF
+# ACHIEVEMENT"; the certificate is issued when a module's post-test is passed.
+MODULE_CERT_TEMPLATE_PATH = "images/modulecert-achievement.png"
+MODULE_CERT_TITLE_SUFFIX = "Certificate of Achievement"
 DATE_BAND_LEFT = 400
 DATE_BAND_RIGHT = 1090
 DATE_BAND_TOP = 725
@@ -168,14 +171,14 @@ def award_certificate_if_earned(user: User, game_key: str) -> UserCertificate | 
 
 
 def award_module_certificate_if_earned(user: User, module: LearningModule) -> UserCertificate | None:
-    """Idempotently issues a module-completion certificate to user for the
+    """Idempotently issues a module Certificate of Achievement to user for the
     given module. Returns the newly-created UserCertificate, or None if the
     user already earned it. Auto-creates the module's Certificate catalog
     entry (all modules share the same modulecert.png template) on first use."""
     certificate, _ = Certificate.objects.get_or_create(
         module=module,
         defaults={
-            "title": f"{module.title} — Certificate of Completion",
+            "title": f"{module.title} — {MODULE_CERT_TITLE_SUFFIX}",
             "template_path": MODULE_CERT_TEMPLATE_PATH,
         },
     )

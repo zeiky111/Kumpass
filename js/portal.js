@@ -182,6 +182,7 @@
       score: Number(quizAttemptRaw.score || 0),
       total: Number(quizAttemptRaw.total || 0),
       submittedAt: quizAttemptRaw.submittedAt || null,
+      passed: Boolean(quizAttemptRaw.passed),
     } : null;
 
     const numericId = Number(module && module.id);
@@ -204,6 +205,9 @@
       ,
       quizzes: quizzes,
       quizAttempt: quizAttempt,
+      // Post-test is passed at 75%+; it can be retaken until then.
+      quizPassed: Boolean((module && module.quizPassed) || (quizAttempt && quizAttempt.passed)),
+      passingPercent: Number((module && module.passingPercent) || 75),
       // The quiz unlocks once the student has opened every material.
       viewedFileIds: Array.isArray(module && module.viewedFileIds) ? module.viewedFileIds.map(Number) : [],
       materialsComplete: module && typeof module.materialsComplete === 'boolean' ? module.materialsComplete : true,
@@ -656,7 +660,7 @@
   // material, then the post-test (which always means 100%).
   function computeModuleStepProgress(module) {
     if (!module) return 0;
-    if (module.quizAttempt) return 100;
+    if (module.quizPassed) return 100;
     const topics = Array.isArray(module.topics) ? module.topics : [];
     const files = Array.isArray(module.files) ? module.files : [];
     const hasPreTest = Number(module.preTestCount || 0) > 0;
@@ -673,8 +677,11 @@
   function getModuleProgress(state, moduleId) {
     const stored = Number((state && state.moduleProgress && state.moduleProgress[moduleId]) || 0);
     const storedValue = Number.isFinite(stored) ? stored : 0;
-    const computed = computeModuleStepProgress(getModuleById(moduleId));
-    return Math.max(0, Math.min(100, Math.max(storedValue, computed)));
+    const module = getModuleById(moduleId);
+    // Backend modules: progress comes only from the real steps, so an old
+    // stored 100% from a failed post-test doesn't show the module as done.
+    const value = module ? computeModuleStepProgress(module) : storedValue;
+    return Math.max(0, Math.min(100, value));
   }
 
   // Re-draws progress wherever it is shown after a step is completed.
@@ -890,8 +897,10 @@
           openQuizBtn.title = locked
             ? (isPreTestPending(module) ? 'Take the pre-test first.' : 'Finish every topic and open every material to unlock the post-test.')
             : '';
-          openQuizBtn.textContent = module.quizAttempt
-            ? 'View Post-test Results'
+          openQuizBtn.textContent = module.quizPassed
+            ? '✓ Post-test passed'
+            : module.quizAttempt
+            ? `🔁 Retake Post-test (best: ${module.quizAttempt.score}/${module.quizAttempt.total})`
             : module.levelLocked
               ? getLevelLockShort(module)
               : isPreTestPending(module)
@@ -996,17 +1005,23 @@
       return;
     }
 
-    const previousAttempt = isPreTest ? module.preTestAttempt : module.quizAttempt;
+    // Pre-test: once. Post-test: shown as done once passed; otherwise retake.
+    const previousAttempt = isPreTest ? module.preTestAttempt : (module.quizPassed ? module.quizAttempt : null);
     if (previousAttempt) {
       const { score, total, submittedAt } = previousAttempt;
       const submittedLabel = submittedAt ? new Date(submittedAt).toLocaleString() : '';
       showMessage(`
         <div class="quiz-results">
           <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
-          <div style="margin-top:8px;color:#6b7280;">This ${testLabel.toLowerCase()} can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}</div>
+          <div style="margin-top:8px;color:#6b7280;">${isPreTest
+            ? `This pre-test can only be taken once. ${submittedLabel ? `Submitted on ${safeText(submittedLabel)}.` : ''}`
+            : `✓ You passed this post-test. Your Certificate of Achievement is in your Profile.`}</div>
         </div>`);
       return;
     }
+    const retakeBanner = !isPreTest && module.quizAttempt
+      ? `<div style="padding:12px;margin-bottom:14px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;">🔁 Retake — your best score so far is ${module.quizAttempt.score}/${module.quizAttempt.total}. You need ${module.passingPercent}% to pass.</div>`
+      : '';
     showSubmit(true);
 
     const totalQuestions = moduleQuizzes.length;
@@ -1015,7 +1030,7 @@
     if (progressLabel) progressLabel.textContent = `${totalQuestions} question${totalQuestions === 1 ? '' : 's'}`;
     if (progressFill) progressFill.style.width = '0%';
 
-    let formHtml = `<form id="popupModuleQuizForm">`;
+    let formHtml = `${retakeBanner}<form id="popupModuleQuizForm">`;
     moduleQuizzes.forEach((q, i) => {
       const idx = i + 1;
       formHtml += `<div class="quiz-question-card" data-question-index="${i}">`;
@@ -1091,7 +1106,7 @@
               body.innerHTML = `
                 <div class="quiz-results">
                   <div class="quiz-results-score">Score: <strong>${Number(err.score || 0)}</strong> / ${Number(err.total || 0)}</div>
-                  <div style="margin-top:8px;color:#6b7280;">This ${testLabel.toLowerCase()} can only be taken once.</div>
+                  <div style="margin-top:8px;color:#6b7280;">${isPreTest ? 'This pre-test can only be taken once.' : 'You have already passed this post-test.'}</div>
                 </div>`;
               submitButton.style.display = 'none';
               return;
@@ -1114,10 +1129,19 @@
           if (progressLabel) progressLabel.textContent = 'Completed';
           if (progressFill) progressFill.style.width = '100%';
 
-          const attemptRecord = { score, total, submittedAt: new Date().toISOString() };
+          const passed = Boolean(result.passed);
+          const passingPercent = Number(result.passingPercent || module.passingPercent || 75);
+          const attemptRecord = { score, total, submittedAt: new Date().toISOString(), passed };
           updateCachedModule(module.numericId, raw => {
-            if (isPreTest) raw.preTestAttempt = attemptRecord;
-            else raw.quizAttempt = attemptRecord;
+            if (isPreTest) {
+              raw.preTestAttempt = attemptRecord;
+              return;
+            }
+            // Keep the best attempt, like the backend does.
+            const prev = raw.quizAttempt;
+            const pct = a => (a && Number(a.total) ? Number(a.score) / Number(a.total) : -1);
+            if (!prev || passed || pct(attemptRecord) >= pct(prev)) raw.quizAttempt = attemptRecord;
+            raw.quizPassed = Boolean(raw.quizPassed || passed);
           });
 
           if (isPreTest) {
@@ -1125,7 +1149,7 @@
               <div class="quiz-results">
                 <div class="quiz-results-score">Pre-test score: <strong>${score}</strong> / ${total}</div>
                 <div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">
-                  ✓ Pre-test done. The module materials are now unlocked. Open all of them, then take the post-test.
+                  ✓ Pre-test done. The module topics and materials are now unlocked. Go through all of them, then take the post-test.
                 </div>
               </div>`;
             submitButton.style.display = 'none';
@@ -1134,9 +1158,16 @@
             return;
           }
 
+          const percent = total ? Math.round((score / total) * 100) : 0;
           body.innerHTML = `
             <div class="quiz-results">
-              <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total}</div>
+              <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total} (${percent}%)</div>
+              ${passed
+                ? `<div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">🎉 You passed! This module is complete.</div>`
+                : `<div style="margin-top:10px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#991b1b;">
+                    Not passed yet — you need ${passingPercent}% to pass. Review the module topics and materials, then retake the post-test.
+                    <div style="margin-top:10px;"><button type="button" class="btn-primary" id="quizRetakeButton">🔁 Retake Post-test</button></div>
+                  </div>`}
               <div class="quiz-results-list">
                 ${details.map(d => `
                   <div class="quiz-results-row ${d.correct ? 'quiz-answer-correct' : 'quiz-answer-incorrect'}">
@@ -1147,12 +1178,14 @@
               </div>
               ${certificate ? `
                 <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
-                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 Certificate earned!</div>
+                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 Certificate of Achievement earned!</div>
                   <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
                 </div>
               ` : ''}
             </div>`;
           submitButton.style.display = 'none';
+          const retakeButton = document.getElementById('quizRetakeButton');
+          if (retakeButton) retakeButton.addEventListener('click', () => openQuiz(module.id));
 
           if (typeof renderLearning === 'function') renderLearning();
           if (typeof openModuleDetails === 'function') openModuleDetails(module.id);

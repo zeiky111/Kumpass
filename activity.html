@@ -887,8 +887,8 @@
                 const score = Number(result.score || 0);
                 const total = Number(result.total || 0);
                 const passed = !!result.passed;
-                const passingScore = Number(result.passingScore || quiz.passingScore || 0);
-                const certificateEarned = !!result.certificateEarned;
+                const passingScore = Number(result.passingPercent || 75);
+                const certificateEarned = !!result.certificate;
 
                 if (result.state && typeof result.state === 'object') {
                     window.KumpasPortal.hydrateState(result.state);
@@ -907,7 +907,7 @@
                 const feedbackPoints = document.getElementById('feedbackPoints');
                 if (feedbackPoints && result.state && typeof result.state.points === 'number') {
                     feedbackPoints.textContent = certificateEarned
-                        ? `Total points: ${result.state.points} -- 🎓 Certificate earned!`
+                        ? `Total points: ${result.state.points} -- 🏆 Certificate of Achievement earned!`
                         : `Total points: ${result.state.points}`;
                 }
 
