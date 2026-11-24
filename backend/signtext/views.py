@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.utils import timezone
 from typing import Any
 from django.db import DatabaseError, IntegrityError, OperationalError
-from django.db.models import F, Q, Sum
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -413,12 +413,14 @@ def _normalize_year_level_filter(value: str) -> str:
 
 
 def _normalize_module_level(value: Any, default: str = "beginner") -> str:
-    """Maps a module level (or a legacy 1st-4th year value) to beginner/intermediate."""
+    """Maps a module level (or a legacy 1st-4th year value) to beginner/intermediate/advanced."""
     normalized = str(value or "").strip().lower()
     if normalized in {"beginner", "1", "1st", "1st year", "2", "2nd", "2nd year"}:
         return "beginner"
     if normalized in {"intermediate", "3", "3rd", "3rd year", "4", "4th", "4th year"}:
         return "intermediate"
+    if normalized == "advanced":
+        return "advanced"
     return default
 
 
@@ -1384,39 +1386,84 @@ def _normalize_test_type(value: Any) -> str:
     return QuizQuestion.TEST_PRE if str(value or "").strip().lower() == QuizQuestion.TEST_PRE else QuizQuestion.TEST_POST
 
 
-def _beginner_modules_remaining(user: User) -> int:
-    """How many published Beginner modules the student hasn't finished yet.
+LEVEL_LABELS = {"beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced"}
 
-    A module is finished once its post-test has been taken. Intermediate
-    modules stay locked until this reaches zero.
+
+def _level_rank_ordering():
+    """ORDER BY expression that sorts modules Beginner -> Intermediate -> Advanced."""
+    return Case(
+        *[When(year_level=level, then=Value(i)) for i, level in enumerate(LearningModule.LEVEL_ORDER)],
+        default=Value(len(LearningModule.LEVEL_ORDER)),
+        output_field=IntegerField(),
+    )
+
+
+def _modules_remaining_by_level(user: User) -> dict[str, int]:
+    """How many published modules per level the student hasn't finished yet.
+
+    A module is finished once its post-test has been taken.
     """
-    beginner_ids = list(
-        LearningModule.objects.filter(
-            status=LearningModule.STATUS_PUBLISHED, year_level=LearningModule.LEVEL_BEGINNER
-        ).values_list("id", flat=True)
+    published = list(
+        LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).values_list("id", "year_level")
     )
-    if not beginner_ids:
-        return 0
-    finished = (
-        QuizAttempt.objects.filter(user=user, test_type=QuizQuestion.TEST_POST, module_id__in=beginner_ids)
-        .values("module_id")
-        .distinct()
-        .count()
+    finished_ids = set(
+        QuizAttempt.objects.filter(
+            user=user, test_type=QuizQuestion.TEST_POST, module_id__in=[mid for mid, _ in published]
+        ).values_list("module_id", flat=True)
     )
-    return max(0, len(beginner_ids) - finished)
+    remaining = {level: 0 for level in LearningModule.LEVEL_ORDER}
+    for module_id, level in published:
+        if module_id not in finished_ids:
+            key = _normalize_module_level(level)
+            remaining[key] = remaining.get(key, 0) + 1
+    return remaining
+
+
+def _beginner_modules_remaining(user: User) -> int:
+    return _modules_remaining_by_level(user).get(LearningModule.LEVEL_BEGINNER, 0)
+
+
+def _level_lock_for(level: str, remaining_by_level: dict[str, int]) -> tuple[str, int] | None:
+    """(blocking level, modules left) when `level` is still locked, else None.
+
+    Beginner is always open. Intermediate needs every Beginner module
+    finished; Advanced needs every Beginner and Intermediate module finished.
+    The earliest unfinished level is reported, so a student who hasn't
+    finished Beginner is told to finish Beginner for both higher levels.
+    """
+    order = LearningModule.LEVEL_ORDER
+    level = _normalize_module_level(level)
+    if level not in order:
+        return None
+    for earlier in order[: order.index(level)]:
+        left = remaining_by_level.get(earlier, 0)
+        if left > 0:
+            return earlier, left
+    return None
+
+
+def _level_lock_message(level: str, blocking_level: str) -> str:
+    return (
+        f"Finish all {LEVEL_LABELS.get(blocking_level, blocking_level)} modules "
+        f"before starting {LEVEL_LABELS.get(level, level)} modules."
+    )
 
 
 def _level_locked_response(user: User, module: LearningModule) -> Response | None:
-    """403 response when an Intermediate module is still locked for this student."""
-    if module.year_level != LearningModule.LEVEL_INTERMEDIATE:
+    """403 response when the module's level is still locked for this student."""
+    level = _normalize_module_level(module.year_level)
+    if level == LearningModule.LEVEL_BEGINNER:
         return None
-    remaining = _beginner_modules_remaining(user)
-    if remaining <= 0:
+    lock = _level_lock_for(level, _modules_remaining_by_level(user))
+    if not lock:
         return None
+    blocking_level, left = lock
     return Response({
-        "error": "Finish all Beginner modules before starting Intermediate modules.",
+        "error": _level_lock_message(level, blocking_level),
         "levelLocked": True,
-        "beginnerRemaining": remaining,
+        "levelLockedBy": blocking_level,
+        "levelRemaining": left,
+        "beginnerRemaining": left if blocking_level == LearningModule.LEVEL_BEGINNER else 0,
     }, status=403)
 
 
@@ -1466,7 +1513,8 @@ def student_content(request: Any) -> Response:
         .select_related("created_by", "updated_by")
         .prefetch_related("files", "quiz_questions")
         .filter(status=LearningModule.STATUS_PUBLISHED)
-        .order_by("year_level", "sort_order", "title")
+        .annotate(level_rank=_level_rank_ordering())
+        .order_by("level_rank", "sort_order", "title")
     )
     if year_level != "all":
         modules_qs = modules_qs.filter(year_level=year_level)
@@ -1482,8 +1530,10 @@ def student_content(request: Any) -> Response:
     viewed_file_ids = _viewed_file_ids(
         user, [file.id for module in modules for file in module.files.all()]
     )
-    # Intermediate modules unlock only after every Beginner module is finished.
-    beginner_remaining = _beginner_modules_remaining(user)
+    # Intermediate and Advanced unlock only after every Beginner module is
+    # finished; Advanced also needs every Intermediate module finished.
+    remaining_by_level = _modules_remaining_by_level(user)
+    beginner_remaining = remaining_by_level.get(LearningModule.LEVEL_BEGINNER, 0)
 
     serialized = []
     for module in modules:
@@ -1495,9 +1545,10 @@ def student_content(request: Any) -> Response:
         # The quiz unlocks once every material in the module has been opened.
         module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
         module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)
-        module_data["levelLocked"] = (
-            module.year_level == LearningModule.LEVEL_INTERMEDIATE and beginner_remaining > 0
-        )
+        level_lock = _level_lock_for(module.year_level, remaining_by_level)
+        module_data["levelLocked"] = bool(level_lock)
+        module_data["levelLockedBy"] = level_lock[0] if level_lock else ""
+        module_data["levelRemaining"] = level_lock[1] if level_lock else 0
         # include quiz count and student-safe quiz payload
         all_questions = list(module.quiz_questions.all().order_by("order", "created_at"))
         questions = [q for q in all_questions if q.test_type != QuizQuestion.TEST_PRE]
@@ -1531,6 +1582,7 @@ def student_content(request: Any) -> Response:
         "yearLevel": year_level,
         "ownYearLevel": own_year_level,
         "beginnerRemaining": beginner_remaining,
+        "remainingByLevel": remaining_by_level,
     })
 
 

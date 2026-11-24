@@ -137,16 +137,19 @@
     return '1';
   }
 
-  // Modules are grouped by learner level (Beginner / Intermediate), not by
-  // school year. Legacy 1st-4th year values map onto the two levels.
+  // Modules are grouped by learner level (Beginner / Intermediate / Advanced),
+  // not by school year. Legacy 1st-4th year values map onto the levels.
+  const LEVEL_LABELS = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
+
   function getModuleLevelKey(value) {
     const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'advanced') return 'advanced';
     if (['intermediate', '3', '3rd', '4', '4th'].includes(normalized)) return 'intermediate';
     return 'beginner';
   }
 
   function getModuleLevelLabel(value) {
-    return getModuleLevelKey(value) === 'intermediate' ? 'Intermediate' : 'Beginner';
+    return LEVEL_LABELS[getModuleLevelKey(value)];
   }
 
   function getLevelTextFromYear(yearLevel) {
@@ -207,8 +210,11 @@
       // Pre-test: taken before the materials unlock.
       preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
       preTestCount: Number((module && module.preTestCount) || 0),
-      // Intermediate modules stay locked until every Beginner module is finished.
+      // Intermediate and Advanced stay locked until every Beginner module is
+      // finished (Advanced also needs Intermediate finished).
       levelLocked: Boolean(module && module.levelLocked),
+      levelLockedBy: getModuleLevelKey((module && module.levelLockedBy) || 'beginner'),
+      levelRemaining: Number((module && module.levelRemaining) || 0),
       preTestAttempt: module && module.preTestAttempt && typeof module.preTestAttempt === 'object' ? {
         score: Number(module.preTestAttempt.score || 0),
         total: Number(module.preTestAttempt.total || 0),
@@ -226,9 +232,17 @@
     return Number((studentContentCache && studentContentCache.beginnerRemaining) || 0);
   }
 
-  function getLevelLockMessage() {
-    const remaining = getBeginnerRemaining();
-    return `🔒 Finish all Beginner modules first${remaining ? ` (${remaining} left)` : ''} to unlock Intermediate modules.`;
+  function getLevelLockMessage(module) {
+    const blocking = (module && module.levelLockedBy) || 'beginner';
+    const remaining = Number((module && module.levelRemaining) || 0)
+      || (blocking === 'beginner' ? getBeginnerRemaining() : 0);
+    const level = module ? module.levelLabel : 'Intermediate and Advanced';
+    return `🔒 Finish all ${LEVEL_LABELS[blocking] || 'Beginner'} modules first${remaining ? ` (${remaining} left)` : ''} to unlock ${level} modules.`;
+  }
+
+  function getLevelLockShort(module) {
+    const blocking = (module && module.levelLockedBy) || 'beginner';
+    return `🔒 Finish ${LEVEL_LABELS[blocking] || 'Beginner'} modules first`;
   }
 
   // Updates the cached backend copy of a module so buttons refresh without a reload.
@@ -666,7 +680,7 @@
       const viewedIds = new Set((module.viewedFileIds || []).map(Number));
       const materialsLocked = module.levelLocked || isPreTestPending(module);
       const lockText = module.levelLocked
-        ? getLevelLockMessage()
+        ? getLevelLockMessage(module)
         : `🔒 Take the pre-test first to unlock this module's ${moduleFiles.length} material${moduleFiles.length === 1 ? '' : 's'}.`;
       files.innerHTML = moduleFiles.length && materialsLocked
         ? `<div style="padding:14px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;margin-bottom:10px;">${lockText}</div>`
@@ -753,7 +767,7 @@
           openQuizBtn.textContent = module.quizAttempt
             ? 'View Post-test Results'
             : module.levelLocked
-              ? '🔒 Finish Beginner modules first'
+              ? getLevelLockShort(module)
               : isPreTestPending(module)
               ? '🔒 Post-test (take the pre-test first)'
               : locked
@@ -771,7 +785,7 @@
       startButton.style.opacity = module.levelLocked ? '0.6' : '';
       startButton.style.cursor = module.levelLocked ? 'not-allowed' : '';
       startButton.textContent = module.levelLocked
-        ? '🔒 Finish Beginner modules first'
+        ? getLevelLockShort(module)
         : needsPreTest ? 'Take Pre-test to Start' : completed ? 'Review Module' : 'Start Learning';
       startButton.onclick = () => {
         if (module.levelLocked) return;
@@ -837,7 +851,7 @@
     }
 
     if (module.levelLocked) {
-      showMessage(`<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">${getLevelLockMessage()}</div>`);
+      showMessage(`<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">${getLevelLockMessage(module)}</div>`);
       return;
     }
 
@@ -1286,7 +1300,7 @@
             </td>
             <td>
               <span class="module-chip" style="background:#eef2ff;color:#2563eb;">${safeText(module.levelLabel)}</span>
-              ${module.levelLocked ? '<div style="margin-top:6px;color:#92400e;font-size:0.82rem;font-weight:600;">🔒 Finish Beginner first</div>' : ''}
+              ${module.levelLocked ? `<div style="margin-top:6px;color:#92400e;font-size:0.82rem;font-weight:600;">🔒 Finish ${safeText(LEVEL_LABELS[module.levelLockedBy] || 'Beginner')} first</div>` : ''}
             </td>
             <td>
               <div class="learning-module-meta">
