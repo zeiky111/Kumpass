@@ -11,6 +11,7 @@ from .models import (
     GameLevelItem,
     LearningModule,
     ModuleFile,
+    ModuleTopic,
     QuizQuestion,
     SignPredictionLog,
     SignVideo,
@@ -123,6 +124,22 @@ class ModuleFileSerializer(serializers.ModelSerializer):
             request = self.context.get("request")
             return request.build_absolute_uri(obj.file.url) if request else obj.file.url
         return download_url(self.context.get("request"), "module", obj.id)
+
+
+class ModuleTopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModuleTopic
+        fields = ["id", "module", "title", "content", "sign_words", "order", "created_at", "updated_at"]
+
+    def validate_sign_words(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError("sign_words must be a list of words.")
+        cleaned = []
+        for word in value:
+            text = str(word or "").strip()
+            if text and text.lower() not in {w.lower() for w in cleaned}:
+                cleaned.append(text[:150])
+        return cleaned[:30]
 
 
 class QuizQuestionSerializer(serializers.ModelSerializer):

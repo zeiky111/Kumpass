@@ -7,6 +7,7 @@ from django.utils import timezone
 from typing import Any
 from django.db import DatabaseError, IntegrityError, OperationalError
 from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import Lower
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
@@ -41,6 +42,8 @@ from .models import (
     LearningModule,
     ModuleFile,
     ModuleFileView,
+    ModuleTopic,
+    ModuleTopicCompletion,
     QuizAttempt,
     QuizQuestion,
     SignPredictionLog,
@@ -61,6 +64,7 @@ from .serializers import (
     LearningStateSerializer,
     LoginSerializer,
     ModuleFileSerializer,
+    ModuleTopicSerializer,
     QuizQuestionSerializer,
     StudentQuizQuestionSerializer,
     SignPredictionLogSerializer,
@@ -1482,6 +1486,65 @@ def _viewed_file_ids(user: User, file_ids: list[int]) -> set[int]:
     )
 
 
+def _completed_topic_ids(user: User, topic_ids: list[int]) -> set[int]:
+    if not topic_ids:
+        return set()
+    return set(
+        ModuleTopicCompletion.objects.filter(user=user, topic_id__in=topic_ids).values_list("topic_id", flat=True)
+    )
+
+
+def _unfinished_module_topics(user: User, module: LearningModule) -> list[int]:
+    """IDs of this module's topics the student hasn't finished yet."""
+    topic_ids = list(module.topics.values_list("id", flat=True))
+    done = _completed_topic_ids(user, topic_ids)
+    return [topic_id for topic_id in topic_ids if topic_id not in done]
+
+
+def _sign_video_lookup(words: set[str], request: Any) -> dict[str, dict]:
+    """Maps lower-cased sign words to {word, video_url} from the SignVideo
+    library. When a word exists twice (original + "fsl105_" import), the
+    original entry wins, same as Text-to-Sign."""
+    if not words:
+        return {}
+    lookup: dict[str, dict] = {}
+    videos = (
+        SignVideo.objects.filter(is_published=True)
+        .annotate(word_lower=Lower("word"))
+        .filter(word_lower__in=list(words))
+    )
+    for video in videos:
+        key = video.word_lower
+        is_fsl105 = str(video.key or "").startswith("fsl105_")
+        if key in lookup and is_fsl105:
+            continue
+        data = SignVideoSerializer(video, context={"request": request}).data
+        lookup[key] = {"word": video.word, "video_url": data.get("video_url") or ""}
+    return lookup
+
+
+def _student_topics_payload(topics: list, completed_ids: set[int], sign_lookup: dict[str, dict]) -> list[dict]:
+    payload = []
+    for topic in topics:
+        words = topic.sign_words if isinstance(topic.sign_words, list) else []
+        signs = []
+        for word in words:
+            found = sign_lookup.get(str(word).strip().lower())
+            signs.append({
+                "word": found["word"] if found else str(word),
+                "video_url": found["video_url"] if found else "",
+            })
+        payload.append({
+            "id": topic.id,
+            "title": topic.title,
+            "content": topic.content,
+            "order": topic.order,
+            "signs": signs,
+            "completed": topic.id in completed_ids,
+        })
+    return payload
+
+
 def _unopened_module_files(user: User, module: LearningModule) -> list[int]:
     """IDs of this module's materials the student hasn't opened yet."""
     file_ids = list(module.files.values_list("id", flat=True))
@@ -1511,7 +1574,7 @@ def student_content(request: Any) -> Response:
     modules_qs = (
         LearningModule.objects
         .select_related("created_by", "updated_by")
-        .prefetch_related("files", "quiz_questions")
+        .prefetch_related("files", "quiz_questions", "topics")
         .filter(status=LearningModule.STATUS_PUBLISHED)
         .annotate(level_rank=_level_rank_ordering())
         .order_by("level_rank", "sort_order", "title")
@@ -1530,6 +1593,19 @@ def student_content(request: Any) -> Response:
     viewed_file_ids = _viewed_file_ids(
         user, [file.id for module in modules for file in module.files.all()]
     )
+    completed_topic_ids = _completed_topic_ids(
+        user, [topic.id for module in modules for topic in module.topics.all()]
+    )
+    sign_lookup = _sign_video_lookup(
+        {
+            str(word).strip().lower()
+            for module in modules
+            for topic in module.topics.all()
+            for word in (topic.sign_words if isinstance(topic.sign_words, list) else [])
+            if str(word).strip()
+        },
+        request,
+    )
     # Intermediate and Advanced unlock only after every Beginner module is
     # finished; Advanced also needs every Intermediate module finished.
     remaining_by_level = _modules_remaining_by_level(user)
@@ -1545,6 +1621,10 @@ def student_content(request: Any) -> Response:
         # The quiz unlocks once every material in the module has been opened.
         module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
         module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)
+        # Topics are studied in order; the post-test also needs every topic finished.
+        module_topics = list(module.topics.all())
+        module_data["topics"] = _student_topics_payload(module_topics, completed_topic_ids, sign_lookup)
+        module_data["topicsComplete"] = all(topic.id in completed_topic_ids for topic in module_topics)
         level_lock = _level_lock_for(module.year_level, remaining_by_level)
         module_data["levelLocked"] = bool(level_lock)
         module_data["levelLockedBy"] = level_lock[0] if level_lock else ""
@@ -2178,6 +2258,7 @@ def instructor_module_detail(request: Any, module_id: int) -> Response:
     if request.method == "GET":
         data = LearningModuleSerializer(module).data
         data["files"] = ModuleFileSerializer(list(module.files.all().order_by("-created_at")), many=True, context={"request": request}).data
+        data["topicCount"] = module.topics.count()
         data["studentCount"] = _module_student_counts([module]).get(module.module_key, 0)
         return Response(data)
 
@@ -2279,6 +2360,105 @@ def module_file_viewed(request: Any, module_id: int, file_id: int) -> Response:
     })
 
 
+def _topic_payload_from_request(payload: Any, fallback: ModuleTopic | None = None) -> dict:
+    def pick(key, default):
+        value = payload.get(key)
+        return default if value is None else value
+
+    raw_words = pick("sign_words", fallback.sign_words if fallback else [])
+    if isinstance(raw_words, str):
+        raw_words = [w for w in raw_words.split(",")]
+    try:
+        order = int(pick("order", fallback.order if fallback else 0) or 0)
+    except (TypeError, ValueError):
+        order = fallback.order if fallback else 0
+    return {
+        "title": str(pick("title", fallback.title if fallback else "")).strip(),
+        "content": str(pick("content", fallback.content if fallback else "")).strip(),
+        "sign_words": raw_words,
+        "order": max(0, order),
+    }
+
+
+@api_view(["GET", "POST"])
+def module_topics(request: Any, module_id: int) -> Response:
+    """Instructor: list a module's topics, or add a new one."""
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    module = get_object_or_404(LearningModule, pk=module_id)
+
+    if request.method == "GET":
+        return Response(ModuleTopicSerializer(module.topics.all(), many=True).data)
+
+    data = _topic_payload_from_request(request.data)
+    if not data["title"]:
+        return Response({"error": "Topic title is required."}, status=400)
+    if not request.data.get("order"):
+        last = module.topics.order_by("-order").first()
+        data["order"] = (last.order + 1) if last else 1
+    serializer = ModuleTopicSerializer(data={**data, "module": module.id})
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+    topic = serializer.save()
+    return Response(ModuleTopicSerializer(topic).data, status=201)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+def module_topic_detail(request: Any, module_id: int, topic_id: int) -> Response:
+    """Instructor: view, edit or delete one topic."""
+    actor, error_response = _get_instructor_actor(request)
+    if error_response:
+        return error_response
+
+    topic = get_object_or_404(ModuleTopic, pk=topic_id, module_id=module_id)
+
+    if request.method == "GET":
+        return Response(ModuleTopicSerializer(topic).data)
+
+    if request.method == "DELETE":
+        topic.delete()
+        return Response({"message": "Topic deleted"})
+
+    data = _topic_payload_from_request(request.data, fallback=topic)
+    if not data["title"]:
+        return Response({"error": "Topic title is required."}, status=400)
+    serializer = ModuleTopicSerializer(topic, data=data, partial=True)
+    if not serializer.is_valid():
+        return Response({"error": serializer.errors}, status=400)
+    topic = serializer.save()
+    return Response(ModuleTopicSerializer(topic).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def module_topic_complete(request: Any, module_id: int, topic_id: int) -> Response:
+    """Student: marks a topic as finished. Topics are done in order."""
+    topic = get_object_or_404(ModuleTopic.objects.select_related("module"), pk=topic_id, module_id=module_id)
+    module = topic.module
+    locked = _level_locked_response(request.user, module)
+    if locked is not None:
+        return locked
+    if _pre_test_pending(request.user, module):
+        return Response({"error": "Take the pre-test before starting the topics.", "preTestRequired": True}, status=403)
+
+    ordered_ids = list(module.topics.values_list("id", flat=True))
+    done = _completed_topic_ids(request.user, ordered_ids)
+    earlier = ordered_ids[: ordered_ids.index(topic.id)]
+    if any(topic_id_ not in done for topic_id_ in earlier):
+        return Response({"error": "Finish the earlier topics first.", "topicLocked": True}, status=403)
+
+    ModuleTopicCompletion.objects.get_or_create(user=request.user, topic=topic)
+    done.add(topic.id)
+    remaining = [tid for tid in ordered_ids if tid not in done]
+    return Response({
+        "topicId": topic.id,
+        "topicsComplete": not remaining,
+        "remaining": len(remaining),
+    })
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def module_quiz_submit(request: Any, module_id: int) -> Response:
@@ -2321,6 +2501,14 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         return Response({
             "error": "Take this module's pre-test first.",
             "preTestRequired": True,
+        }, status=403)
+
+    unfinished_topics = [] if is_pre_test else _unfinished_module_topics(user, module)
+    if unfinished_topics:
+        return Response({
+            "error": "Finish all of this module's topics before taking the quiz.",
+            "topicsIncomplete": True,
+            "remaining": len(unfinished_topics),
         }, status=403)
 
     unopened = [] if is_pre_test else _unopened_module_files(user, module)

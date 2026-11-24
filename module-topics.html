@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/logo_transparent.png">
+    <link rel="icon" type="image/png" href="images/logo_transparent.png">
+    <title>Module Topics - Kumpas</title>
+    <link rel="stylesheet" href="css/style.css?v=20260912" />
+    <link rel="stylesheet" href="css/pages.css" />
+    <link rel="stylesheet" href="css/dashboard-pro.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <style>
+        .topics-container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.5rem) clamp(2rem, 5vw, 4rem);
+            display: grid;
+            grid-template-columns: 1.3fr 0.9fr;
+            gap: 1.75rem;
+            align-items: start;
+        }
+
+        .topics-panel {
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            padding: 1.75rem;
+        }
+
+        .topics-panel h1,
+        .topics-panel h2 {
+            margin-top: 0;
+        }
+
+        .topics-hint {
+            color: #64748b;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .topic-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .topic-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem;
+            display: grid;
+            gap: 0.6rem;
+        }
+
+        .topic-card.editing {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .topic-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .topic-card-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #111827;
+        }
+
+        .topic-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .topic-card-actions .btn {
+            padding: 0.45rem 0.8rem;
+            font-size: 0.82rem;
+        }
+
+        .topic-content-preview {
+            margin: 0;
+            color: #475569;
+            white-space: pre-wrap;
+            line-height: 1.55;
+            max-height: 4.8em;
+            overflow: hidden;
+        }
+
+        .sign-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .sign-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #eef2ff;
+            color: #3730a3;
+            border-radius: 999px;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .sign-tag.missing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .sign-tag button {
+            border: none;
+            background: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .topic-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .topic-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .topic-form label {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .topic-form input,
+        .topic-form textarea {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            font-size: 0.95rem;
+            color: #111827;
+            background: #ffffff;
+            font-family: inherit;
+        }
+
+        .topic-form textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .sign-input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .sign-input-row input {
+            flex: 1;
+        }
+
+        .topic-form-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .empty-note {
+            padding: 16px;
+            color: #6b7280;
+            background: #f8fafc;
+            border: 1px dashed #d1d5db;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 1024px) {
+            .topics-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="pro-dashboard instructor-theme pro-standalone">
+    <script src="js/api-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        requireAuth(['instructor', 'admin']);
+    </script>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a href="instructor-dashboard.html" class="logo">
+                <img src="images/logo_transparent.png" alt="Kumpas Logo" class="logo-image" loading="lazy">
+                <span>Kumpas</span>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="instructor-dashboard.html" class="nav-link">Dashboard</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-user-menu" id="navUserMenu">
+                <button class="nav-user-toggle" id="navUserToggle">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <div class="nav-user-dropdown" id="navUserDropdown">
+                    <a href="index.html" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="topics-container">
+        <section class="topics-panel">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h1 id="topicsTitle">Module Topics</h1>
+                    <p class="topics-hint" id="topicsSubtitle">Split this module into topics. Students go through them in order, then take the post-test.</p>
+                </div>
+                <a href="instructor-dashboard.html" class="btn btn-secondary" style="white-space:nowrap;">&larr; Back to Dashboard</a>
+            </div>
+            <h2 style="margin-top:1rem;">Topics <span id="topicsCount" style="color:#64748b; font-weight:600; font-size:0.95rem;"></span></h2>
+            <div id="topicList" class="topic-list">
+                <div class="empty-note">Loading topics…</div>
+            </div>
+        </section>
+
+        <section class="topics-panel">
+            <h2 id="topicFormTitle">Add a Topic</h2>
+            <form class="topic-form" id="topicForm" autocomplete="off">
+                <div class="form-group">
+                    <label for="topicTitle">Topic title</label>
+                    <input id="topicTitle" type="text" maxlength="180" placeholder="e.g. Saying hello" required />
+                </div>
+                <div class="form-group">
+                    <label for="topicContent">Lesson</label>
+                    <textarea id="topicContent" placeholder="Explain the topic. Leave a blank line between paragraphs. Start lines with &quot;-&quot; for a bullet list."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="topicSignInput">Signs to learn</label>
+                    <div class="sign-input-row">
+                        <input id="topicSignInput" type="text" list="signWordOptions" placeholder="Type a word, e.g. hello" />
+                        <button type="button" class="btn btn-secondary btn-sm" id="addSignBtn">Add</button>
+                    </div>
+                    <datalist id="signWordOptions"></datalist>
+                    <small class="topics-hint" id="signLibraryHint">Pick words from the sign video library so students see the demonstration video.</small>
+                    <div class="sign-tags" id="topicSignTags"></div>
+                </div>
+                <div class="form-group">
+                    <label for="topicOrder">Order</label>
+                    <input id="topicOrder" type="number" min="1" step="1" placeholder="Auto (added at the end)" />
+                </div>
+                <div class="topic-form-actions">
+                    <button type="submit" class="btn btn-primary" id="saveTopicBtn">Add Topic</button>
+                    <button type="button" class="btn btn-secondary" id="cancelTopicBtn" style="display:none;">Cancel</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        const API_BASE = window.KUMPAS_API_BASE;
+        const moduleId = new URLSearchParams(window.location.search).get('module');
+        let topics = [];
+        let editingTopicId = null;
+        let formSigns = [];
+        let signLibrary = new Map(); // lower-case word -> display word
+
+        function esc(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getCurrentUser() {
+            if (window.KumpasSession && typeof window.KumpasSession.getCurrentUser === 'function') {
+                const currentUser = window.KumpasSession.getCurrentUser();
+                if (currentUser && (currentUser.email || currentUser.username)) return currentUser;
+            }
+            return { name: 'Instructor', email: '', username: '', role: 'instructor' };
+        }
+
+        async function getInstructorActorIdentifier() {
+            if (window.KumpasSession && typeof window.KumpasSession.ensureCurrentUser === 'function') {
+                const u = await window.KumpasSession.ensureCurrentUser().catch(() => null);
+                if (u && (u.email || u.username)) return u.email || u.username || '';
+            }
+            const currentUser = getCurrentUser();
+            return currentUser.email || currentUser.username || '';
+        }
+
+        async function requestJson(path, options = {}) {
+            const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+            const method = (options.method || 'GET').toUpperCase();
+            if (method !== 'GET' && typeof ensureCsrfToken === 'function') {
+                try {
+                    const csrfToken = await ensureCsrfToken(API_BASE);
+                    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+                } catch (_) {}
+            }
+            const response = await fetch(`${API_BASE}${path}`, { credentials: 'include', ...options, headers });
+            let data = {};
+            try { data = await response.json(); } catch (_) { data = {}; }
+            if (!response.ok) {
+                const message = typeof data.error === 'object'
+                    ? Object.values(data.error).flat().join(' ')
+                    : data.error || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+            return data;
+        }
+
+        async function actorQuery() {
+            return `actorEmail=${encodeURIComponent(await getInstructorActorIdentifier())}`;
+        }
+
+        // ---- Sign library (for the word picker) ----
+        async function loadSignLibrary() {
+            try {
+                const response = await fetch(`${API_BASE}/sign-videos/`);
+                if (!response.ok) throw new Error(String(response.status));
+                const items = await response.json();
+                signLibrary = new Map();
+                items.forEach(item => {
+                    const word = String(item.word || '').trim();
+                    if (word && item.video_url && !signLibrary.has(word.toLowerCase())) {
+                        signLibrary.set(word.toLowerCase(), word);
+                    }
+                });
+                const sorted = Array.from(signLibrary.values()).sort((a, b) => a.localeCompare(b));
+                document.getElementById('signWordOptions').innerHTML = sorted.map(word => `<option value="${esc(word)}"></option>`).join('');
+                document.getElementById('signLibraryHint').textContent =
+                    `Pick from ${sorted.length} words in the sign video library so students see the demonstration video. Words not in the library show a "no video yet" note.`;
+            } catch (_) {
+                document.getElementById('signLibraryHint').textContent = 'Could not load the sign video library. You can still type words.';
+            }
+            renderFormSigns();
+            renderTopics();
+        }
+
+        function hasVideo(word) {
+            return signLibrary.has(String(word || '').trim().toLowerCase());
+        }
+
+        // ---- Form ----
+        function renderFormSigns() {
+            const target = document.getElementById('topicSignTags');
+            target.innerHTML = formSigns.length
+                ? formSigns.map((word, i) => `
+                    <span class="sign-tag${!signLibrary.size || hasVideo(word) ? '' : ' missing'}" title="${!signLibrary.size || hasVideo(word) ? 'Has a sign video' : 'No sign video in the library yet'}">
+                        ${esc(word)}
+                        <button type="button" aria-label="Remove ${esc(word)}" data-remove="${i}">&times;</button>
+                    </span>`).join('')
+                : '<span class="topics-hint">No signs added yet.</span>';
+            target.querySelectorAll('[data-remove]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    formSigns.splice(Number(btn.dataset.remove), 1);
+                    renderFormSigns();
+                });
+            });
+        }
+
+        function addSignFromInput() {
+            const input = document.getElementById('topicSignInput');
+            const parts = String(input.value || '').split(',').map(part => part.trim()).filter(Boolean);
+            parts.forEach(part => {
+                const canonical = signLibrary.get(part.toLowerCase()) || part;
+                if (!formSigns.some(word => word.toLowerCase() === canonical.toLowerCase())) formSigns.push(canonical);
+            });
+            input.value = '';
+            input.focus();
+            renderFormSigns();
+        }
+
+        function resetForm() {
+            editingTopicId = null;
+            formSigns = [];
+            document.getElementById('topicForm').reset();
+            document.getElementById('topicFormTitle').textContent = 'Add a Topic';
+            document.getElementById('saveTopicBtn').textContent = 'Add Topic';
+            document.getElementById('cancelTopicBtn').style.display = 'none';
+            renderFormSigns();
+            renderTopics();
+        }
+
+        function editTopic(topicId) {
+            const topic = topics.find(item => Number(item.id) === Number(topicId));
+            if (!topic) return;
+            editingTopicId = topic.id;
+            formSigns = Array.isArray(topic.sign_words) ? topic.sign_words.slice() : [];
+            document.getElementById('topicTitle').value = topic.title || '';
+            document.getElementById('topicContent').value = topic.content || '';
+            document.getElementById('topicOrder').value = topic.order || '';
+            document.getElementById('topicFormTitle').textContent = 'Edit Topic';
+            document.getElementById('saveTopicBtn').textContent = 'Save Changes';
+            document.getElementById('cancelTopicBtn').style.display = '';
+            renderFormSigns();
+            renderTopics();
+            document.getElementById('topicTitle').focus();
+            if (window.innerWidth <= 1024) {
+                document.getElementById('topicForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        async function saveTopic(event) {
+            event.preventDefault();
+            const pending = document.getElementById('topicSignInput').value.trim();
+            if (pending) addSignFromInput();
+            const title = document.getElementById('topicTitle').value.trim();
+            if (!title) {
+                alert('Please enter a topic title.');
+                return;
+            }
+            const orderValue = document.getElementById('topicOrder').value.trim();
+            const body = {
+                title,
+                content: document.getElementById('topicContent').value,
+                sign_words: formSigns,
+            };
+            if (orderValue) body.order = Number(orderValue);
+
+            const saveBtn = document.getElementById('saveTopicBtn');
+            saveBtn.disabled = true;
+            try {
+                const query = await actorQuery();
+                const path = editingTopicId
+                    ? `/instructor/modules/${moduleId}/topics/${editingTopicId}/?${query}`
+                    : `/instructor/modules/${moduleId}/topics/?${query}`;
+                await requestJson(path, { method: editingTopicId ? 'PUT' : 'POST', body: JSON.stringify(body) });
+                resetForm();
+                await refreshTopics();
+            } catch (error) {
+                alert(`Unable to save topic: ${error.message}`);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        async function deleteTopic(topicId) {
+            const topic = topics.find(item => Number(item.id) === Number(topicId));
+            if (!confirm(`Delete the topic "${topic ? topic.title : ''}"? Students' progress on it will be removed.`)) return;
+            try {
+                await requestJson(`/instructor/modules/${moduleId}/topics/${topicId}/?${await actorQuery()}`, { method: 'DELETE' });
+                if (Number(editingTopicId) === Number(topicId)) resetForm();
+                await refreshTopics();
+            } catch (error) {
+                alert(`Unable to delete topic: ${error.message}`);
+            }
+        }
+
+        // Swap order with the neighbour above/below.
+        async function moveTopic(topicId, direction) {
+            const index = topics.findIndex(item => Number(item.id) === Number(topicId));
+            const other = topics[index + direction];
+            if (index < 0 || !other) return;
+            const reordered = topics.slice();
+            reordered[index] = other;
+            reordered[index + direction] = topics[index];
+            try {
+                const query = await actorQuery();
+                // Renumber 1..n so the order is always clean.
+                await Promise.all(reordered.map((item, i) => (item.order === i + 1 ? null : requestJson(
+                    `/instructor/modules/${moduleId}/topics/${item.id}/?${query}`,
+                    { method: 'PATCH', body: JSON.stringify({ order: i + 1 }) }
+                ))).filter(Boolean));
+                await refreshTopics();
+            } catch (error) {
+                alert(`Unable to reorder topics: ${error.message}`);
+            }
+        }
+
+        // ---- List ----
+        function renderTopics() {
+            const target = document.getElementById('topicList');
+            document.getElementById('topicsCount').textContent = topics.length ? `(${topics.length})` : '';
+            if (!topics.length) {
+                target.innerHTML = '<div class="empty-note">No topics yet. Add the first one using the form.</div>';
+                return;
+            }
+            target.innerHTML = topics.map((topic, index) => {
+                const words = Array.isArray(topic.sign_words) ? topic.sign_words : [];
+                return `
+                    <div class="topic-card${Number(editingTopicId) === Number(topic.id) ? ' editing' : ''}">
+                        <div class="topic-card-header">
+                            <h3>Topic ${index + 1}: ${esc(topic.title)}</h3>
+                            <div class="topic-card-actions">
+                                <button class="btn btn-secondary btn-sm" type="button" data-move="-1" data-id="${topic.id}" ${index === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+                                <button class="btn btn-secondary btn-sm" type="button" data-move="1" data-id="${topic.id}" ${index === topics.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button>
+                                <button class="btn btn-secondary btn-sm" type="button" data-edit="${topic.id}">Edit</button>
+                                <button class="btn btn-danger btn-sm" type="button" data-delete="${topic.id}">Delete</button>
+                            </div>
+                        </div>
+                        ${topic.content ? `<p class="topic-content-preview">${esc(topic.content)}</p>` : ''}
+                        <div class="sign-tags">
+                            ${words.length
+                                ? words.map(word => `<span class="sign-tag${!signLibrary.size || hasVideo(word) ? '' : ' missing'}">🤟 ${esc(word)}</span>`).join('')
+                                : '<span class="topics-hint">No signs</span>'}
+                        </div>
+                    </div>`;
+            }).join('');
+            target.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => editTopic(btn.dataset.edit)));
+            target.querySelectorAll('[data-delete]').forEach(btn => btn.addEventListener('click', () => deleteTopic(btn.dataset.delete)));
+            target.querySelectorAll('[data-move]').forEach(btn => btn.addEventListener('click', () => moveTopic(btn.dataset.id, Number(btn.dataset.move))));
+        }
+
+        async function refreshTopics() {
+            try {
+                topics = await requestJson(`/instructor/modules/${moduleId}/topics/?${await actorQuery()}`);
+                topics = Array.isArray(topics) ? topics : [];
+            } catch (error) {
+                document.getElementById('topicList').innerHTML = `<div class="empty-note">Unable to load topics: ${esc(error.message)}</div>`;
+                return;
+            }
+            renderTopics();
+        }
+
+        async function loadModule() {
+            if (!moduleId) {
+                document.getElementById('topicsTitle').textContent = 'Module not selected';
+                document.getElementById('topicsSubtitle').textContent = 'Open this page from the instructor dashboard.';
+                document.getElementById('topicList').innerHTML = '';
+                return;
+            }
+            try {
+                const moduleData = await requestJson(`/instructor/modules/${moduleId}/?${await actorQuery()}`);
+                document.getElementById('topicsTitle').textContent = `Topics — ${moduleData.title || 'Module'}`;
+            } catch (error) {
+                alert(`Unable to load module details: ${error.message}`);
+            }
+            await refreshTopics();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            document.getElementById('topicForm').addEventListener('submit', saveTopic);
+            document.getElementById('cancelTopicBtn').addEventListener('click', resetForm);
+            document.getElementById('addSignBtn').addEventListener('click', addSignFromInput);
+            document.getElementById('topicSignInput').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSignFromInput();
+                }
+            });
+            renderFormSigns();
+            await loadModule();
+            loadSignLibrary();
+        });
+    </script>
+    <script src="js/main.js"></script>
+    <script>
+    (function() {
+        const _t = document.getElementById('navUserToggle');
+        const _d = document.getElementById('navUserDropdown');
+        if (_t && _d) {
+            _t.addEventListener('click', function(e) { e.stopPropagation(); _d.classList.toggle('open'); });
+            document.addEventListener('click', function() { _d.classList.remove('open'); });
+        }
+    })();
+    </script>
+    <script src="js/pwa.js"></script>
+</body>
+</html>

@@ -225,6 +225,46 @@ class ModuleFile(models.Model):
         return f"{self.file_name} (in {self.module.title})"
 
 
+class ModuleTopic(models.Model):
+    """One lesson topic inside a learning module (e.g. "Greetings" ->
+    "Hello / Hi", "Good morning", "Thank you").
+
+    Students go through a module's topics in order. Each topic has the
+    lesson text plus the signs to learn, picked by word from the shared
+    SignVideo library so the student sees the demonstration video.
+    """
+    module = models.ForeignKey(
+        LearningModule,
+        on_delete=models.CASCADE,
+        related_name="topics",
+    )
+    title = models.CharField(max_length=180)
+    content = models.TextField(blank=True, default="")
+    sign_words = models.JSONField(default=list, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.title} (in {self.module.title})"
+
+
+class ModuleTopicCompletion(models.Model):
+    """Records that a student finished one topic of a module."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="module_topic_completions")
+    topic = models.ForeignKey(ModuleTopic, on_delete=models.CASCADE, related_name="completions")
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "topic")
+
+    def __str__(self) -> str:
+        return f"{self.user.username} finished {self.topic.title}"
+
+
 class ModuleFileView(models.Model):
     """Records that a student opened one of a module's materials.
 

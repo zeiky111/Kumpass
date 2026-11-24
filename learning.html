@@ -555,6 +555,57 @@
             background: #eef2ff;
         }
 
+        .learning-topic-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .learning-topic-row.current {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .learning-topic-row.locked {
+            opacity: 0.65;
+        }
+
+        .learning-topic-status {
+            flex: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .learning-topic-row.done .learning-topic-status {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        :root[data-theme="dark"] .learning-topic-row {
+            background: #1f2937;
+            border-color: #374151;
+        }
+
+        :root[data-theme="dark"] .learning-topic-row.current {
+            background: #1e3a8a;
+            border-color: #3b82f6;
+        }
+
+        :root[data-theme="dark"] #learningModuleTopics h3 {
+            color: #f3f4f6 !important;
+        }
+
         .learning-file-link {
             border: none;
             cursor: pointer;
@@ -890,6 +941,7 @@
             </div>
             <div class="learning-module-layout">
                 <div>
+                    <div id="learningModuleTopics" style="margin-bottom: 22px; display:none;"></div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom: 12px;">
                         <h3 style="margin:0; color:#111827;">Lesson materials</h3>
                         <span style="color:#6b7280; font-size: 0.88rem;">Study them here in the app</span>
@@ -936,6 +988,7 @@
 
     <script src="assets/js/main.js"></script>
     <script src="js/material-viewer.js"></script>
+    <script src="js/topic-viewer.js"></script>
     <script src="js/portal.js"></script>
     <script>
         // Navbar dropdown

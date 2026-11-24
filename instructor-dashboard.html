@@ -898,6 +898,7 @@
                             <td title="Post-test / Pre-test questions">${Number(module.quizCount || 0)} post · ${Number(module.preTestCount || 0)} pre</td>
                             <td onclick="event.stopPropagation();">
                                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); window.location.href='module-topics.html?module=${Number(module.id)}'">Topics</button>
                                     <button class="btn btn-sm btn-info" onclick="openModuleQuizBuilder(${module.id})">Quiz</button>
                                     <button class="btn btn-sm btn-secondary" onclick="openModuleModal(${module.id})">Edit</button>
                                     <button class="btn btn-sm btn-primary" onclick="openModuleMaterialsModal(${module.id})">Materials</button>

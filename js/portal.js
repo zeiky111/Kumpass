@@ -207,6 +207,9 @@
       // The quiz unlocks once the student has opened every material.
       viewedFileIds: Array.isArray(module && module.viewedFileIds) ? module.viewedFileIds.map(Number) : [],
       materialsComplete: module && typeof module.materialsComplete === 'boolean' ? module.materialsComplete : true,
+      // Lesson topics, studied in order; the post-test also needs all of them finished.
+      topics: Array.isArray(module && module.topics) ? module.topics : [],
+      topicsComplete: module && typeof module.topicsComplete === 'boolean' ? module.topicsComplete : true,
       // Pre-test: taken before the materials unlock.
       preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
       preTestCount: Number((module && module.preTestCount) || 0),
@@ -258,8 +261,12 @@
     return (module.files || []).filter(file => viewed.has(Number(file.id))).length;
   }
 
+  function getCompletedTopicsCount(module) {
+    return (module.topics || []).filter(topic => topic.completed).length;
+  }
+
   function isQuizLocked(module) {
-    return Boolean(module) && !module.quizAttempt && (module.levelLocked || isPreTestPending(module) || !module.materialsComplete);
+    return Boolean(module) && !module.quizAttempt && (module.levelLocked || isPreTestPending(module) || !module.materialsComplete || !module.topicsComplete);
   }
 
   // Tells the backend this student opened a material, then updates the
@@ -301,6 +308,93 @@
     if (window.KumpasMaterialViewer) {
       window.KumpasMaterialViewer.open(file, { onOpened: record });
     }
+  }
+
+  // Tells the backend this student finished a topic. Resolves true when saved.
+  async function markTopicComplete(moduleId, topicId) {
+    const module = getModuleById(moduleId);
+    if (!module || !Number.isFinite(module.numericId)) return false;
+    try {
+      const response = await window.fetchWithAuth(
+        `${API_BASE}/modules/${encodeURIComponent(module.numericId)}/topics/${encodeURIComponent(topicId)}/complete/`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      if (!response.ok) return false;
+      const result = await response.json().catch(() => ({}));
+      updateCachedModule(module.numericId, raw => {
+        (raw.topics || []).forEach(topic => {
+          if (Number(topic.id) === Number(topicId)) topic.completed = true;
+        });
+        raw.topicsComplete = Boolean(result.topicsComplete);
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Opens the step-by-step topic lesson (js/topic-viewer.js). Starts at the
+  // given topic, or at the first unfinished one.
+  function openModuleTopics(moduleId, index) {
+    const module = getModuleById(moduleId);
+    if (!module || !window.KumpasTopicViewer) return;
+    const topics = module.topics || [];
+    if (!topics.length || module.levelLocked || isPreTestPending(module)) return;
+    let start = Number.isFinite(Number(index)) ? Number(index) : topics.findIndex(topic => !topic.completed);
+    if (start < 0) start = 0;
+    window.KumpasTopicViewer.open({
+      moduleTitle: module.title,
+      topics,
+      index: start,
+      onComplete: topic => markTopicComplete(module.id, topic.id),
+      onClose: () => {
+        const modal = document.getElementById('learningModuleModal');
+        if (modal && modal.classList.contains('active')) openModuleDetails(module.id);
+        document.dispatchEvent(new CustomEvent('kumpas:module-updated', { detail: { moduleId: module.id } }));
+      },
+    });
+  }
+
+  function renderModuleTopicsList(module, container) {
+    if (!container) return;
+    const topics = module.topics || [];
+    if (!topics.length) {
+      container.innerHTML = '';
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = '';
+    const locked = module.levelLocked || isPreTestPending(module);
+    const doneCount = getCompletedTopicsCount(module);
+    const firstOpen = topics.findIndex(topic => !topic.completed);
+    const rows = topics.map((topic, index) => {
+      const unlocked = !locked && topics.slice(0, index).every(t => t.completed);
+      const isCurrent = unlocked && index === firstOpen;
+      const signs = Array.isArray(topic.signs) ? topic.signs : [];
+      const status = topic.completed ? '✓' : unlocked ? '▶' : '🔒';
+      const action = topic.completed ? 'Review' : isCurrent ? 'Start' : 'Locked';
+      return `
+        <div class="learning-topic-row${topic.completed ? ' done' : ''}${isCurrent ? ' current' : ''}${unlocked ? '' : ' locked'}">
+          <span class="learning-topic-status" aria-hidden="true">${status}</span>
+          <div style="min-width:0; flex:1;">
+            <div class="learning-file-name">Topic ${index + 1}: ${safeText(topic.title)}</div>
+            <small>${signs.length ? `${signs.length} sign${signs.length === 1 ? '' : 's'}: ${safeText(signs.slice(0, 4).map(s => s.word).join(', '))}${signs.length > 4 ? '…' : ''}` : 'Lesson'}</small>
+          </div>
+          <button type="button" class="learning-file-link" data-topic-index="${index}" ${unlocked ? '' : 'disabled style="opacity:0.5;cursor:not-allowed;"'}>${action}</button>
+        </div>`;
+    }).join('');
+    container.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom: 10px;">
+        <h3 style="margin:0; color:#111827;">Topics</h3>
+        <span style="color:#6b7280; font-size: 0.88rem;">${doneCount}/${topics.length} done</span>
+      </div>
+      <div class="progress-bar" style="margin-bottom:12px;"><div class="progress-fill" style="width:${Math.round((doneCount / topics.length) * 100)}%;"></div></div>
+      ${locked ? `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;margin-bottom:10px;">${module.levelLocked ? getLevelLockMessage(module) : '🔒 Take the pre-test first to unlock the topics.'}</div>` : ''}
+      <div style="display:flex; flex-direction:column; gap:10px;">${rows}</div>
+    `;
+    container.querySelectorAll('[data-topic-index]').forEach(button => {
+      button.addEventListener('click', () => openModuleTopics(module.id, Number(button.getAttribute('data-topic-index'))));
+    });
   }
 
   function getVisibleModules() {
@@ -671,10 +765,13 @@
         <span class="module-chip">${safeText(module.levelLabel)}</span>
         <span class="module-chip">📚 ${Number(module.activities || 0)} activities</span>
         <span class="module-chip">⏱️ ${Number(module.minutes || 0)} min</span>
+        ${(module.topics || []).length ? `<span class="module-chip">🧩 ${(module.topics || []).length} topics</span>` : ''}
         <span class="module-chip">📎 ${Number(module.filesCount || 0)} materials</span>
         <span class="module-chip">${moduleProgress}% complete</span>
       `;
     }
+
+    renderModuleTopicsList(module, document.getElementById('learningModuleTopics'));
 
     if (files) {
       const viewedIds = new Set((module.viewedFileIds || []).map(Number));
@@ -762,7 +859,7 @@
           openQuizBtn.style.opacity = locked ? '0.6' : '';
           openQuizBtn.style.cursor = locked ? 'not-allowed' : '';
           openQuizBtn.title = locked
-            ? (isPreTestPending(module) ? 'Take the pre-test first.' : 'Open every material in this module to unlock the post-test.')
+            ? (isPreTestPending(module) ? 'Take the pre-test first.' : 'Finish every topic and open every material to unlock the post-test.')
             : '';
           openQuizBtn.textContent = module.quizAttempt
             ? 'View Post-test Results'
@@ -770,6 +867,8 @@
               ? getLevelLockShort(module)
               : isPreTestPending(module)
               ? '🔒 Post-test (take the pre-test first)'
+              : !module.topicsComplete
+                ? `🔒 Finish all topics to unlock post-test (${getCompletedTopicsCount(module)}/${(module.topics || []).length})`
               : locked
                 ? `🔒 Open all materials to unlock post-test (${getOpenedMaterialsCount(module)}/${moduleFiles.length})`
                 : 'Take Post-test';
@@ -791,6 +890,10 @@
         if (module.levelLocked) return;
         if (needsPreTest) {
           openQuiz(module.id, 'pre');
+          return;
+        }
+        if (!module.topicsComplete && (module.topics || []).length) {
+          openModuleTopics(module.id);
           return;
         }
         window.location.href = completed ? `activity.html?module=${module.id}&review=true` : `activity.html?module=${module.id}`;
@@ -857,7 +960,9 @@
 
     if (!isPreTest && isQuizLocked(module)) {
       showMessage(isPreTestPending(module)
-        ? '<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Take the pre-test first, then go through the module materials to unlock the post-test.</div>'
+        ? '<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Take the pre-test first, then go through the module topics and materials to unlock the post-test.</div>'
+        : !module.topicsComplete
+        ? `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Finish this module first: complete all of its topics (${getCompletedTopicsCount(module)}/${(module.topics || []).length} done) to unlock the post-test.</div>`
         : `<div style="padding:12px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:12px;">🔒 Finish this module first: open all of its materials (${getOpenedMaterialsCount(module)}/${(module.files || []).length} opened) to unlock the post-test.</div>`);
       return;
     }
@@ -2652,7 +2757,9 @@
     getModuleById,
     getModuleProgress,
     markMaterialOpened,
-    openMaterial
+    openMaterial,
+    markTopicComplete,
+    openModuleTopics
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html
   window.uploadPhoto = function () {

@@ -87,6 +87,7 @@
                         <h3 id="activityModuleTitle">Module</h3>
                         <p id="activityModuleDescription"><strong>Description:</strong> Loading…</p>
                         <p id="activityFilesNote" style="display:none;"><strong>Lesson materials:</strong> <span id="activityFilesCount">0</span> to study for this module.</p>
+                        <div id="activityTopicsList" class="activity-materials"></div>
                         <div id="activityMaterialsList" class="activity-materials"></div>
                     </div>
                 </div>
@@ -635,6 +636,7 @@
     <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/material-viewer.js"></script>
+    <script src="js/topic-viewer.js"></script>
     <script src="js/portal.js"></script>
     <script>
         const queryParams = new URLSearchParams(window.location.search);
@@ -674,6 +676,7 @@
 
             const videoFile = files.find(f => f.file_type === 'video' && f.file_url);
             const preTestPending = Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+            renderTopicsList(module, preTestPending || module.levelLocked);
             renderMaterialsList(module, files, preTestPending || module.levelLocked);
             if (preTestPending || module.levelLocked) {
                 const container = document.getElementById('activityVideoContainer');
@@ -695,6 +698,46 @@
                 }
             }
         }
+
+        // The module's topics, studied in order in the topic viewer.
+        function renderTopicsList(module, locked) {
+            const list = document.getElementById('activityTopicsList');
+            if (!list) return;
+            const topics = Array.isArray(module.topics) ? module.topics : [];
+            if (!topics.length || locked || !window.KumpasTopicViewer || !window.KumpasPortal) {
+                list.innerHTML = '';
+                return;
+            }
+            const doneCount = topics.filter(topic => topic.completed).length;
+            const firstOpen = topics.findIndex(topic => !topic.completed);
+            list.innerHTML = `<p style="margin:12px 0 2px;"><strong>Topics:</strong> ${doneCount}/${topics.length} done</p>` + topics.map((topic, index) => {
+                const unlocked = topics.slice(0, index).every(t => t.completed);
+                const action = topic.completed ? '✓ Review' : index === firstOpen ? '▶ Start' : '🔒 Locked';
+                const signs = Array.isArray(topic.signs) ? topic.signs : [];
+                return `
+                    <button type="button" class="activity-material-btn" data-topic-index="${index}" ${unlocked ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'}>
+                        <span class="material-icon" aria-hidden="true">🧩</span>
+                        <span class="material-text">
+                            <span class="material-name">Topic ${index + 1}: ${escapeHtml(topic.title)}</span>
+                            <small>${signs.length ? `${signs.length} sign${signs.length === 1 ? '' : 's'} to learn` : 'Lesson'}</small>
+                        </span>
+                        <span class="material-action">${action}</span>
+                    </button>`;
+            }).join('');
+            list.querySelectorAll('[data-topic-index]').forEach(btn => {
+                btn.addEventListener('click', () => window.KumpasPortal.openModuleTopics(module.id, Number(btn.dataset.topicIndex)));
+            });
+        }
+
+        // Re-draw the topic list after the student finishes topics.
+        document.addEventListener('kumpas:module-updated', () => {
+            if (!window.KumpasPortal || !window.KumpasPortal.getModuleById) return;
+            const fresh = window.KumpasPortal.getModuleById(currentModuleId);
+            if (fresh) {
+                const preTestPending = Number(fresh.preTestCount || 0) > 0 && !fresh.preTestAttempt;
+                renderTopicsList(fresh, preTestPending || fresh.levelLocked);
+            }
+        });
 
         // Every material opens in the in-app lesson viewer (no downloads).
         function renderMaterialsList(module, files, locked) {
