@@ -643,7 +643,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124"></script>
+    <script src="js/games-common.js?v=20261124b"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -900,6 +900,12 @@
 
             const acceptedAnswers = question.answers.map(normalizeInput);
             const isCorrect = answer !== null && acceptedAnswers.includes(answer);
+            engine.recordAnswer({
+                question: `Sign ${engine.state.roundAnswers.length + 1} (video)`,
+                correctAnswer: question.answers[0],
+                yourAnswer: timedOut ? "(time's up)" : rawAnswer.trim(),
+                correct: isCorrect,
+            });
 
             if (isCorrect) {
                 const points = engine.getPointValue();

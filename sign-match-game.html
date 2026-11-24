@@ -674,7 +674,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124"></script>
+    <script src="js/games-common.js?v=20261124b"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -897,6 +897,12 @@
             document.querySelectorAll('.option-btn').forEach(btn => btn.style.pointerEvents = 'none');
 
             const isCorrect = engine.normalizeText(selected.textContent) === engine.normalizeText(question.label);
+            engine.recordAnswer({
+                question: `Sign ${engine.state.roundAnswers.length + 1} (video)`,
+                correctAnswer: question.label,
+                yourAnswer: selected.textContent,
+                correct: isCorrect,
+            });
 
             if (isCorrect) {
                 const points = engine.getPointValue();

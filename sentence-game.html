@@ -851,7 +851,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124"></script>
+    <script src="js/games-common.js?v=20261124b"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -1151,6 +1151,12 @@
 
             const answerWords = userAnswer.map(tileId => currentTiles.find(t => t.id === tileId).word);
             const isCorrect = !timedOut && normalizeSentenceAnswer(answerWords.join(' ')) === normalizeSentenceAnswer(question.correct.join(' '));
+            engine.recordAnswer({
+                question: `Sentence ${engine.state.roundAnswers.length + 1}`,
+                correctAnswer: question.correct.join(' '),
+                yourAnswer: timedOut ? "(time's up)" : answerWords.join(' '),
+                correct: isCorrect,
+            });
 
             if (isCorrect) {
                 const points = engine.getPointValue();

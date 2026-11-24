@@ -615,6 +615,20 @@
     return `<div style="font-weight:700;margin-bottom:6px;">Tries before passing</div><div class="game-instructions-levels" style="display:grid;gap:6px;">${rows}</div>`;
   }
 
+  // Latest round's answers per game + difficulty, for the end-of-game review.
+  const lastRoundAnswers = {};
+
+  function answersListHtml(answers) {
+    if (!answers || !answers.length) return '<div style="color:#64748b;">No answers recorded.</div>';
+    return '<ol style="margin:6px 0 0; padding-left:22px;">' + answers.map(a => `
+      <li style="margin-bottom:6px;">
+        <span style="font-weight:700;color:${a.correct ? '#059669' : '#dc2626'};">${a.correct ? '✓' : '✗'}</span>
+        ${escapeHtml(a.question)}<br>
+        <span style="color:#475569;">Correct answer:</span> <strong>${escapeHtml(a.correctAnswer || '—')}</strong>
+        ${a.correct ? '' : `<br><span style="color:#475569;">Your answer:</span> <span style="color:#dc2626;">${escapeHtml(a.yourAnswer || '(no answer)')}</span>`}
+      </li>`).join('') + '</ol>';
+  }
+
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -697,13 +711,30 @@
     document.getElementById('gameRoundMessage').innerHTML = message;
     document.getElementById('gameRoundTries').innerHTML = triesSummaryHtml(game, difficulty);
 
+    // Correct answers: this difficulty after every round; all three
+    // difficulties (latest round of each) once the whole game is finished.
+    const roundAnswers = Array.isArray(engine.state.roundAnswers) ? engine.state.roundAnswers.slice() : [];
+    lastRoundAnswers[cfg.gameKey] = lastRoundAnswers[cfg.gameKey] || {};
+    lastRoundAnswers[cfg.gameKey][difficulty] = roundAnswers;
     const reviewDiv = document.getElementById('gameRoundReview');
-    const items = Array.isArray(cfg.reviewItems) ? cfg.reviewItems : [];
-    if (items.length && (gameComplete || !passed)) {
+    reviewDiv.style.maxHeight = gameComplete ? '320px' : '220px';
+    if (gameComplete) {
+      const byDifficulty = lastRoundAnswers[cfg.gameKey];
       reviewDiv.style.display = 'block';
-      reviewDiv.innerHTML = '<strong>Answers to review:</strong><ul style="margin:8px 0 0; padding-left:20px;">'
-        + items.map(item => `<li style="margin-bottom:4px;">${escapeHtml(item.question)} &rarr; <strong>${escapeHtml(item.correctAnswer)}</strong></li>`).join('')
-        + '</ul>';
+      reviewDiv.innerHTML = '<div style="font-weight:700;margin-bottom:4px;">Correct answers</div>'
+        + DIFFICULTIES.filter(d => byDifficulty[d]).map(d => {
+          const list = byDifficulty[d];
+          const right = list.filter(a => a.correct).length;
+          return `<details ${d === 'hard' ? 'open' : ''} style="margin-bottom:8px;">
+              <summary style="cursor:pointer;font-weight:700;">${DIFF_LABEL[d]} — ${right}/${list.length} correct</summary>
+              ${answersListHtml(list)}
+            </details>`;
+        }).join('');
+    } else if (roundAnswers.length) {
+      const right = roundAnswers.filter(a => a.correct).length;
+      reviewDiv.style.display = 'block';
+      reviewDiv.innerHTML = `<div style="font-weight:700;">Correct answers — ${DIFF_LABEL[difficulty]} (${right}/${roundAnswers.length} correct)</div>`
+        + answersListHtml(roundAnswers);
     } else {
       reviewDiv.style.display = 'none';
       reviewDiv.innerHTML = '';
@@ -783,6 +814,8 @@
       // (all of its levels) -- this is what the 70% pass mark is checked on.
       roundCorrect: 0,
       roundTotal: 0,
+      // Every answer in the current difficulty: { question, correctAnswer, yourAnswer, correct }
+      roundAnswers: [],
       // Restored from saved tries: a difficulty passed before stays passed.
       completedDifficulties: opts.gameKey ? getPassedDifficulties(opts.gameKey) : { easy: false, medium: false, hard: false },
       levelsByDifficulty: { easy: [], medium: [], hard: [] },
@@ -900,6 +933,7 @@
         // First level of a difficulty = start of a new round.
         state.roundCorrect = 0;
         state.roundTotal = 0;
+        state.roundAnswers = [];
       }
       state.roundTotal += pool.length ? questions.length : 0;
       updatePassIndicator(engineApi);
@@ -921,6 +955,17 @@
     function recordCorrect() {
       state.roundCorrect += 1;
       updatePassIndicator(engineApi);
+    }
+
+    // Call after every answer (right or wrong) so the correct answers can be
+    // shown after the difficulty and at the end of the game.
+    function recordAnswer(entry) {
+      state.roundAnswers.push({
+        question: String((entry && entry.question) || `Question ${state.roundAnswers.length + 1}`),
+        correctAnswer: String((entry && entry.correctAnswer) || ''),
+        yourAnswer: entry && entry.yourAnswer != null && entry.yourAnswer !== '' ? String(entry.yourAnswer) : '',
+        correct: Boolean(entry && entry.correct),
+      });
     }
 
     function hasNextLevel() {
@@ -963,6 +1008,7 @@
       }
       state.roundCorrect = 0;
       state.roundTotal = 0;
+      state.roundAnswers = [];
       updateDifficultyButtons();
     }
 
@@ -985,6 +1031,7 @@
       setDifficulty,
       expectedRoundTotal,
       recordCorrect,
+      recordAnswer,
     };
     return engineApi;
   }

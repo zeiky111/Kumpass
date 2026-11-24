@@ -742,7 +742,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124"></script>
+    <script src="js/games-common.js?v=20261124b"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -963,6 +963,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.dataset.correct = opt.correct;
+                btn.dataset.name = opt.name || '';
                 // Prefer the live SignVideo URL for this option's name; the
                 // level's stored opt.video can be stale/broken seed data.
                 const liveVideo = signVideoByKey[String(opt.name || '').toLowerCase()];
@@ -994,6 +995,14 @@
             document.querySelectorAll('.option-btn').forEach(btn => btn.style.pointerEvents = 'none');
 
             const isCorrect = normalizeClipName(selected.dataset.correct) === 'true';
+            const scenarioNow = activeScenarios[currentIndex];
+            const correctOption = scenarioNow && Array.isArray(scenarioNow.options) ? scenarioNow.options.find(opt => opt.correct) : null;
+            engine.recordAnswer({
+                question: scenarioNow ? scenarioNow.scenario : `Scenario ${engine.state.roundAnswers.length + 1}`,
+                correctAnswer: correctOption ? correctOption.name : '',
+                yourAnswer: selected.dataset.name || '',
+                correct: isCorrect,
+            });
 
             if (isCorrect) {
                 const points = engine.getPointValue();
