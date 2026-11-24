@@ -169,6 +169,57 @@
   // *slot* itself doesn't change (same level_number/title/count), but which
   // WORD fills that slot can be redrawn from the pool on each playthrough --
   // see createGameEngine's buildQuestionsForCurrentLevel/pickFromPool.
+  // Dataset categories used for each difficulty, easiest signs first.
+  const DATASET_CATEGORIES_BY_DIFFICULTY = {
+    easy: ['alphabet', 'numbers', 'colors', 'days', 'greetings'],
+    medium: ['family', 'relationships', 'food', 'drink', 'emotions', 'calendar'],
+    hard: ['everyday_words', 'responses', 'phrases', 'expressions', 'survival'],
+  };
+
+  // Single-sign games (Sign Match, Typing): give every question a pool of
+  // other videos from the sign video dataset (SignVideo, incl. FSL-105) --
+  // same category as the question plus the categories of its difficulty --
+  // so plays show the whole dataset instead of only the handful of videos
+  // typed into the levels. Half the time the teacher's own video is used.
+  //   datasetItems: /sign-videos/?scope=games rows {key, word, category, video_url}
+  //   makeItem(row) -> game item;  wordOf(item) -> the item's sign word
+  function addDatasetAlternatives(levelsByDifficulty, datasetItems, makeItem, wordOf) {
+    const byWord = new Map();
+    (Array.isArray(datasetItems) ? datasetItems : []).forEach(row => {
+      if (!row || !row.word || !row.video_url) return;
+      const key = normalizeText(row.word);
+      if (!key) return;
+      // Same word twice (original + "fsl105_" import): keep the original.
+      if (byWord.has(key) && String(row.key || '').startsWith('fsl105_')) return;
+      byWord.set(key, row);
+    });
+    const byCategory = {};
+    byWord.forEach(row => { (byCategory[row.category] = byCategory[row.category] || []).push(row); });
+
+    // Words already used as authored questions stay where the teacher put them.
+    const authored = new Set();
+    Object.values(levelsByDifficulty || {}).forEach(levels => (levels || []).forEach(level =>
+      (level.items || []).forEach(item => authored.add(normalizeText(wordOf(item))))));
+
+    let added = 0;
+    Object.entries(levelsByDifficulty || {}).forEach(([difficulty, levels]) => (levels || []).forEach(level =>
+      (level.items || []).forEach(item => {
+        const row = byWord.get(normalizeText(wordOf(item)));
+        const categories = new Set(DATASET_CATEGORIES_BY_DIFFICULTY[difficulty] || []);
+        if (row) categories.add(row.category);
+        const alternatives = [];
+        categories.forEach(category => (byCategory[category] || []).forEach(other => {
+          if (!authored.has(normalizeText(other.word))) alternatives.push(makeItem(other));
+        }));
+        const usable = alternatives.filter(Boolean);
+        if (!usable.length) return;
+        item._datasetPool = usable;
+        added += usable.length;
+      })));
+    return added;
+  }
+  window.KumpasGames.addDatasetAlternatives = addDatasetAlternatives;
+
   function buildLevelsByDifficulty(levels, mapItem) {
     const byDifficulty = { easy: [], medium: [], hard: [] };
     levels.forEach(level => {
@@ -920,21 +971,37 @@
     // surface a different word on each playthrough. An item without a
     // `_pool` (or an empty one) always plays its own authored content, so
     // this is a no-op for levels that were never given extra alternatives.
-    function drawFromPool(item) {
-      if (!item || !Array.isArray(item._pool) || !item._pool.length) return item;
-      const candidates = [item, ...item._pool];
-      return candidates[Math.floor(Math.random() * candidates.length)];
+    function itemKey(item) {
+      return String((item && (item.video || item.label || (item.answers && item.answers[0]))) || JSON.stringify(item));
+    }
+
+    // Avoids showing the same sign twice in one difficulty when several
+    // questions share the same dataset pool.
+    function drawFromPool(item, used) {
+      if (!item) return item;
+      const own = [item, ...(Array.isArray(item._pool) ? item._pool : [])];
+      const dataset = Array.isArray(item._datasetPool) ? item._datasetPool : [];
+      const isFresh = c => !used || !used.has(itemKey(c));
+      // 50/50 between the teacher's content and the sign video dataset;
+      // fall back to the other source if one has nothing unused left.
+      const sources = dataset.length && Math.random() < 0.5 ? [dataset, own] : [own, dataset];
+      let candidates = sources.map(list => list.filter(isFresh)).find(list => list.length);
+      if (!candidates) candidates = own;
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      if (used) used.add(itemKey(pick));
+      return pick;
     }
 
     function buildQuestionsForCurrentLevel() {
-      const pool = getActivePool().map(drawFromPool);
-      const questions = shuffle(pool).slice(0, Math.max(1, pool.length));
-      if (state.levelIndex === 0) {
+      if (state.levelIndex === 0 || !state.roundUsed) {
         // First level of a difficulty = start of a new round.
         state.roundCorrect = 0;
         state.roundTotal = 0;
         state.roundAnswers = [];
+        state.roundUsed = new Set();
       }
+      const pool = getActivePool().map(item => drawFromPool(item, state.roundUsed));
+      const questions = shuffle(pool).slice(0, Math.max(1, pool.length));
       state.roundTotal += pool.length ? questions.length : 0;
       updatePassIndicator(engineApi);
       // 3 failed tries -> the student must review a module before playing again.

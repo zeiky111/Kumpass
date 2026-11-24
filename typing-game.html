@@ -649,7 +649,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124b"></script>
+    <script src="js/games-common.js?v=20261125"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -966,8 +966,20 @@
             }
         });
 
+        // Sign video dataset: questions also draw same-category videos from it.
+        let datasetVideos = [];
+        async function loadDatasetVideos() {
+            try {
+                const response = await fetch(`${KumpasGames.API_BASE}/sign-videos/?scope=games`);
+                datasetVideos = response.ok ? await response.json() : [];
+            } catch (_) {
+                datasetVideos = [];
+            }
+        }
+
         // Initialize game
         Promise.all([
+            loadDatasetVideos(),
             KumpasGames.loadGameLevels('typing').then(levels => {
                 engine.state.levelsByDifficulty = KumpasGames.buildLevelsByDifficulty(
                     levels,
@@ -984,6 +996,16 @@
                 : Promise.resolve(null),
         ])
             .then(() => {
+                KumpasGames.addDatasetAlternatives(
+                    engine.state.levelsByDifficulty,
+                    datasetVideos,
+                    row => {
+                        const word = String(row.word || '');
+                        const alternates = ANSWER_ALTERNATES[word] || [];
+                        return { video: row.video_url, answers: [word.toLowerCase(), ...alternates.map(a => a.toLowerCase())] };
+                    },
+                    item => (item.answers && item.answers[0]) || ''
+                );
                 initHighScore();
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,

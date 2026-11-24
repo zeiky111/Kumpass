@@ -680,7 +680,7 @@
     </div>
 
     <script src="js/portal.js?v=20261124"></script>
-    <script src="js/games-common.js?v=20261124b"></script>
+    <script src="js/games-common.js?v=20261125"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -707,12 +707,21 @@
         const { videoMimeType } = KumpasGames;
 
         let allWordLabels = [];
+        let datasetVideos = [];
 
         async function loadDistractorWords() {
             const response = await fetch(SIGN_VIDEOS_API);
             if (!response.ok) throw new Error(`Failed to load sign videos (${response.status})`);
             const items = await response.json();
-            allWordLabels = items.map(item => item.word).filter(Boolean);
+            datasetVideos = items;
+            // One label per word (the dataset has e.g. "Hello" and FSL-105 "hello").
+            const seen = new Set();
+            allWordLabels = items.map(item => item.word).filter(word => {
+                const key = KumpasGames.normalizeText(word);
+                if (!word || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
         }
 
         // Difficulty only changes the number of multiple-choice options shown.
@@ -969,6 +978,13 @@
                 : Promise.resolve(null),
         ])
             .then(() => {
+                // Questions also draw same-category videos from the whole dataset.
+                KumpasGames.addDatasetAlternatives(
+                    engine.state.levelsByDifficulty,
+                    datasetVideos,
+                    row => ({ label: row.word, video: row.video_url }),
+                    item => item.label
+                );
                 initHighScore();
                 const levelCounts = {
                     easy: engine.totalLevelsForDifficulty('easy') || 0,
