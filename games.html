@@ -38,6 +38,13 @@
             padding: clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3vw, 1.25rem) clamp(2rem, 5vw, 3.5rem);
         }
 
+        /* The page's .container padding must not apply to the navbar's
+           container too, or the top bar grows to ~185px tall. */
+        .navbar .container {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
         /* Page Header */
         .page-header {
             margin-bottom: 32px;
