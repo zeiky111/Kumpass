@@ -291,6 +291,7 @@
         raw.viewedFileIds = Array.from(viewed);
         raw.materialsComplete = Boolean(result.materialsComplete);
       });
+      refreshProgressViews(moduleId);
 
       const modal = document.getElementById('learningModuleModal');
       if (modal && modal.classList.contains('active')) {
@@ -350,7 +351,7 @@
       onClose: () => {
         const modal = document.getElementById('learningModuleModal');
         if (modal && modal.classList.contains('active')) openModuleDetails(module.id);
-        document.dispatchEvent(new CustomEvent('kumpas:module-updated', { detail: { moduleId: module.id } }));
+        refreshProgressViews(module.id);
       },
     });
   }
@@ -651,9 +652,37 @@
     return nextState;
   }
 
+  // Progress from the module's actual steps: pre-test, each topic, each
+  // material, then the post-test (which always means 100%).
+  function computeModuleStepProgress(module) {
+    if (!module) return 0;
+    if (module.quizAttempt) return 100;
+    const topics = Array.isArray(module.topics) ? module.topics : [];
+    const files = Array.isArray(module.files) ? module.files : [];
+    const hasPreTest = Number(module.preTestCount || 0) > 0;
+    const hasPostTest = Number(module.quizCount || 0) > 0;
+    const total = (hasPreTest ? 1 : 0) + topics.length + files.length + (hasPostTest ? 1 : 0);
+    if (!total) return 0;
+    const viewed = new Set((module.viewedFileIds || []).map(Number));
+    const done = (hasPreTest && module.preTestAttempt ? 1 : 0)
+      + topics.filter(topic => topic.completed).length
+      + files.filter(file => viewed.has(Number(file.id))).length;
+    return Math.round((done / total) * 100);
+  }
+
   function getModuleProgress(state, moduleId) {
-    const value = Number(state.moduleProgress[moduleId] || 0);
-    return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    const stored = Number((state && state.moduleProgress && state.moduleProgress[moduleId]) || 0);
+    const storedValue = Number.isFinite(stored) ? stored : 0;
+    const computed = computeModuleStepProgress(getModuleById(moduleId));
+    return Math.max(0, Math.min(100, Math.max(storedValue, computed)));
+  }
+
+  // Re-draws progress wherever it is shown after a step is completed.
+  function refreshProgressViews(moduleId) {
+    if (document.getElementById('learningOverallProgressFill') || document.getElementById('learningModulesGrid')) {
+      try { renderLearning(); } catch (_) {}
+    }
+    document.dispatchEvent(new CustomEvent('kumpas:module-updated', { detail: { moduleId } }));
   }
 
   function getModuleStatus(progress) {

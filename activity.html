@@ -736,6 +736,8 @@
             if (fresh) {
                 const preTestPending = Number(fresh.preTestCount || 0) > 0 && !fresh.preTestAttempt;
                 renderTopicsList(fresh, preTestPending || fresh.levelLocked);
+                renderMaterialsList(fresh, Array.isArray(fresh.files) ? fresh.files : [], preTestPending || fresh.levelLocked);
+                renderModuleStats(fresh);
             }
         });
 
