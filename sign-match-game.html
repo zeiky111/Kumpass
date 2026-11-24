@@ -47,12 +47,11 @@
             width: 100%;
             padding: clamp(0.75rem, 2vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
         }
-
-        /* The page's .container padding must not apply to the navbar's
-           container too, or the top bar grows to ~185px tall. */
+        /* Same top bar as the Student Dashboard: the page's own .container
+           (wider, with large padding) must not apply to the navbar's. */
         .navbar .container {
-            padding-top: 0;
-            padding-bottom: 0;
+            max-width: 1200px;
+            padding: 0 20px;
         }
 
         /* Fills the remaining viewport height below the navbar */
