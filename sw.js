@@ -1,5 +1,7 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v9';
+// v10: new Kumpas logo -- images are cache-first, so the cache must be
+// replaced or returning users keep seeing the old logo.
+var CACHE_NAME = 'kumpas-cache-v10';
 // api-config.js, auth.js, main.js, and google-config.js are excluded because
 // they drive login/redirect logic, the API base/auth-token plumbing, and
 // Google Sign-In configuration. games-common.js is excluded for the same
@@ -22,7 +24,9 @@ var PRECACHE_URLS = [
   'css/bg-orbs.css',
   'js/theme.js',
   'images/kumpas_logo.png',
-  'images/kumpas_logo1.png'
+  // images/kumpas_logo1.png was listed here but doesn't exist; a missing
+  // file makes cache.addAll() reject and the whole install fail.
+  'images/logo_transparent.png'
 ];
 // material-viewer.js (in-app lesson viewer) joined in v7, topic-viewer.js in v8, policy.js in v9.
 var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common|portal|material-viewer|topic-viewer|policy)\.js$/;

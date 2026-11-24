@@ -11,13 +11,13 @@
   "icons": [
     {
       "src": "images/kumpas_logo.png",
-      "sizes": "500x500",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "images/kumpas_logo.png",
-      "sizes": "500x500",
+      "src": "images/kumpas_icon_maskable.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }

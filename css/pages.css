@@ -72,9 +72,11 @@
   margin-bottom: 14px;
 }
 
+/* !important: style.css forces every .logo img to 68px tall, which shrank
+   this standalone logo to a thumbnail. */
 .login-page .auth-brand-logo {
-  width: clamp(160px, 22vw, 210px);
-  height: auto;
+  width: clamp(200px, 26vw, 260px) !important;
+  height: auto !important;
 }
 
 .auth-brand-text {
