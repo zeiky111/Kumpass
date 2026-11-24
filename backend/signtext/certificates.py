@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .file_downloads import read_file_bytes
 
-from .models import Certificate, LearningModule, UserCertificate
+from .models import Certificate, LearningModule, QuizAttempt, QuizQuestion, UserCertificate
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +193,58 @@ def award_module_certificate_if_earned(user: User, module: LearningModule) -> Us
     user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
     file_name = f"module-{module.module_key}-{user.id}.pdf"
     user_certificate.file.save(file_name, ContentFile(pdf_bytes), save=False)
+    user_certificate.save()
+    return user_certificate
+
+
+# The one Kumpas certificate: issued once a student has completed and passed
+# EVERY published learning module. Passing a single module (or a game) earns
+# an achievement instead (see views._unlock_module_achievement).
+ALL_MODULES_CERT_TITLE = "Kumpas Learning Modules — Certificate of Achievement"
+ALL_MODULES_PASSING_PERCENT = 75
+
+
+def _all_modules_certificate() -> Certificate:
+    certificate = Certificate.objects.filter(
+        game_key__isnull=True, module__isnull=True, title=ALL_MODULES_CERT_TITLE
+    ).first()
+    if certificate is None:
+        certificate = Certificate.objects.create(title=ALL_MODULES_CERT_TITLE, template_path=MODULE_CERT_TEMPLATE_PATH)
+    return certificate
+
+
+def unpassed_module_count(user: User) -> int:
+    """Published modules whose post-test this user hasn't passed (75%+) yet."""
+    module_ids = list(
+        LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).values_list("id", flat=True)
+    )
+    passed = {
+        attempt.module_id
+        for attempt in QuizAttempt.objects.filter(
+            user=user, test_type=QuizQuestion.TEST_POST, module_id__in=module_ids
+        ).only("module_id", "score", "total")
+        if attempt.total and attempt.score / attempt.total * 100 >= ALL_MODULES_PASSING_PERCENT
+    }
+    return len([module_id for module_id in module_ids if module_id not in passed])
+
+
+def award_all_modules_certificate_if_earned(user: User) -> UserCertificate | None:
+    """Issues the Kumpas certificate once every published module is passed.
+    Idempotent: returns None if not earned yet or already issued."""
+    if not LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).exists():
+        return None
+    if unpassed_module_count(user) > 0:
+        return None
+
+    certificate = _all_modules_certificate()
+    if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
+        return None
+
+    student_name = _student_name_for_user(user)
+    issued_at = timezone.now()
+    pdf_bytes = _generate_module_certificate_pdf(certificate.template_path, student_name, issued_at)
+    user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
+    user_certificate.file.save(f"kumpas-modules-{user.id}.pdf", ContentFile(pdf_bytes), save=False)
     user_certificate.save()
     return user_certificate
 

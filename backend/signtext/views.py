@@ -31,7 +31,11 @@ from .fingerspelling_svc import predict_letter_from_landmarks
 from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
 from .file_downloads import download_url
-from .certificates import award_certificate_if_earned, award_module_certificate_if_earned, send_certificate_email_async
+from .certificates import (
+    award_all_modules_certificate_if_earned,
+    send_certificate_email_async,
+    unpassed_module_count,
+)
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
     Achievement,
@@ -485,6 +489,56 @@ def _skill_breakdown_for_user(user: User) -> list:
     return breakdown
 
 
+GAME_LABELS = dict(GameLevel.GAME_CHOICES)
+
+
+def _unlock_achievement(user: User, key: str, name: str, icon: str, criteria_type: str, criteria_value: int, sort_order: int):
+    """Creates the achievement if needed and unlocks it for user. Returns the
+    Achievement when it was newly unlocked, else None."""
+    achievement, created = Achievement.objects.get_or_create(
+        key=key,
+        defaults={
+            "name": name,
+            "icon": icon,
+            "criteria_type": criteria_type,
+            "criteria_value": criteria_value,
+            "sort_order": sort_order,
+        },
+    )
+    if not created and achievement.name != name:
+        achievement.name = name
+        achievement.save(update_fields=["name"])
+    _, unlocked = UserAchievement.objects.get_or_create(user=user, achievement=achievement)
+    return achievement if unlocked else None
+
+
+def _unlock_module_achievement(user: User, module: LearningModule):
+    """Passing a module's post-test earns an achievement (not a certificate)."""
+    return _unlock_achievement(
+        user,
+        key=f"module_passed_{module.id}",
+        name=f"Passed: {module.title}",
+        icon="fa-solid fa-medal",
+        criteria_type=Achievement.CRITERIA_MODULE_PASSED,
+        criteria_value=module.id,
+        sort_order=1000 + int(module.sort_order or 0),
+    )
+
+
+def _unlock_game_achievement(user: User, game_key: str):
+    """Passing a game's Hard difficulty earns an achievement (not a certificate)."""
+    label = GAME_LABELS.get(game_key, game_key)
+    return _unlock_achievement(
+        user,
+        key=f"game_passed_{game_key}",
+        name=f"{label} Champion",
+        icon="fa-solid fa-trophy",
+        criteria_type=Achievement.CRITERIA_GAME_PASSED,
+        criteria_value=1,
+        sort_order=2000,
+    )
+
+
 def _evaluate_achievements(user: User, state: dict) -> list:
     """Unlocks any newly-qualified achievements for this user and returns
     the full catalog as [{earned, icon, name}], matching the shape the
@@ -517,6 +571,7 @@ def _evaluate_achievements(user: User, state: dict) -> list:
         achievement
         for achievement in achievements
         if achievement.key not in unlocked_keys
+        and achievement.criteria_type in metric_by_criteria
         and metric_by_criteria.get(achievement.criteria_type, 0) >= achievement.criteria_value
     ]
     if newly_unlocked:
@@ -526,9 +581,12 @@ def _evaluate_achievements(user: User, state: dict) -> list:
         )
         unlocked_keys.update(achievement.key for achievement in newly_unlocked)
 
+    per_item = {Achievement.CRITERIA_MODULE_PASSED, Achievement.CRITERIA_GAME_PASSED}
     return [
         {"earned": achievement.key in unlocked_keys, "icon": achievement.icon, "name": achievement.name}
         for achievement in achievements
+        # Per-module / per-game badges are listed once earned.
+        if achievement.criteria_type not in per_item or achievement.key in unlocked_keys
     ]
 
 
@@ -1327,39 +1385,36 @@ def learning_state(request: Any) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def award_certificate(request: Any) -> Response:
+    """Called when a student passes a game's Hard difficulty. Games earn an
+    achievement (not a certificate); the only certificate is for passing
+    every learning module."""
     user = request.user
     game_key = str(request.data.get("game_key") or "").strip()
     if not game_key:
         return Response({"error": "Missing game_key"}, status=400)
-
-    if not Certificate.objects.filter(game_key=game_key).exists():
+    if game_key not in GAME_LABELS:
         return Response({"error": "Unknown game_key"}, status=400)
 
-    user_certificate = award_certificate_if_earned(user, game_key)
-    if user_certificate is None:
-        return Response({"certificate": None, "alreadyEarned": True})
-
-    send_certificate_email_async(user_certificate)
+    achievement = _unlock_game_achievement(user, game_key)
+    if achievement is None:
+        return Response({"certificate": None, "achievement": None, "alreadyEarned": True})
 
     learning_state = _get_learning_state_for_user(user)
     state = dict(learning_state.state or {})
     recent_activity = list(state.get("recentActivity") or [])
     recent_activity.insert(0, {
         "icon": "🏆",
-        "text": f"Earned the {user_certificate.certificate.title} certificate",
-        "meta": "Certificate unlocked",
+        "text": f"Achievement unlocked: {achievement.name}",
+        "meta": "Game passed on Hard",
     })
     state["recentActivity"] = recent_activity[:10]
+    state["achievements"] = _evaluate_achievements(user, state)
     learning_state.state = state
     learning_state.save(update_fields=["state", "updated_at"])
 
     return Response({
-        "certificate": {
-            "gameKey": user_certificate.certificate.game_key,
-            "title": user_certificate.certificate.title,
-            "issuedAt": user_certificate.issued_at,
-            "downloadUrl": download_url(request, "certificate", user_certificate.id),
-        },
+        "certificate": None,
+        "achievement": {"name": achievement.name, "icon": achievement.icon},
         "alreadyEarned": False,
     })
 
@@ -2622,6 +2677,8 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
     # completion is correct even if the client never re-syncs.
     updated_state = None
     certificate_payload = None
+    achievement_payload = None
+    modules_left = None
     passed = total > 0 and (score / total * 100) >= QUIZ_PASSING_PERCENT
     try:
         QuizAttempt.objects.create(user=user, module=module, test_type=QuizQuestion.TEST_POST, score=score, total=total)
@@ -2648,7 +2705,20 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
                 "meta": f"{score}/{total} correct — {QUIZ_PASSING_PERCENT}% needed",
             })
 
-        user_certificate = award_module_certificate_if_earned(user, module) if passed else None
+        achievement_payload = None
+        if passed:
+            achievement = _unlock_module_achievement(user, module)
+            if achievement is not None:
+                achievement_payload = {"name": achievement.name, "icon": achievement.icon}
+                recent_activity.insert(0, {
+                    "icon": "🏅",
+                    "text": f"Achievement unlocked: {achievement.name}",
+                    "meta": "Module post-test passed",
+                })
+        modules_left = unpassed_module_count(user)
+
+        # The certificate is only for completing and passing EVERY module.
+        user_certificate = award_all_modules_certificate_if_earned(user) if passed else None
         if user_certificate is not None:
             send_certificate_email_async(user_certificate)
             recent_activity.insert(0, {
@@ -2682,6 +2752,8 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         "details": details if passed else [{"question_id": d["question_id"], "correct": d["correct"]} for d in details],
         "state": updated_state,
         "certificate": certificate_payload,
+        "achievement": achievement_payload,
+        "modulesLeftForCertificate": modules_left,
     })
 
 

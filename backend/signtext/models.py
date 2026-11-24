@@ -475,12 +475,20 @@ class Achievement(models.Model):
     CRITERIA_QUIZ_PERFECT_SCORE = "quiz_perfect_score"
     CRITERIA_QUIZ_COUNT = "quiz_count"
     CRITERIA_POINTS_TOTAL = "points_total"
+    # One achievement per module (criteria_value = module id), unlocked when
+    # its post-test is passed, and one per game (key "game_passed_<game_key>"),
+    # unlocked when the game's Hard difficulty is passed. These are created
+    # and unlocked directly when earned, not by the metric evaluation.
+    CRITERIA_MODULE_PASSED = "module_passed"
+    CRITERIA_GAME_PASSED = "game_passed"
     CRITERIA_CHOICES = [
         (CRITERIA_MODULES_COMPLETED, "Modules completed"),
         (CRITERIA_STREAK_DAYS, "Streak (days)"),
         (CRITERIA_QUIZ_PERFECT_SCORE, "Perfect quiz scores"),
         (CRITERIA_QUIZ_COUNT, "Quizzes taken"),
         (CRITERIA_POINTS_TOTAL, "Points total"),
+        (CRITERIA_MODULE_PASSED, "Module post-test passed"),
+        (CRITERIA_GAME_PASSED, "Game passed (Hard)"),
     ]
 
     key = models.CharField(max_length=64, unique=True)

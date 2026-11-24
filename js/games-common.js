@@ -14,12 +14,11 @@
   // Auth is checked by js/auth.js's requireAuth() near the top of <body> on
   // every game page, before this file loads -- not repeated here.
 
-  // ---- Certificates ----
-  // Called once a game's engine.advance() returns 'game-complete' (i.e. Hard
-  // difficulty's last level was just finished). The backend is idempotent
-  // (one UserCertificate per user+game), so this is safe to call every time
-  // a player finishes Hard, even on replays -- it only issues once and the
-  // rest are silent no-ops. Fire-and-forget: never blocks the completion UI.
+  // ---- Game achievement ----
+  // Called once Hard is passed. Games earn an ACHIEVEMENT ("<Game> Champion"),
+  // not a certificate -- the only certificate is for passing every learning
+  // module. The backend is idempotent, so replays are silent no-ops.
+  // Fire-and-forget: never blocks the completion UI.
   async function awardCertificateIfEarned(gameKey) {
     try {
       const currentUser = window.KumpasPortal && typeof window.KumpasPortal.ensureCurrentUser === 'function'

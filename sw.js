@@ -1,5 +1,5 @@
 // Kumpas service worker - basic offline cache for static assets
-var CACHE_NAME = 'kumpas-cache-v8';
+var CACHE_NAME = 'kumpas-cache-v9';
 // api-config.js, auth.js, main.js, and google-config.js are excluded because
 // they drive login/redirect logic, the API base/auth-token plumbing, and
 // Google Sign-In configuration. games-common.js is excluded for the same
@@ -24,8 +24,8 @@ var PRECACHE_URLS = [
   'images/kumpas_logo.png',
   'images/kumpas_logo1.png'
 ];
-// material-viewer.js (in-app lesson viewer) joined in v7, topic-viewer.js in v8.
-var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common|portal|material-viewer|topic-viewer)\.js$/;
+// material-viewer.js (in-app lesson viewer) joined in v7, topic-viewer.js in v8, policy.js in v9.
+var NETWORK_ONLY_SCRIPTS = /\/js\/(api-config|auth|main|google-config|games-common|portal|material-viewer|topic-viewer|policy)\.js$/;
 
 self.addEventListener('install', function (event) {
   event.waitUntil(

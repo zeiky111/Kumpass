@@ -1131,6 +1131,8 @@
           const total = Number(result.total || 0);
           const details = Array.isArray(result.details) ? result.details : [];
           const certificate = result.certificate && typeof result.certificate === 'object' ? result.certificate : null;
+          const achievement = result.achievement && typeof result.achievement === 'object' ? result.achievement : null;
+          const modulesLeft = Number.isFinite(Number(result.modulesLeftForCertificate)) ? Number(result.modulesLeftForCertificate) : null;
 
           if (result.state && typeof result.state === 'object') {
             hydratedState = mergeState(result.state);
@@ -1173,7 +1175,10 @@
             <div class="quiz-results">
               <div class="quiz-results-score">Score: <strong>${score}</strong> / ${total} (${percent}%)</div>
               ${passed
-                ? `<div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">🎉 You passed! This module is complete.</div>`
+                ? `<div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">🎉 You passed! This module is complete.
+                    ${achievement ? `<div style="margin-top:6px;font-weight:700;">🏅 Achievement unlocked: ${safeText(achievement.name)}</div>` : ''}
+                    ${!certificate && modulesLeft ? `<div style="margin-top:6px;">Pass ${modulesLeft} more module${modulesLeft === 1 ? '' : 's'} to earn your Kumpas Certificate.</div>` : ''}
+                  </div>`
                 : `<div style="margin-top:10px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#991b1b;">
                     Not passed yet — you need ${passingPercent}% to pass. Review the module topics and materials, then retake the post-test.
                     <div style="margin-top:10px;"><button type="button" class="btn-primary" id="quizRetakeButton">🔁 Retake Post-test</button></div>
@@ -1188,7 +1193,7 @@
               </div>
               ${certificate ? `
                 <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
-                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 Certificate of Achievement earned!</div>
+                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 You passed every module — Certificate earned!</div>
                   <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
                 </div>
               ` : ''}
@@ -1893,6 +1898,7 @@
         if (String(iconClass).indexOf('graduation-cap') !== -1) return '🎓';
         if (String(iconClass).indexOf('star') !== -1) return '⭐';
         if (String(iconClass).indexOf('lock') !== -1) return '🔒';
+        if (String(iconClass).indexOf('trophy') !== -1) return '🏆';
         return '🏅';
       };
 
@@ -1912,7 +1918,7 @@
           certificatesList.innerHTML = `
             <div class="achievement" style="opacity: 0.55;">
               <span class="achievement-icon">📜</span>
-              <span class="achievement-name">Complete a game's Hard difficulty to earn your first certificate!</span>
+              <span class="achievement-name">Pass every learning module to earn your Kumpas certificate!</span>
             </div>
           `;
           return;
