@@ -107,7 +107,9 @@
     const style = document.createElement('style');
     style.id = 'kmvStyles';
     style.textContent = `
-      .kmv { position: fixed; inset: 0; z-index: 10050; display: none; flex-direction: column;
+      /* !important: css/bg-orbs.css forces position:relative on every direct
+         child of <body>, which would push this overlay below the footer. */
+      .kmv { position: fixed !important; inset: 0; z-index: 10050 !important; display: none; flex-direction: column;
         background: #0f172a; color: #f8fafc; font-family: inherit;
         -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
       .kmv.open { display: flex; }
@@ -459,8 +461,11 @@
     els.icon.textContent = iconFor(file);
     els.kicker.textContent = labelFor(file);
     els.title.textContent = file.file_name || 'Material';
-    els.desc.textContent = file.description || '';
-    els.desc.style.display = file.description ? '' : 'none';
+    // Skip the description when it only repeats the file name.
+    const desc = String(file.description || '').trim();
+    const showDesc = desc && desc.toLowerCase() !== String(file.file_name || '').trim().toLowerCase();
+    els.desc.textContent = showDesc ? desc : '';
+    els.desc.style.display = showDesc ? '' : 'none';
     els.bar.innerHTML = '';
     const freshBar = els.bar.cloneNode(false); // drop old listeners
     els.bar.replaceWith(freshBar);

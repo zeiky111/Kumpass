@@ -52,7 +52,9 @@
     const style = document.createElement('style');
     style.id = 'ktvStyles';
     style.textContent = `
-      .ktv { position: fixed; inset: 0; z-index: 10040; display: none; flex-direction: column;
+      /* !important: css/bg-orbs.css forces position:relative on every direct
+         child of <body>, which would push this overlay below the footer. */
+      .ktv { position: fixed !important; inset: 0; z-index: 10040 !important; display: none; flex-direction: column;
         background: #f1f5f9; color: #0f172a; font-family: inherit; }
       .ktv.open { display: flex; }
       .ktv-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
