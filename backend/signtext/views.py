@@ -1489,7 +1489,9 @@ def student_content(request: Any) -> Response:
     for module in modules:
         module_data = LearningModuleSerializer(module).data
         module_files = list(module.files.all().order_by("-created_at"))
-        module_data["files"] = ModuleFileSerializer(module_files, many=True, context={"request": request}).data
+        module_data["files"] = ModuleFileSerializer(
+            module_files, many=True, context={"request": request, "student_view": True}
+        ).data
         # The quiz unlocks once every material in the module has been opened.
         module_data["viewedFileIds"] = [file.id for file in module_files if file.id in viewed_file_ids]
         module_data["materialsComplete"] = all(file.id in viewed_file_ids for file in module_files)

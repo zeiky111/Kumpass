@@ -86,7 +86,8 @@
                     <div class="sign-info">
                         <h3 id="activityModuleTitle">Module</h3>
                         <p id="activityModuleDescription"><strong>Description:</strong> Loading…</p>
-                        <p id="activityFilesNote" style="display:none;"><strong>Materials:</strong> <span id="activityFilesCount">0</span> file(s) available for this module.</p>
+                        <p id="activityFilesNote" style="display:none;"><strong>Lesson materials:</strong> <span id="activityFilesCount">0</span> to study for this module.</p>
+                        <div id="activityMaterialsList" class="activity-materials"></div>
                     </div>
                 </div>
             </section>
@@ -561,10 +562,79 @@
             height: 76px;
             object-fit: contain;
         }
+
+        .activity-materials {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .activity-material-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            text-align: left;
+            padding: 10px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: #f8fafc;
+            color: #111827;
+            cursor: pointer;
+            font: inherit;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .activity-material-btn:hover,
+        .activity-material-btn:focus-visible {
+            border-color: #2563eb;
+            transform: translateY(-1px);
+            outline: none;
+        }
+
+        .activity-material-btn .material-icon {
+            font-size: 1.3rem;
+            flex: none;
+        }
+
+        .activity-material-btn .material-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-material-btn .material-name {
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .activity-material-btn small {
+            color: #6b7280;
+        }
+
+        .activity-material-btn .material-action {
+            flex: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #2563eb;
+        }
+
+        :root[data-theme="dark"] .activity-material-btn {
+            background: #1f2937;
+            border-color: #374151;
+            color: #f3f4f6;
+        }
+
+        :root[data-theme="dark"] .activity-material-btn small {
+            color: #9ca3af;
+        }
     </style>
 
     <script src="js/api-config.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/material-viewer.js"></script>
     <script src="js/portal.js"></script>
     <script>
         const queryParams = new URLSearchParams(window.location.search);
@@ -604,6 +674,7 @@
 
             const videoFile = files.find(f => f.file_type === 'video' && f.file_url);
             const preTestPending = Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+            renderMaterialsList(module, files, preTestPending || module.levelLocked);
             if (videoFile && (preTestPending || module.levelLocked)) {
                 const container = document.getElementById('activityVideoContainer');
                 if (container) {
@@ -614,7 +685,7 @@
             } else if (videoFile) {
                 const container = document.getElementById('activityVideoContainer');
                 if (container) {
-                    container.innerHTML = `<video controls style="width:100%; border-radius:16px;" src="${videoFile.file_url}"></video>`;
+                    container.innerHTML = `<video controls playsinline controlslist="nodownload noremoteplayback" disablepictureinpicture oncontextmenu="return false;" style="width:100%; border-radius:16px;" src="${escapeHtml(videoFile.file_url)}"></video>`;
                     // Watching the video counts as opening that material (unlocks the quiz once all are opened).
                     const video = container.querySelector('video');
                     if (video && window.KumpasPortal && window.KumpasPortal.markMaterialOpened) {
@@ -622,6 +693,44 @@
                     }
                 }
             }
+        }
+
+        // Every material opens in the in-app lesson viewer (no downloads).
+        function renderMaterialsList(module, files, locked) {
+            const list = document.getElementById('activityMaterialsList');
+            if (!list) return;
+            const viewer = window.KumpasMaterialViewer;
+            if (!files.length || locked || !viewer) {
+                list.innerHTML = '';
+                return;
+            }
+            const viewed = new Set((module.viewedFileIds || []).map(Number));
+            list.innerHTML = files.map((file, index) => {
+                const done = viewed.has(Number(file.id));
+                const action = done ? '✓ Review' : (viewer.kindOf(file) === 'video' ? '▶ Watch' : 'View');
+                return `
+                    <button type="button" class="activity-material-btn" data-index="${index}">
+                        <span class="material-icon" aria-hidden="true">${viewer.iconFor(file)}</span>
+                        <span class="material-text">
+                            <span class="material-name">${index + 1}. ${escapeHtml(file.file_name)}</span>
+                            <small>${escapeHtml(viewer.labelFor(file))}${file.description ? ' · ' + escapeHtml(file.description) : ''}</small>
+                        </span>
+                        <span class="material-action">${action}</span>
+                    </button>`;
+            }).join('');
+            list.querySelectorAll('.activity-material-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const file = files[Number(btn.dataset.index)];
+                    if (!file) return;
+                    viewer.open(file, {
+                        onOpened: () => {
+                            if (window.KumpasPortal && window.KumpasPortal.markMaterialOpened) {
+                                window.KumpasPortal.markMaterialOpened(module.id, Number(file.id));
+                            }
+                        },
+                    });
+                });
+            });
         }
 
         function renderModuleStats(module) {

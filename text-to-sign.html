@@ -682,11 +682,48 @@
             color: #e5e7eb;
         }
 
+        .translate-media,
+        .sign-preview-media {
+            position: relative;
+        }
+
         .translate-media video {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
+        }
+
+        /* Spinner shown over the last frame while the next sign buffers,
+           instead of a blank black box. */
+        .sign-video-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(17, 24, 39, 0.35);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .sign-video-loading.show {
+            opacity: 1;
+        }
+
+        .sign-video-loading::after {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            animation: signVideoSpin 0.8s linear infinite;
+        }
+
+        @keyframes signVideoSpin {
+            to { transform: rotate(360deg); }
         }
 
         .translate-no-match {
@@ -1082,6 +1119,98 @@
             return 'video/mp4';
         }
 
+        // ---- Sign video preloading ----
+        // Each sign video gets one reusable <video preload="auto"> element so
+        // upcoming signs are already buffered by the time they are shown.
+        // Without this every word started downloading only when its turn
+        // came, leaving a blank "dead" screen between signs.
+        const VIDEO_POOL_MAX = 16;
+        const VIDEO_LOAD_TIMEOUT_MS = 12000;
+        const videoPool = new Map(); // url -> HTMLVideoElement
+
+        function getSignVideo(url) {
+            let video = videoPool.get(url);
+            if (video) {
+                // Refresh insertion order so it is evicted last.
+                videoPool.delete(url);
+                videoPool.set(url, video);
+                return video;
+            }
+            video = document.createElement('video');
+            video.muted = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.preload = 'auto';
+            video.src = url;
+            video.load();
+            videoPool.set(url, video);
+            trimVideoPool();
+            return video;
+        }
+
+        function releaseVideo(video) {
+            try { video.pause(); } catch (_) {}
+            video.removeAttribute('src');
+            try { video.load(); } catch (_) {}
+        }
+
+        function dropSignVideo(url) {
+            const video = videoPool.get(url);
+            if (!video) return;
+            videoPool.delete(url);
+            if (!video.isConnected) releaseVideo(video);
+        }
+
+        function trimVideoPool() {
+            for (const [url, video] of videoPool) {
+                if (videoPool.size <= VIDEO_POOL_MAX) break;
+                if (video.isConnected) continue; // currently on screen
+                videoPool.delete(url);
+                releaseVideo(video);
+            }
+        }
+
+        function preloadSign(sign) {
+            if (sign && sign.video) getSignVideo(sign.video);
+        }
+
+        function ensureLoadingOverlay(container) {
+            let overlay = container.querySelector(':scope > .sign-video-loading');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'sign-video-loading';
+                container.appendChild(overlay);
+            }
+            return overlay;
+        }
+
+        function setVideoLoading(container, on) {
+            ensureLoadingOverlay(container).classList.toggle('show', !!on);
+        }
+
+        // Puts `video` into `container`, keeping whatever was there visible
+        // until the new video has a frame to show, then swaps it in.
+        function showSignVideo(container, video, isCurrent) {
+            const swap = () => {
+                if (!isCurrent()) return;
+                Array.from(container.children).forEach(child => {
+                    if (child !== video && !child.classList.contains('sign-video-loading')) {
+                        if (child.tagName === 'VIDEO') { try { child.pause(); } catch (_) {} }
+                        child.remove();
+                    }
+                });
+                if (video.parentNode !== container) {
+                    container.insertBefore(video, ensureLoadingOverlay(container));
+                }
+            };
+            if (video.readyState >= 2) {
+                swap();
+            } else {
+                setVideoLoading(container, true);
+                video.addEventListener('loadeddata', swap, { once: true });
+            }
+        }
+
         async function loadSignLibrary() {
             const response = await fetch(SIGN_VIDEOS_API);
             if (!response.ok) {
@@ -1159,6 +1288,11 @@
         function attachPickerCardHandlers(container) {
             container.querySelectorAll('.word-picker-card').forEach(card => {
                 card.addEventListener('click', () => previewSign(card.dataset.word));
+                // Start buffering as soon as the user points at / touches a
+                // card, so the video is ready by the time the modal opens.
+                const warm = () => preloadSign(lookupSign(card.dataset.word));
+                card.addEventListener('pointerenter', warm, { once: true });
+                card.addEventListener('touchstart', warm, { once: true, passive: true });
             });
         }
 
@@ -1250,15 +1384,38 @@
             if (!sign) return;
 
             signPreviewWord.textContent = sign.label;
-            signPreviewMedia.innerHTML = sign.video
-                ? `<video controls playsinline preload="metadata" autoplay muted><source src="${escapeHtml(sign.video)}" type="${videoMimeType(sign.video)}"></video>`
-                : `<div class="demo-icon">${sign.fallback}</div>`;
+            const token = ++previewToken;
+            signPreviewMedia.innerHTML = '';
+            if (sign.video) {
+                const url = sign.video;
+                const video = getSignVideo(url);
+                video.controls = true;
+                video.loop = false;
+                video.onended = null;
+                video.onwaiting = () => { if (token === previewToken) setVideoLoading(signPreviewMedia, true); };
+                video.onplaying = () => { if (token === previewToken) setVideoLoading(signPreviewMedia, false); };
+                video.oncanplay = video.onplaying;
+                video.onerror = () => {
+                    if (token !== previewToken) return;
+                    dropSignVideo(url);
+                    signPreviewMedia.innerHTML = '<div class="demo-icon">⚠️</div>';
+                };
+                try { video.currentTime = 0; } catch (_) {}
+                showSignVideo(signPreviewMedia, video, () => token === previewToken);
+                video.play().catch(() => {});
+            } else {
+                signPreviewMedia.innerHTML = `<div class="demo-icon">${sign.fallback}</div>`;
+            }
 
             signPreviewOverlay.classList.remove('hidden');
         }
 
+        let previewToken = 0;
+
         function closeSignPreview() {
+            previewToken++;
             signPreviewOverlay.classList.add('hidden');
+            signPreviewMedia.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} v.controls = false; });
             signPreviewMedia.innerHTML = '';
         }
 
@@ -1294,6 +1451,20 @@
         let translateIndex = -1;
         let translatePlaying = false;
         let translateAdvanceTimer = null;
+        let translateLoadTimer = null;
+        let translatePlayToken = 0;
+        let translateCurrentVideo = null;
+        const TRANSLATE_PRELOAD_AHEAD = 3;
+
+        function preloadTranslateFrom(index) {
+            for (let i = index; i < Math.min(translateQueue.length, index + TRANSLATE_PRELOAD_AHEAD + 1); i++) {
+                preloadSign(translateQueue[i].sign);
+            }
+        }
+
+        function advanceTranslate(token) {
+            if (token === translatePlayToken && translatePlaying) playTranslateIndex(translateIndex + 1);
+        }
 
         function tokenizeSentence(text) {
             return text
@@ -1346,7 +1517,14 @@
 
         function playTranslateIndex(index) {
             clearTimeout(translateAdvanceTimer);
+            clearTimeout(translateLoadTimer);
+            const token = ++translatePlayToken;
+            if (translateCurrentVideo) {
+                try { translateCurrentVideo.pause(); } catch (_) {}
+                translateCurrentVideo = null;
+            }
             if (index < 0 || index >= translateQueue.length) {
+                setVideoLoading(translateMedia, false);
                 translateIndex = -1;
                 translatePlaying = false;
                 updateTranslatePlayPauseIcon();
@@ -1360,17 +1538,50 @@
             renderTranslateWordStrip();
 
             const item = translateQueue[index];
+            preloadTranslateFrom(index);
+
             if (item.sign && item.sign.video) {
-                translateMedia.innerHTML = `<video autoplay muted playsinline><source src="${escapeHtml(item.sign.video)}" type="${videoMimeType(item.sign.video)}"></video>`;
-                const video = translateMedia.querySelector('video');
-                video.addEventListener('ended', () => {
-                    if (translatePlaying) playTranslateIndex(translateIndex + 1);
-                });
+                const url = item.sign.video;
+                const video = getSignVideo(url);
+                translateCurrentVideo = video;
+                let started = false;
+
+                const showFailure = () => {
+                    if (token !== translatePlayToken) return;
+                    clearTimeout(translateLoadTimer);
+                    dropSignVideo(url);
+                    translateCurrentVideo = null;
+                    setVideoLoading(translateMedia, false);
+                    translateMedia.innerHTML = `<div class="translate-no-match"><span class="demo-icon">⚠️</span><span>Couldn't load the sign for "${escapeHtml(item.label)}"</span></div>`;
+                    translateAdvanceTimer = setTimeout(() => advanceTranslate(token), UNMATCHED_DISPLAY_MS);
+                };
+
+                video.controls = false;
+                video.loop = false;
+                video.onended = () => advanceTranslate(token);
+                video.onerror = showFailure;
+                video.onwaiting = () => { if (token === translatePlayToken) setVideoLoading(translateMedia, true); };
+                video.onplaying = () => {
+                    if (token !== translatePlayToken) return;
+                    started = true;
+                    clearTimeout(translateLoadTimer);
+                    setVideoLoading(translateMedia, false);
+                };
+                video.oncanplay = () => { if (token === translatePlayToken && !video.paused) video.onplaying(); };
+
+                try { video.currentTime = 0; } catch (_) {}
+                showSignVideo(translateMedia, video, () => token === translatePlayToken);
+                if (video.readyState < 3) setVideoLoading(translateMedia, true);
+                video.play().catch(() => {});
+
+                // Never hang forever on a video that won't load: skip ahead.
+                translateLoadTimer = setTimeout(() => {
+                    if (token === translatePlayToken && !started && translatePlaying) showFailure();
+                }, VIDEO_LOAD_TIMEOUT_MS);
             } else {
+                setVideoLoading(translateMedia, false);
                 translateMedia.innerHTML = `<div class="translate-no-match"><span class="demo-icon">🤟</span><span>No sign found for "${escapeHtml(item.label)}"</span></div>`;
-                translateAdvanceTimer = setTimeout(() => {
-                    if (translatePlaying) playTranslateIndex(translateIndex + 1);
-                }, UNMATCHED_DISPLAY_MS);
+                translateAdvanceTimer = setTimeout(() => advanceTranslate(token), UNMATCHED_DISPLAY_MS);
             }
         }
 
@@ -1392,6 +1603,22 @@
         }
 
         if (translateBtn) translateBtn.addEventListener('click', runTranslate);
+        // Start buffering the first few signs while the user is still typing,
+        // so pressing Translate starts playing almost immediately.
+        let translateTypingTimer = null;
+        if (translateInput) {
+            translateInput.addEventListener('input', () => {
+                clearTimeout(translateTypingTimer);
+                translateTypingTimer = setTimeout(() => {
+                    if (!signLibraryReady) return;
+                    const text = translateInput.value.trim();
+                    if (!text) return;
+                    buildTranslateQueue(text)
+                        .slice(0, TRANSLATE_PRELOAD_AHEAD + 1)
+                        .forEach(entry => preloadSign(entry.sign));
+                }, 400);
+            });
+        }
         if (translateInput) {
             translateInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') runTranslate();
@@ -1401,17 +1628,19 @@
         if (translateNextBtn) translateNextBtn.addEventListener('click', () => playTranslateIndex(translateIndex + 1));
         if (translatePlayPauseBtn) {
             translatePlayPauseBtn.addEventListener('click', () => {
-                const video = translateMedia.querySelector('video');
+                const video = translateCurrentVideo;
                 if (translatePlaying) {
                     translatePlaying = false;
                     clearTimeout(translateAdvanceTimer);
+                    clearTimeout(translateLoadTimer);
                     if (video) video.pause();
                 } else {
                     translatePlaying = true;
                     if (video) {
-                        video.play();
+                        video.play().catch(() => {});
                     } else if (translateIndex >= 0) {
-                        translateAdvanceTimer = setTimeout(() => playTranslateIndex(translateIndex + 1), UNMATCHED_DISPLAY_MS);
+                        const token = translatePlayToken;
+                        translateAdvanceTimer = setTimeout(() => advanceTranslate(token), UNMATCHED_DISPLAY_MS);
                     }
                 }
                 updateTranslatePlayPauseIcon();

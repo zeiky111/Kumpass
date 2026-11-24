@@ -9,6 +9,7 @@ authenticated download API, and returns it as an attachment.
 
 import io
 import logging
+import mimetypes
 import os
 import urllib.request
 
@@ -20,12 +21,27 @@ from django.urls import reverse
 logger = logging.getLogger(__name__)
 
 SALT = "kumpas-file-download"
+# Separate salt so a "view" link can never be turned into a download link.
+VIEW_SALT = "kumpas-file-view"
 
 
 def download_url(request, kind: str, obj_id: int) -> str:
     """Unguessable link that works without the bearer token (plain <a href>)."""
     token = signing.dumps([kind, obj_id], salt=SALT)
     path = reverse("file-download", args=[token])
+    return request.build_absolute_uri(path) if request else path
+
+
+def view_url(request, obj_id: int, filename: str = "") -> str:
+    """Link students use to *view* a module material inside the app.
+
+    The response is served inline (never as an attachment). The file name is
+    appended to the path so document viewers (e.g. the Office web viewer for
+    .docx/.pptx) can tell the file type from the URL.
+    """
+    token = signing.dumps(["module", obj_id], salt=VIEW_SALT)
+    safe_name = os.path.basename(str(filename or "")).replace("/", "_") or "material"
+    path = reverse("file-view", args=[token, safe_name])
     return request.build_absolute_uri(path) if request else path
 
 
@@ -72,3 +88,32 @@ def file_download(request, token: str):
         raise Http404("File not available")
 
     return FileResponse(io.BytesIO(data), as_attachment=True, filename=filename or "download")
+
+
+def file_view(request, token: str, filename: str = ""):
+    """Serve a module material inline for the in-app viewer (no download)."""
+    from .models import ModuleFile
+
+    try:
+        kind, obj_id = signing.loads(token, salt=VIEW_SALT)
+    except signing.BadSignature:
+        raise Http404("Invalid link")
+    if kind != "module":
+        raise Http404("Invalid link")
+
+    obj = ModuleFile.objects.filter(pk=obj_id).first()
+    if not obj or not obj.file:
+        raise Http404("File not found")
+
+    try:
+        data = read_file_bytes(obj.file)
+    except Exception:
+        logger.exception("Could not fetch module file %s", obj.file.name)
+        raise Http404("File not available")
+
+    content_type = mimetypes.guess_type(obj.file_name or obj.file.name)[0] or "application/octet-stream"
+    response = FileResponse(io.BytesIO(data), as_attachment=False, content_type=content_type)
+    response["Content-Disposition"] = "inline"
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response

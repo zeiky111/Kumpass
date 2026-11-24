@@ -543,7 +543,23 @@
             margin-bottom: 4px;
         }
 
+        .learning-file-icon {
+            flex: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            background: #eef2ff;
+        }
+
         .learning-file-link {
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            min-height: 36px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -874,8 +890,8 @@
             <div class="learning-module-layout">
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom: 12px;">
-                        <h3 style="margin:0; color:#111827;">Uploaded files</h3>
-                        <span style="color:#6b7280; font-size: 0.88rem;">Teacher materials</span>
+                        <h3 style="margin:0; color:#111827;">Lesson materials</h3>
+                        <span style="color:#6b7280; font-size: 0.88rem;">Study them here in the app</span>
                     </div>
                     <div id="learningModuleFiles" style="display:flex; flex-direction:column; gap:10px;"></div>
                 </div>
@@ -918,6 +934,7 @@
     </footer>
 
     <script src="assets/js/main.js"></script>
+    <script src="js/material-viewer.js"></script>
     <script src="js/portal.js"></script>
     <script>
         // Navbar dropdown

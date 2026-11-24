@@ -4,7 +4,7 @@ import re
 from django.conf import settings
 from rest_framework import serializers
 
-from .file_downloads import download_url
+from .file_downloads import download_url, view_url
 from .models import (
     Announcement,
     GameLevel,
@@ -73,6 +73,8 @@ class AnnouncementSerializer(serializers.ModelSerializer):
 
 class ModuleFileSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
+    view_url = serializers.SerializerMethodField()
+    file_extension = serializers.SerializerMethodField()
 
     class Meta:
         model = ModuleFile
@@ -82,11 +84,34 @@ class ModuleFileSerializer(serializers.ModelSerializer):
             "file_name",
             "file",
             "file_url",
+            "view_url",
+            "file_extension",
             "file_type",
             "file_size",
             "description",
             "created_at",
         ]
+
+    def get_file_extension(self, obj):
+        name = obj.file_name or (obj.file.name if obj.file else "")
+        return os.path.splitext(str(name))[1].lstrip(".").lower()
+
+    def get_view_url(self, obj):
+        if not obj.file:
+            return None
+        if obj.file_type == "video":
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+        return view_url(self.context.get("request"), obj.id, obj.file_name or obj.file.name)
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # Students study materials inside the app's viewer and must not get a
+        # download link (or the raw storage URL) for them.
+        if self.context.get("student_view"):
+            data.pop("file", None)
+            data["file_url"] = data.get("view_url")
+        return data
 
     def get_file_url(self, obj):
         """Get the full URL for the file"""

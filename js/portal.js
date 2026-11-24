@@ -280,6 +280,15 @@
     }
   }
 
+  // Opens a module material in the in-app viewer (js/material-viewer.js) and
+  // records it as opened for the post-test unlock.
+  function openMaterial(moduleId, file) {
+    const record = () => markMaterialOpened(moduleId, Number(file.id));
+    if (window.KumpasMaterialViewer) {
+      window.KumpasMaterialViewer.open(file, { onOpened: record });
+    }
+  }
+
   function getVisibleModules() {
     if (studentContentCache && Array.isArray(studentContentCache.modules) && studentContentCache.modules.length) {
       return studentContentCache.modules.map(mapBackendModule);
@@ -671,22 +680,36 @@
             </div>
           `).join('')
         : moduleFiles.length
-        ? moduleFiles.map(file => `
+        ? moduleFiles.map((file, index) => {
+            const viewer = window.KumpasMaterialViewer;
+            const icon = viewer ? viewer.iconFor(file) : '📄';
+            const kindLabel = viewer ? viewer.labelFor(file) : 'Material';
+            const opened = viewedIds.has(Number(file.id));
+            const actionLabel = viewer && viewer.kindOf(file) === 'video' ? '▶ Watch' : 'View';
+            return `
             <div class="learning-file-row">
-              <div>
-                <div class="learning-file-name">${safeText(file.file_name)}</div>
-                <small>${safeText(file.description || 'Teacher-uploaded material')}</small>
+              <div style="display:flex; gap:12px; align-items:center; min-width:0;">
+                <span class="learning-file-icon" aria-hidden="true">${icon}</span>
+                <div style="min-width:0;">
+                  <div class="learning-file-name">${index + 1}. ${safeText(file.file_name)}</div>
+                  <small>${safeText(kindLabel)} · ${safeText(file.description || 'Lesson material')}</small>
+                </div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                ${viewedIds.has(Number(file.id)) ? '<span style="color:#059669;font-size:0.85rem;font-weight:600;">✓ Opened</span>' : ''}
-                ${file.file_url ? `<a class="learning-file-link" href="${safeText(file.file_url)}" target="_blank" rel="noopener" data-file-id="${Number(file.id)}">Open</a>` : ''}
+                ${opened ? '<span style="color:#059669;font-size:0.85rem;font-weight:600;">✓ Done</span>' : ''}
+                ${(file.view_url || file.file_url) ? `<button type="button" class="learning-file-link" data-file-index="${index}">${opened ? 'Review' : actionLabel}</button>` : ''}
               </div>
             </div>
-          `).join('')
-          : '<div style="padding:14px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No uploaded files yet.</div>';
-      files.querySelectorAll('.learning-file-link[data-file-id]').forEach(link => {
-        link.addEventListener('click', () => {
-          markMaterialOpened(module.id, Number(link.getAttribute('data-file-id')));
+          `;
+          }).join('')
+          : '<div style="padding:14px;color:#6b7280;background:#f8fafc;border:1px dashed #d1d5db;border-radius:12px;">No lesson materials yet.</div>';
+      // Materials open in the in-app lesson viewer; students never get a
+      // download link.
+      files.querySelectorAll('.learning-file-link[data-file-index]').forEach(button => {
+        button.addEventListener('click', () => {
+          const file = moduleFiles[Number(button.getAttribute('data-file-index'))];
+          if (!file) return;
+          openMaterial(module.id, file);
         });
       });
       }
@@ -2614,7 +2637,8 @@
     getVisibleModules,
     getModuleById,
     getModuleProgress,
-    markMaterialOpened
+    markMaterialOpened,
+    openMaterial
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html
   window.uploadPhoto = function () {
