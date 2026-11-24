@@ -124,13 +124,12 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label for="yearLevel">Year Level:</label>
-                    <select id="yearLevel" class="select-input" onchange="updateLeaderboard()">
+                    <label for="levelFilter">Level:</label>
+                    <select id="levelFilter" class="select-input" onchange="updateLeaderboard()">
                         <option value="all">All Levels</option>
-                        <option value="1st">1st Year</option>
-                        <option value="2nd">2nd Year</option>
-                        <option value="3rd">3rd Year</option>
-                        <option value="4th">4th Year</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -1030,9 +1029,9 @@
 
             function getFilters() {
                 const timeRange = document.getElementById('timeRange') ? document.getElementById('timeRange').value : 'all-time';
-                const yearLevel = document.getElementById('yearLevel') ? document.getElementById('yearLevel').value : 'all';
+                const level = document.getElementById('levelFilter') ? document.getElementById('levelFilter').value : 'all';
                 const sortBy = document.getElementById('sortBy') ? document.getElementById('sortBy').value : 'points';
-                return { timeRange, yearLevel, sortBy };
+                return { timeRange, level, sortBy };
             }
 
             function buildFallbackPayload() {
@@ -1044,8 +1043,8 @@
                 const current = {
                     email: currentUser.email,
                     name: currentUser.name || 'Learner',
-                    yearLevel: String(currentUser.yearLevel || '1'),
-                    yearLabel: getYearLabel(currentUser.yearLevel),
+                    level: 'beginner',
+                    levelLabel: 'Beginner',
                     role: currentUser.role || 'student',
                     points: portalState ? portalState.points : 0,
                     rank: portalState ? portalState.rank : 0,
@@ -1090,8 +1089,8 @@
                 if (currentUser.email) {
                     params.set('email', currentUser.email);
                 }
-                if (filters.yearLevel && filters.yearLevel !== 'all') {
-                    params.set('yearLevel', filters.yearLevel);
+                if (filters.level && filters.level !== 'all') {
+                    params.set('level', filters.level);
                 }
                 if (filters.sortBy) {
                     params.set('sortBy', filters.sortBy);
@@ -1183,7 +1182,7 @@
                         <div class="position-info">
                             <h3>#${entry.rank}</h3>
                             <p class="username">${escapeHtml(entry.name)}</p>
-                            <p class="level-badge">${escapeHtml(entry.yearLabel || getYearLabel(entry.yearLevel))}</p>
+                            <p class="level-badge">${escapeHtml(entry.levelLabel || 'Beginner')}</p>
                         </div>
                         <div class="position-stats">
                             <div class="stat">
@@ -1226,7 +1225,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-level">${escapeHtml(entry.yearLabel || getYearLabel(entry.yearLevel))}</div>
+                        <div class="col-level">${escapeHtml(entry.levelLabel || 'Beginner')}</div>
                         <div class="col-points">${formatPoints(entry.points)}</div>
                         <div class="col-streak">${Number(entry.streak || 0)} days</div>
                         <div class="col-accuracy"><span class="accuracy-badge">${Number(entry.accuracy || 0)}%</span></div>

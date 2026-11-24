@@ -644,33 +644,63 @@ def _zero_learning_state_for_user(user: User) -> dict:
     }
 
 
+def _current_levels_for_users(user_ids: list[int]) -> dict[int, str]:
+    """Each student's current learning level: Beginner until every published
+    Beginner module is passed, then Intermediate, then Advanced (same rule
+    as the module level lock). Computed in two queries for all users."""
+    published = list(
+        LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).values_list("id", "year_level")
+    )
+    level_of_module = {module_id: _normalize_module_level(level) for module_id, level in published}
+    passed: dict[int, set] = {}
+    for attempt in QuizAttempt.objects.filter(
+        user_id__in=user_ids, test_type=QuizQuestion.TEST_POST, module_id__in=list(level_of_module)
+    ).only("user_id", "module_id", "score", "total"):
+        if _attempt_passed(attempt):
+            passed.setdefault(attempt.user_id, set()).add(attempt.module_id)
+
+    levels = {}
+    for user_id in user_ids:
+        done = passed.get(user_id, set())
+        current = LearningModule.LEVEL_ORDER[-1]
+        for level in LearningModule.LEVEL_ORDER[:-1]:
+            if any(lvl == level and module_id not in done for module_id, lvl in level_of_module.items()):
+                current = level
+                break
+        levels[user_id] = current
+    return levels
+
+
 @api_view(["GET"])
 def leaderboard(request: Any) -> Response:
     current_email = str(request.query_params.get("email") or "").strip().lower()
     sort_by = str(request.query_params.get("sortBy") or "points").strip().lower()
-    year_level = _normalize_year_level_filter(request.query_params.get("yearLevel") or "all")
+    # Filter by learning level (Beginner / Intermediate / Advanced), not school year.
+    level_filter = _normalize_module_level(request.query_params.get("level") or "all", default="all")
     try:
         limit = max(3, min(50, int(request.query_params.get("limit") or 10)))
     except Exception:
         limit = 10
 
-    entries = [
-        _leaderboard_entry_for_state(learning_state, request)
-        for learning_state in UserLearningState.objects.select_related("user", "user__profile").all()
-    ]
+    learning_states = list(UserLearningState.objects.select_related("user", "user__profile").all())
+    entries = []
+    for learning_state in learning_states:
+        entry = _leaderboard_entry_for_state(learning_state, request)
+        entry["_userId"] = learning_state.user_id
+        entries.append(entry)
 
-    # Student leaderboard only: exclude instructor/admin and any non-student year labels.
-    entries = [
-        entry
-        for entry in entries
-        if str(entry.get("role") or "").lower() == "student"
-        and str(entry.get("yearLevel") or "") in {"1", "2", "3", "4"}
-    ]
-
+    # Student leaderboard only (instructors/admins excluded). Students are
+    # included whatever their (old) year level is, including none.
+    entries = [entry for entry in entries if str(entry.get("role") or "").lower() == "student"]
     entries = [entry for entry in entries if entry["points"] > 0]
 
-    if year_level != "all":
-        entries = [entry for entry in entries if entry["yearLevel"] == year_level]
+    levels = _current_levels_for_users([entry["_userId"] for entry in entries])
+    for entry in entries:
+        entry["level"] = levels.get(entry.pop("_userId"), LearningModule.LEVEL_BEGINNER)
+        entry["levelLabel"] = LEVEL_LABELS.get(entry["level"], "Beginner")
+
+    if level_filter != "all":
+        entries = [entry for entry in entries if entry["level"] == level_filter]
 
     sort_key_map = {
         "streak": lambda entry: (entry["streak"], entry["points"], entry["accuracy"]),
@@ -706,7 +736,7 @@ def leaderboard(request: Any) -> Response:
             "nextLower": next_lower,
             "summary": summary,
             "sortBy": sort_by,
-            "yearLevel": year_level,
+            "level": level_filter,
             "limit": limit,
         }
     )
