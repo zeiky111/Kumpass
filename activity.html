@@ -768,6 +768,7 @@
                 btn.addEventListener('click', () => {
                     const file = files[Number(btn.dataset.index)];
                     if (!file) return;
+                    if (window.KumpasPortal && window.KumpasPortal.recordModuleReview) window.KumpasPortal.recordModuleReview();
                     viewer.open(file, {
                         onOpened: () => {
                             if (window.KumpasPortal && window.KumpasPortal.markMaterialOpened) {

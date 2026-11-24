@@ -741,8 +741,8 @@
         </main>
     </div>
 
-    <script src="js/portal.js?v=20260801"></script>
-    <script src="js/games-common.js?v=20260801c"></script>
+    <script src="js/portal.js?v=20261124"></script>
+    <script src="js/games-common.js?v=20261124"></script>
     <script src="js/game-preview.js?v=20260801"></script>
     <script>
         function awardGameProgress(points, progressDelta, completed) {
@@ -822,6 +822,8 @@
         // (the scenario's own authored options are always included in full;
         // extras are padded up to TOTAL_OPTIONS from the full clip library).
         const engine = KumpasGames.createGameEngine({
+            gameKey: 'scenario',
+            gameLabel: 'Scenario-Based Game',
             choiceCounts: TOTAL_OPTIONS,
             pointBase: { easy: 20, medium: 25, hard: 30 },
         });
@@ -904,29 +906,20 @@
                 const result = engine.advance();
                 if (result === 'next-level') {
                     startLevel(false);
-                } else if (result === 'next-difficulty') {
-                    const nextDifficulty = engine.state.difficulty === 'easy' ? 'medium' : 'hard';
-                    KumpasGames.showCompletionModal({
-                        title: '🎉 Difficulty Complete!',
-                        message: `You finished all levels on ${engine.state.difficulty}. Moving on to ${nextDifficulty}.`,
-                        continueLabel: `Starting ${nextDifficulty[0].toUpperCase()}${nextDifficulty.slice(1)}...`,
-                        autoContinueAfterMs: 1400,
-                        onContinue: () => {
-                            engine.setDifficulty(nextDifficulty, false);
-                            startLevel(false);
-                        },
-                    });
                 } else {
-                    KumpasGames.awardCertificateIfEarned('scenario');
-                    KumpasGames.showGameResultScreen({
+                    // End of a difficulty: 70% pass mark, retry / proceed,
+                    // tries count and the review-the-module lock.
+                    KumpasGames.finishRound({
+                        engine,
                         gameKey: 'scenario',
                         gameLabel: 'Scenario-Based Game',
-                        score: engine.state.score,
-                        highScore: highScore,
-                        correct: engine.state.correct,
-                        difficultyLabel: engine.state.difficulty[0].toUpperCase() + engine.state.difficulty.slice(1),
-                        onPlayAgain: () => {
-                            engine.setDifficulty('easy', true);
+                        highScore,
+                        onReplay: (level) => {
+                            engine.setDifficulty(level, level === 'easy');
+                            startLevel(false);
+                        },
+                        onProceed: (level) => {
+                            engine.setDifficulty(level, false);
                             startLevel(false);
                         },
                     });
@@ -1005,6 +998,7 @@
             if (isCorrect) {
                 const points = engine.getPointValue();
                 engine.state.correct++;
+                engine.recordCorrect();
                 engine.state.score += points;
                 feedbackDiv.classList.remove('incorrect');
                 feedbackDiv.classList.add('correct', 'show');

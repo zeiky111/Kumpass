@@ -448,6 +448,326 @@
 
   window.KumpasGames.showGameResultScreen = showGameResultScreen;
 
+  // ---- Passing, tries and module review ----
+  // Each difficulty is a "round" (all of its levels). A round is passed at
+  // 70% correct (e.g. 7/10). Passing unlocks the next difficulty; failing
+  // allows a retry. After 3 failed tries in a row on a difficulty, the
+  // student must review a learning module (open its topics or materials)
+  // before playing that difficulty again. Tries are kept per game and
+  // difficulty so the end screen can show "passed Easy on try 2".
+  const PASS_RATIO = 0.7;
+  const MAX_FAILS_BEFORE_REVIEW = 3;
+  const DIFFICULTIES = ['easy', 'medium', 'hard'];
+  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+  const REVIEW_KEY = 'kumpasLastModuleReviewAt';
+
+  function passMarkFor(total) {
+    return Math.max(1, Math.ceil(Number(total || 0) * PASS_RATIO));
+  }
+
+  function currentUserKey() {
+    try {
+      const user = window.KumpasPortal && window.KumpasPortal.getCurrentUser ? window.KumpasPortal.getCurrentUser() : null;
+      return String((user && (user.email || user.username)) || 'guest').toLowerCase();
+    } catch (_) {
+      return 'guest';
+    }
+  }
+
+  function readLocal(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; }
+  }
+
+  function writeLocal(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  }
+
+  // Newest of the synced learning state copy and this browser's copy.
+  function loadAllAttempts() {
+    const local = readLocal(`kumpasGameAttempts:${currentUserKey()}`);
+    let synced = null;
+    try {
+      const state = window.KumpasPortal && window.KumpasPortal.getState ? window.KumpasPortal.getState() : null;
+      synced = state && state.gameAttempts && typeof state.gameAttempts === 'object' ? state.gameAttempts : null;
+    } catch (_) {}
+    const pick = [local, synced].filter(Boolean).sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))[0];
+    return pick ? JSON.parse(JSON.stringify(pick)) : { updatedAt: 0, games: {} };
+  }
+
+  function saveAllAttempts(all) {
+    all.updatedAt = Date.now();
+    writeLocal(`kumpasGameAttempts:${currentUserKey()}`, all);
+    try {
+      if (window.KumpasPortal && typeof window.KumpasPortal.updateState === 'function'
+          && !(window.KumpasGamePreview && window.KumpasGamePreview.active)) {
+        window.KumpasPortal.updateState({ gameAttempts: all });
+      }
+    } catch (_) {}
+  }
+
+  function emptyRecord() {
+    return { tries: 0, fails: 0, passed: false, passedOnTry: 0, bestCorrect: 0, bestTotal: 0, reviewRequiredSince: 0 };
+  }
+
+  function getGameRecord(all, gameKey) {
+    all.games = all.games || {};
+    const game = all.games[gameKey] = all.games[gameKey] || {};
+    DIFFICULTIES.forEach(d => { game[d] = Object.assign(emptyRecord(), game[d] || {}); });
+    return game;
+  }
+
+  function lastModuleReviewAt() {
+    let synced = 0;
+    try {
+      const state = window.KumpasPortal && window.KumpasPortal.getState ? window.KumpasPortal.getState() : null;
+      synced = Number((state && state.lastModuleReviewAt) || 0);
+    } catch (_) {}
+    return Math.max(Number(readLocal(REVIEW_KEY) || 0), synced);
+  }
+
+  // True while the student still has to review a module for this difficulty.
+  // Clears the lock (and the fail count) once a review has happened.
+  function isReviewRequired(gameKey, difficulty) {
+    const all = loadAllAttempts();
+    const rec = getGameRecord(all, gameKey)[difficulty];
+    if (!rec.reviewRequiredSince) return false;
+    if (lastModuleReviewAt() > rec.reviewRequiredSince) {
+      rec.reviewRequiredSince = 0;
+      rec.fails = 0;
+      saveAllAttempts(all);
+      return false;
+    }
+    return true;
+  }
+
+  function recordRound(gameKey, difficulty, correct, total, passed) {
+    const all = loadAllAttempts();
+    const game = getGameRecord(all, gameKey);
+    const rec = game[difficulty];
+    rec.tries += 1;
+    if (correct / Math.max(1, total) >= rec.bestCorrect / Math.max(1, rec.bestTotal || 1) || !rec.bestTotal) {
+      rec.bestCorrect = correct;
+      rec.bestTotal = total;
+    }
+    if (passed) {
+      if (!rec.passed) rec.passedOnTry = rec.tries;
+      rec.passed = true;
+      rec.fails = 0;
+      rec.reviewRequiredSince = 0;
+    } else {
+      rec.fails += 1;
+      if (rec.fails >= MAX_FAILS_BEFORE_REVIEW) rec.reviewRequiredSince = Date.now();
+    }
+    saveAllAttempts(all);
+    return { rec: Object.assign({}, rec), game: JSON.parse(JSON.stringify(game)) };
+  }
+
+  function getPassedDifficulties(gameKey) {
+    const game = getGameRecord(loadAllAttempts(), gameKey);
+    return { easy: game.easy.passed, medium: game.medium.passed, hard: game.hard.passed };
+  }
+
+  window.KumpasGames.passMarkFor = passMarkFor;
+  window.KumpasGames.isReviewRequired = isReviewRequired;
+  window.KumpasGames.getGameAttempts = gameKey => getGameRecord(loadAllAttempts(), gameKey);
+
+  // ---- Round result screen ----
+  function ensureRoundModal() {
+    let modal = document.getElementById('gameRoundModal');
+    if (modal) return modal;
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="gameRoundModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gameRoundTitle">
+        <div class="modal-content game-result-content" style="max-width:520px;">
+          <div class="game-result-header">
+            <div class="game-result-icon" id="gameRoundIcon">🏆</div>
+            <h2 id="gameRoundTitle">Round Complete</h2>
+            <p class="game-result-subtitle" id="gameRoundSubtitle"></p>
+          </div>
+          <div class="game-result-score-row">
+            <div class="game-result-score-box game-result-score-primary">
+              <span class="game-result-score-label">Your Score</span>
+              <span class="game-result-score-value" id="gameRoundScore">0/0</span>
+            </div>
+            <div class="game-result-score-box">
+              <span class="game-result-score-label">Passing Score</span>
+              <span class="game-result-score-value" id="gameRoundPassMark">0/0</span>
+            </div>
+          </div>
+          <div id="gameRoundVerdict" style="margin:6px 0 10px;padding:10px 12px;border-radius:12px;font-weight:700;text-align:center;"></div>
+          <div id="gameRoundMessage" style="color:#475569;line-height:1.55;text-align:center;margin-bottom:10px;"></div>
+          <div id="gameRoundTries" style="text-align:left;margin-bottom:8px;"></div>
+          <div id="gameRoundReview" style="display:none; text-align:left; max-height:160px; overflow-y:auto; margin-top:4px; border-top:1px solid rgba(148,163,184,0.25); padding-top:12px;"></div>
+          <div class="game-result-buttons" id="gameRoundButtons"></div>
+        </div>
+      </div>`);
+    return document.getElementById('gameRoundModal');
+  }
+
+  function triesSummaryHtml(game, highlight) {
+    const rows = DIFFICULTIES.map(d => {
+      const rec = game[d] || emptyRecord();
+      let text;
+      if (rec.passed) text = `✅ Passed on try ${rec.passedOnTry}${rec.tries > rec.passedOnTry ? ` <span style="color:#64748b;">(${rec.tries} plays total)</span>` : ''}`;
+      else if (rec.tries) text = `❌ Not passed yet — ${rec.tries} ${rec.tries === 1 ? 'try' : 'tries'}`;
+      else text = '<span style="color:#94a3b8;">Not played yet</span>';
+      return `<div class="level-pill" style="justify-content:space-between;${d === highlight ? 'outline:2px solid #3b82f6;' : ''}"><span>${DIFF_LABEL[d]}</span><strong style="font-weight:600;">${text}</strong></div>`;
+    }).join('');
+    return `<div style="font-weight:700;margin-bottom:6px;">Tries before passing</div><div class="game-instructions-levels" style="display:grid;gap:6px;">${rows}</div>`;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Shows the review-the-module lock (no way back into the game from here).
+  function showReviewRequired(gameKey, gameLabel, difficulty) {
+    const modal = ensureRoundModal();
+    const game = getGameRecord(loadAllAttempts(), gameKey);
+    document.getElementById('gameRoundIcon').textContent = '📖';
+    document.getElementById('gameRoundTitle').textContent = 'Review the module first';
+    document.getElementById('gameRoundSubtitle').textContent = `${gameLabel || ''} · ${DIFF_LABEL[difficulty]}`;
+    const rec = game[difficulty];
+    document.getElementById('gameRoundScore').textContent = rec.bestTotal ? `${rec.bestCorrect}/${rec.bestTotal}` : '—';
+    document.getElementById('gameRoundPassMark').textContent = rec.bestTotal ? `${passMarkFor(rec.bestTotal)}/${rec.bestTotal}` : '70%';
+    const verdict = document.getElementById('gameRoundVerdict');
+    verdict.textContent = `${MAX_FAILS_BEFORE_REVIEW} tries without passing`;
+    verdict.style.cssText += ';background:#fffbeb;color:#92400e;border:1px solid #fcd34d;';
+    document.getElementById('gameRoundMessage').innerHTML =
+      `Read a learning module again — open its <strong>topics</strong> or <strong>materials</strong> — then come back to play ${DIFF_LABEL[difficulty]} again.`;
+    document.getElementById('gameRoundTries').innerHTML = triesSummaryHtml(game, difficulty);
+    document.getElementById('gameRoundReview').style.display = 'none';
+    document.getElementById('gameRoundButtons').innerHTML = `
+      <a class="btn btn-primary" href="learning.html">📖 Review the Module</a>
+      <a class="btn btn-outline" href="games.html">Back to Games</a>`;
+    openModal('gameRoundModal');
+  }
+
+  // cfg: { engine, gameKey, gameLabel, highScore, reviewItems, onReplay(level), onProceed(level) }
+  function finishRound(cfg) {
+    const engine = cfg.engine;
+    const difficulty = engine.state.difficulty;
+    const correct = Number(engine.state.roundCorrect || 0);
+    const total = Number(engine.state.roundTotal || 0);
+    const passMark = passMarkFor(total);
+    const passed = total > 0 && correct >= passMark;
+    const { rec, game } = recordRound(cfg.gameKey, difficulty, correct, total, passed);
+    const nextDifficulty = difficulty === 'easy' ? 'medium' : difficulty === 'medium' ? 'hard' : null;
+    const gameComplete = passed && !nextDifficulty;
+
+    if (passed) engine.markDifficultyCompleted(difficulty);
+    if (gameComplete) {
+      awardCertificateIfEarned(cfg.gameKey);
+      syncGameResult(cfg.gameKey, {
+        score: engine.state.score,
+        highScore: cfg.highScore,
+        correct: engine.state.correct,
+        difficulty: DIFF_LABEL[difficulty],
+      });
+    }
+
+    const modal = ensureRoundModal();
+    document.getElementById('gameRoundIcon').textContent = gameComplete ? '🏆' : passed ? '🎉' : '💪';
+    document.getElementById('gameRoundTitle').textContent = gameComplete
+      ? 'Game Complete!'
+      : passed ? `${DIFF_LABEL[difficulty]} Passed!` : 'Not passed yet';
+    document.getElementById('gameRoundSubtitle').textContent = `${cfg.gameLabel || ''} · ${DIFF_LABEL[difficulty]} · Try #${rec.tries}`;
+    document.getElementById('gameRoundScore').textContent = `${correct}/${total}`;
+    document.getElementById('gameRoundPassMark').textContent = `${passMark}/${total}`;
+
+    const verdict = document.getElementById('gameRoundVerdict');
+    verdict.style.cssText = 'margin:6px 0 10px;padding:10px 12px;border-radius:12px;font-weight:700;text-align:center;'
+      + (passed ? 'background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;' : 'background:#fef2f2;color:#991b1b;border:1px solid #fecaca;');
+    verdict.textContent = passed
+      ? `✓ PASSED — ${correct}/${total} (needed ${passMark}/${total})`
+      : `✗ NOT PASSED — ${correct}/${total} (needed ${passMark}/${total})`;
+
+    const reviewNeeded = !passed && rec.reviewRequiredSince;
+    const triesLeft = Math.max(0, MAX_FAILS_BEFORE_REVIEW - rec.fails);
+    let message;
+    if (gameComplete) {
+      message = `You passed every difficulty! Final score: <strong>${engine.state.score}</strong> · High score: <strong>${cfg.highScore}</strong>.`;
+    } else if (passed) {
+      message = `Play ${DIFF_LABEL[difficulty]} again for practice, or move on to <strong>${DIFF_LABEL[nextDifficulty]}</strong> — it's harder.`;
+    } else if (reviewNeeded) {
+      message = `That was your ${MAX_FAILS_BEFORE_REVIEW}${MAX_FAILS_BEFORE_REVIEW === 3 ? 'rd' : 'th'} try without passing. <strong>Read a learning module again</strong> (open its topics or materials), then come back to play.`;
+    } else {
+      message = `Keep practicing! You have <strong>${triesLeft}</strong> more ${triesLeft === 1 ? 'try' : 'tries'} before you need to review the module.`;
+    }
+    document.getElementById('gameRoundMessage').innerHTML = message;
+    document.getElementById('gameRoundTries').innerHTML = triesSummaryHtml(game, difficulty);
+
+    const reviewDiv = document.getElementById('gameRoundReview');
+    const items = Array.isArray(cfg.reviewItems) ? cfg.reviewItems : [];
+    if (items.length && (gameComplete || !passed)) {
+      reviewDiv.style.display = 'block';
+      reviewDiv.innerHTML = '<strong>Answers to review:</strong><ul style="margin:8px 0 0; padding-left:20px;">'
+        + items.map(item => `<li style="margin-bottom:4px;">${escapeHtml(item.question)} &rarr; <strong>${escapeHtml(item.correctAnswer)}</strong></li>`).join('')
+        + '</ul>';
+    } else {
+      reviewDiv.style.display = 'none';
+      reviewDiv.innerHTML = '';
+    }
+
+    const buttons = document.getElementById('gameRoundButtons');
+    if (gameComplete) {
+      buttons.innerHTML = `
+        <button type="button" class="btn btn-primary" data-act="replay-easy">Play Again</button>
+        <a class="btn btn-outline" href="games.html">Back to Games</a>`;
+    } else if (passed) {
+      buttons.innerHTML = `
+        <button type="button" class="btn btn-outline" data-act="replay">🔁 Play ${DIFF_LABEL[difficulty]} Again</button>
+        <button type="button" class="btn btn-primary" data-act="proceed">Proceed to ${DIFF_LABEL[nextDifficulty]} →</button>`;
+    } else if (reviewNeeded) {
+      buttons.innerHTML = `
+        <a class="btn btn-primary" href="learning.html">📖 Review the Module</a>
+        <a class="btn btn-outline" href="games.html">Back to Games</a>`;
+    } else {
+      buttons.innerHTML = `
+        <button type="button" class="btn btn-primary" data-act="replay">🔁 Retry ${DIFF_LABEL[difficulty]}</button>
+        <a class="btn btn-outline" href="games.html">Back to Games</a>`;
+    }
+    buttons.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        closeModal('gameRoundModal');
+        const act = btn.dataset.act;
+        if (act === 'proceed' && typeof cfg.onProceed === 'function') cfg.onProceed(nextDifficulty);
+        else if (act === 'replay' && typeof cfg.onReplay === 'function') cfg.onReplay(difficulty);
+        else if (act === 'replay-easy' && typeof cfg.onReplay === 'function') cfg.onReplay('easy');
+      });
+    });
+
+    // Without the close button, this screen can only be left via its buttons.
+    const closeBtn = modal.querySelector('.modal-close');
+    if (closeBtn) closeBtn.remove();
+    openModal('gameRoundModal');
+  }
+
+  window.KumpasGames.finishRound = finishRound;
+  window.KumpasGames.showReviewRequired = showReviewRequired;
+
+  // Small "To Pass" box next to the in-game score, e.g. "3 / 7".
+  function updatePassIndicator(engine) {
+    const correctEl = document.getElementById('correct');
+    const anchor = correctEl && correctEl.closest('.score-box');
+    if (!anchor) return;
+    let box = document.getElementById('kgPassBox');
+    if (!box) {
+      anchor.insertAdjacentHTML('afterend', `
+        <div class="score-box" id="kgPassBox" title="Correct answers needed on this difficulty to pass (70%)">
+          <div class="label">To Pass</div>
+          <div class="value" id="kgPassValue">0/0</div>
+        </div>`);
+      box = document.getElementById('kgPassBox');
+    }
+    const total = engine.expectedRoundTotal();
+    const mark = passMarkFor(total);
+    const got = Number(engine.state.roundCorrect || 0);
+    const value = document.getElementById('kgPassValue');
+    value.textContent = total ? `${got}/${mark}` : '—';
+    value.style.color = total && got >= mark ? '#10b981' : '';
+  }
+
   // ---- Difficulty / level engine ----
   // Creates a self-contained state machine each game page instantiates once.
   // choiceCounts: { easy, medium, hard } -- number of answer choices per difficulty.
@@ -459,7 +779,12 @@
       score: 0,
       correct: 0,
       total: 0,
-      completedDifficulties: { easy: false, medium: false, hard: false },
+      // Correct answers / questions played in the current difficulty
+      // (all of its levels) -- this is what the 70% pass mark is checked on.
+      roundCorrect: 0,
+      roundTotal: 0,
+      // Restored from saved tries: a difficulty passed before stays passed.
+      completedDifficulties: opts.gameKey ? getPassedDifficulties(opts.gameKey) : { easy: false, medium: false, hard: false },
       levelsByDifficulty: { easy: [], medium: [], hard: [] },
       // Per-difficulty shuffled level order, re-rolled every time that
       // difficulty is (re)started -- so replaying assigns different
@@ -570,7 +895,32 @@
 
     function buildQuestionsForCurrentLevel() {
       const pool = getActivePool().map(drawFromPool);
-      return shuffle(pool).slice(0, Math.max(1, pool.length));
+      const questions = shuffle(pool).slice(0, Math.max(1, pool.length));
+      if (state.levelIndex === 0) {
+        // First level of a difficulty = start of a new round.
+        state.roundCorrect = 0;
+        state.roundTotal = 0;
+      }
+      state.roundTotal += pool.length ? questions.length : 0;
+      updatePassIndicator(engineApi);
+      // 3 failed tries -> the student must review a module before playing again.
+      if (opts.gameKey && !(window.KumpasGamePreview && window.KumpasGamePreview.active)
+          && isReviewRequired(opts.gameKey, state.difficulty)) {
+        showReviewRequired(opts.gameKey, opts.gameLabel, state.difficulty);
+      }
+      return questions;
+    }
+
+    // Number of questions in the whole current difficulty (all its levels).
+    function expectedRoundTotal() {
+      const levels = state.levelsByDifficulty[state.difficulty] || [];
+      return levels.reduce((sum, level) => sum + ((level && level.items) ? level.items.length : 0), 0);
+    }
+
+    // Call after each correct answer so the "To Pass" box updates.
+    function recordCorrect() {
+      state.roundCorrect += 1;
+      updatePassIndicator(engineApi);
     }
 
     function hasNextLevel() {
@@ -595,12 +945,9 @@
         state.levelIndex += 1;
         return 'next-level';
       }
-      if (state.difficulty === 'easy' || state.difficulty === 'medium') {
-        markDifficultyCompleted(state.difficulty);
-        return 'next-difficulty';
-      }
-      state.completedDifficulties = { easy: true, medium: true, hard: true };
-      return 'game-complete';
+      // End of the difficulty: the game page calls KumpasGames.finishRound(),
+      // which checks the 70% pass mark before unlocking the next difficulty.
+      return 'round-complete';
     }
 
     function setDifficulty(level, resetScore) {
@@ -614,10 +961,12 @@
         state.score = 0;
         state.correct = 0;
       }
+      state.roundCorrect = 0;
+      state.roundTotal = 0;
       updateDifficultyButtons();
     }
 
-    return {
+    const engineApi = {
       state,
       shuffle,
       normalizeText,
@@ -634,7 +983,10 @@
       hasNextLevel,
       advance,
       setDifficulty,
+      expectedRoundTotal,
+      recordCorrect,
     };
+    return engineApi;
   }
 
   window.KumpasGames.shuffle = shuffle;

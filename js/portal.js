@@ -308,7 +308,16 @@
 
   // Opens a module material in the in-app viewer (js/material-viewer.js) and
   // records it as opened for the post-test unlock.
+  // Games ask students to re-read a module after 3 failed tries on a
+  // difficulty (js/games-common.js). Opening a material or topic counts.
+  function recordModuleReview() {
+    const now = Date.now();
+    try { localStorage.setItem('kumpasLastModuleReviewAt', JSON.stringify(now)); } catch (_) {}
+    try { updateState({ lastModuleReviewAt: now }); } catch (_) {}
+  }
+
   function openMaterial(moduleId, file) {
+    recordModuleReview();
     const record = () => markMaterialOpened(moduleId, Number(file.id));
     if (window.KumpasMaterialViewer) {
       window.KumpasMaterialViewer.open(file, { onOpened: record });
@@ -347,6 +356,7 @@
     if (!topics.length || module.levelLocked || isPreTestPending(module)) return;
     let start = Number.isFinite(Number(index)) ? Number(index) : topics.findIndex(topic => !topic.completed);
     if (start < 0) start = 0;
+    recordModuleReview();
     window.KumpasTopicViewer.open({
       moduleTitle: module.title,
       topics,
@@ -2821,7 +2831,8 @@
     markMaterialOpened,
     openMaterial,
     markTopicComplete,
-    openModuleTopics
+    openModuleTopics,
+    recordModuleReview
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html
   window.uploadPhoto = function () {
