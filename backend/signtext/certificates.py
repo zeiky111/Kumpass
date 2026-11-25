@@ -384,7 +384,8 @@ def _send_certificate_email_sync(user_certificate_id: int) -> None:
         return
 
     certificate = user_certificate.certificate
-    subject = f"Your {certificate.title} Certificate"
+    # Titles already say "Certificate of ..."; don't add a second "Certificate".
+    subject = f"Your {certificate.title}" if "certificate" in certificate.title.lower() else f"Your {certificate.title} Certificate"
     body = (
         f"Congratulations, {user_certificate.student_name}!\n\n"
         f"You've completed the {certificate.title} on Kumpas. "
