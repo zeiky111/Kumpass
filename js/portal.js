@@ -42,6 +42,12 @@
     });
   };
   let hydratedState = null;
+  // The backend REPLACES the whole progress state on every save, so nothing
+  // may be saved until the student's real state has been loaded -- otherwise
+  // a page that never loaded it would overwrite points/progress with zeros.
+  let stateLoadedFromBackend = false;
+  let stateLoadPromise = null;
+  const pendingStateChanges = [];
   let studentContentCache = null;
   // 'idle' | 'loading' | 'ready' | 'error'. With a cached copy on screen,
   // 'loading'/'error' only mean the background refresh is still running/failed.
@@ -461,10 +467,48 @@
 
       const merged = mergeState(payload.state);
       hydratedState = merged;
+      stateLoadedFromBackend = true;
       return merged;
     } catch (_) {
       return null;
     }
+  }
+
+  // Loads the signed-in student's real progress once (shared by all callers).
+  function ensureStateLoaded() {
+    if (stateLoadedFromBackend) return Promise.resolve(true);
+    if (!stateLoadPromise) {
+      stateLoadPromise = (async () => {
+        await ensureCurrentUser().catch(() => null);
+        const loaded = await loadStateFromBackend().catch(() => null);
+        stateLoadPromise = null;
+        return Boolean(loaded);
+      })();
+    }
+    return stateLoadPromise;
+  }
+
+  // Applies a change (fn: state -> new state) to the progress state. It is
+  // shown right away, but saved only on top of the state loaded from the
+  // backend; if that can't be loaded, nothing is saved (never overwrite).
+  function changeState(fn) {
+    const optimistic = mergeState(fn(mergeState(getState())));
+    hydratedState = optimistic;
+    if (stateLoadedFromBackend) {
+      void syncStateToBackend(optimistic);
+      return optimistic;
+    }
+    pendingStateChanges.push(fn);
+    ensureStateLoaded().then(loaded => {
+      if (!pendingStateChanges.length) return;
+      const changes = pendingStateChanges.splice(0);
+      if (!loaded) return; // offline / signed out: keep it local only
+      let next = mergeState(getState());
+      changes.forEach(change => { next = mergeState(change(next)); });
+      hydratedState = next;
+      void syncStateToBackend(next);
+    });
+    return optimistic;
   }
 
   async function loadStateForEmail(email) {
@@ -492,6 +536,7 @@
     }
   }
 
+  // Returns the list, or null when it couldn't be loaded.
   async function loadCertificatesForEmail(email) {
     const normalizedEmail = String(email || '').trim();
     if (!normalizedEmail) {
@@ -503,13 +548,13 @@
         credentials: 'include'
       });
       if (!response.ok) {
-        return [];
+        return null;
       }
 
       const payload = await response.json();
       return Array.isArray(payload.certificates) ? payload.certificates : [];
     } catch (_) {
-      return [];
+      return null;
     }
   }
 
@@ -718,14 +763,21 @@
 
   function saveState(state) {
     const merged = mergeState(state);
-    hydratedState = merged;
-    void syncStateToBackend(merged);
+    return changeState(() => merged);
   }
 
   function updateState(patch) {
-    const nextState = mergeState(Object.assign({}, getState(), patch || {}));
-    saveState(nextState);
-    return nextState;
+    const changes = patch || {};
+    return changeState(state => {
+      const next = Object.assign({}, state);
+      Object.keys(changes).forEach(key => {
+        const value = changes[key];
+        const isPlainObject = v => v && typeof v === 'object' && !Array.isArray(v);
+        // One level deep, so e.g. {games: {typing: ...}} keeps the other games.
+        next[key] = isPlainObject(value) && isPlainObject(next[key]) ? Object.assign({}, next[key], value) : value;
+      });
+      return next;
+    });
   }
 
   // Progress from the module's actual steps: pre-test, each topic, each
@@ -782,7 +834,10 @@
   }
 
   function recordProgress(options) {
-    const currentState = getState();
+    return changeState(currentState => applyProgress(currentState, options));
+  }
+
+  function applyProgress(currentState, options) {
     const currentUser = getCurrentUser();
     const config = options && typeof options === 'object' ? options : {};
     const moduleId = config.moduleId;
@@ -821,7 +876,6 @@
     }
     nextState.leaderboard = leaderboard.sort((a, b) => Number(b.points || 0) - Number(a.points || 0));
 
-    saveState(nextState);
     return nextState;
   }
 
@@ -1951,8 +2005,14 @@
       })();
     }
 
+    // A module is completed when its post-test is passed (own profile only;
+    // another learner's module list isn't available here).
+    const ownModules = viewingSomeoneElse ? [] : getVisibleModules();
+    const modulesCompletedCount = ownModules.length
+      ? ownModules.filter(module => module.quizPassed).length
+      : Object.values(state.moduleProgress).filter(value => Number(value) >= 100).length;
     const stats = {
-      profileModulesCompleted: Object.values(state.moduleProgress).filter(value => Number(value) >= 100).length,
+      profileModulesCompleted: modulesCompletedCount,
       profileAccuracy: `${state.accuracy}%`,
       profileStreak: `${state.streak} days`,
       profilePracticeTime: `${Math.round(state.practiceMinutes / 60)} hrs`
@@ -1969,7 +2029,7 @@
         { label: 'Activities Completed', value: Number(state.completedActivities || 0) },
         { label: 'Practice Minutes', value: Number(state.practiceMinutes || 0) },
         { label: 'Current Points', value: Number(state.points || 0).toLocaleString() },
-        { label: 'Modules Completed', value: Object.values(state.moduleProgress).filter(value => Number(value) >= 100).length }
+        { label: 'Modules Completed', value: modulesCompletedCount }
       ];
 
       activitySummary.innerHTML = summaryItems.map(item => `
@@ -2002,6 +2062,15 @@
     if (certificatesList) {
       void (async () => {
         const certificates = await loadCertificatesForEmail(profileUser.email);
+        if (certificates === null) {
+          certificatesList.innerHTML = `
+            <div class="achievement" style="opacity: 0.7;">
+              <span class="achievement-icon">⚠️</span>
+              <span class="achievement-name">Couldn&#39;t load your certificates right now. Refresh the page to try again.</span>
+            </div>
+          `;
+          return;
+        }
         if (!certificates.length) {
           certificatesList.innerHTML = `
             <div class="achievement" style="opacity: 0.55;">
@@ -2024,16 +2093,35 @@
 
     const moduleProgressContainer = document.getElementById('profileModuleProgress');
     if (moduleProgressContainer) {
-      moduleProgressContainer.innerHTML = getVisibleModules().slice(0, 4).map(module => {
-        const progress = getModuleProgress(state, module.id);
-        return `
+      if (viewingSomeoneElse) {
+        moduleProgressContainer.innerHTML = '<p style="color:#64748b;margin:0;">Module progress is only shown on your own profile.</p>';
+      } else if (!ownModules.length) {
+        moduleProgressContainer.innerHTML = studentContentStatus === 'error'
+          ? '<p style="color:#64748b;margin:0;">Couldn&#39;t load your modules right now. Refresh the page to try again.</p>'
+          : '<p style="color:#64748b;margin:0;">Loading your modules…</p>';
+      } else {
+        // Every module with its status: Completed (post-test passed),
+        // In Progress, Not Started, or Locked (level not unlocked yet).
+        moduleProgressContainer.innerHTML = ownModules.map(module => {
+          const progress = getModuleProgress(state, module.id);
+          const status = module.quizPassed
+            ? '✓ Completed'
+            : module.levelLocked
+              ? '🔒 Locked'
+              : getModuleStatus(progress);
+          const color = module.quizPassed ? '#059669' : module.levelLocked ? '#92400e' : '';
+          const score = module.quizAttempt && module.quizPassed
+            ? ` · ${module.quizAttempt.score}/${module.quizAttempt.total}`
+            : '';
+          return `
           <div class="progress-item">
-            <span>${module.title}</span>
+            <span>${safeText(module.title)} <small style="opacity:0.7;">(${safeText(module.levelLabel)})</small></span>
             <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%;"></div></div>
-            <span class="progress-status">${getModuleStatus(progress)}</span>
+            <span class="progress-status"${color ? ` style="color:${color};font-weight:700;"` : ''}>${status}${score}</span>
           </div>
         `;
-      }).join('');
+        }).join('');
+      }
     }
 
     const skillContainer = document.getElementById('profileSkillBreakdown');
@@ -2792,11 +2880,16 @@
     // Render page-specific content once
     if (pageType === 'dashboard' || pageType === 'unknown') {
       try { await renderDashboard(); } catch (e) { console.error('renderDashboard error:', e); }
+      // Re-render with the student's real progress once it has loaded.
+      ensureStateLoaded().then(loaded => {
+        if (loaded) renderDashboard().catch(e => console.error('renderDashboard error:', e));
+      });
       // Load async data after small delay
       setTimeout(() => {
         loadDashboardAsyncData().catch(e => console.error('loadDashboardAsyncData error:', e));
       }, 500);
     } else if (pageType === 'learning') {
+      ensureStateLoaded();
       // Show the saved module list (or a loading state) right away, then
       // refresh it from the backend.
       primeStudentContentFromCache();
@@ -2811,6 +2904,14 @@
     } else if (pageType === 'activities') {
       try { renderActivities(); } catch (e) { console.error('renderActivities error:', e); }
     } else if (pageType === 'profile') {
+      // Show what we have right away, then again with the real progress and
+      // the module list (needed for module statuses).
+      primeStudentContentFromCache();
+      try { await renderProfile(); } catch (e) { console.error('renderProfile error:', e); }
+      await Promise.all([
+        ensureStateLoaded().catch(() => false),
+        loadStudentContentFromBackend().catch(() => null),
+      ]);
       try { await renderProfile(); } catch (e) { console.error('renderProfile error:', e); }
     }
   }
