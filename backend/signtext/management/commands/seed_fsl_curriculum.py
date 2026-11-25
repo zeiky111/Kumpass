@@ -1,7 +1,8 @@
-"""Seeds the recommended KUMPAS FSL curriculum: one learning module per level
-(Beginner -> Elementary -> Intermediate -> Advanced), each with its lesson
-topics and the sign words each topic teaches. (--split instead creates one
-module per topic area.)
+"""Seeds the recommended KUMPAS FSL curriculum (Beginner -> Intermediate ->
+Advanced): Beginner has two modules (Basic Sign Language, then Everyday
+Vocabulary), Intermediate and Advanced one each -- each with its lesson topics
+and the sign words each topic teaches. (--split instead creates one module per
+topic area.)
 
 Safe to run more than once. Modules are matched by module_key; an existing
 module is left alone unless --update is given. Modules are created as drafts
@@ -14,6 +15,8 @@ which would keep the next level locked for every student).
     python manage.py seed_fsl_curriculum --update      # also rewrite title/description/topics of existing ones
     python manage.py seed_fsl_curriculum --dry-run     # show what would happen
     python manage.py seed_fsl_curriculum --split       # 28 modules (one per topic area) instead of 4
+    python manage.py seed_fsl_curriculum --update      # rewrite modules that already exist (e.g. an old
+                                                       # "Elementary" module becomes "Beginner – Everyday Vocabulary")
 """
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -22,9 +25,12 @@ from django.db.models.functions import Lower
 from signtext.models import LearningModule, ModuleTopic, SignVideo
 
 B = LearningModule.LEVEL_BEGINNER
-E = LearningModule.LEVEL_ELEMENTARY
 I = LearningModule.LEVEL_INTERMEDIATE
 A = LearningModule.LEVEL_ADVANCED
+# Not a level (there is no Elementary level): the "Everyday Vocabulary" group,
+# taught as the second Beginner module.
+E = "everyday-vocabulary"
+GROUP_LEVEL = {B: B, E: B, I: I, A: A}
 
 ALPHABET = [chr(c) for c in range(ord("A"), ord("Z") + 1)]
 
@@ -122,7 +128,7 @@ CURRICULUM = [
      ]),
 
     # ------------------------------------------------------------------
-    # ELEMENTARY - Everyday Vocabulary
+    # BEGINNER (2nd module) - Everyday Vocabulary
     # Focus: Learning commonly used words and expressions.
     # ------------------------------------------------------------------
     ("fsl-e1-family", E, "Family Members",
@@ -337,7 +343,9 @@ CURRICULUM = [
 LEVEL_MODULES = {
     B: ("fsl-beginner", "Beginner – Basic Sign Language",
         "Focus: Familiarization with FSL and basic hand signs."),
-    E: ("fsl-elementary", "Elementary – Everyday Vocabulary",
+    # Key kept as "fsl-elementary" so a module seeded before the Elementary
+    # level was removed is matched (and fixed with --update), not duplicated.
+    E: ("fsl-elementary", "Beginner – Everyday Vocabulary",
         "Focus: Learning commonly used words and expressions."),
     I: ("fsl-intermediate", "Intermediate – Sentence Construction",
         "Focus: Combining signs to express complete thoughts."),
@@ -347,13 +355,13 @@ LEVEL_MODULES = {
 
 
 def level_curriculum():
-    """CURRICULUM regrouped as [(module_key, level, title, description, topics)], one module per level."""
+    """CURRICULUM regrouped as [(module_key, level, title, description, topics)], one module per group."""
     grouped = []
-    for level in (B, E, I, A):
-        key, title, description = LEVEL_MODULES[level]
+    for group in (B, E, I, A):
+        key, title, description = LEVEL_MODULES[group]
         topics = []
-        for _key, entry_level, entry_title, entry_description, sub_topics in CURRICULUM:
-            if entry_level != level:
+        for _key, entry_group, entry_title, entry_description, sub_topics in CURRICULUM:
+            if entry_group != group:
                 continue
             # Topic text: the entry's summary, then each sub-topic as its own
             # paragraph ("Sub-topic: text"); the topic viewer shows blank-line
@@ -366,12 +374,12 @@ def level_curriculum():
                         seen.add(word.lower())
                         words.append(word)
             topics.append(topic(entry_title, "\n\n".join(paragraphs), words))
-        grouped.append((key, level, title, description, topics))
+        grouped.append((key, GROUP_LEVEL[group], title, description, topics))
     return grouped
 
 
 class Command(BaseCommand):
-    help = "Seed the KUMPAS FSL curriculum (Beginner, Elementary, Intermediate, Advanced modules and topics)."
+    help = "Seed the KUMPAS FSL curriculum (Beginner, Intermediate, Advanced modules and topics)."
 
     def add_arguments(self, parser):
         parser.add_argument("--split", action="store_true",
@@ -386,7 +394,10 @@ class Command(BaseCommand):
         publish, update, dry = opts["publish"], opts["update"], opts["dry_run"]
         created = updated = skipped = 0
 
-        plan = CURRICULUM if opts["split"] else level_curriculum()
+        plan = (
+            [(key, GROUP_LEVEL[group], title, description, topics) for key, group, title, description, topics in CURRICULUM]
+            if opts["split"] else level_curriculum()
+        )
         with transaction.atomic():
             for index, (key, level, title, description, topics) in enumerate(plan):
                 sort_order = index + 1

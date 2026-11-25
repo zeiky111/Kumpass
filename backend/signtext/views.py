@@ -423,12 +423,13 @@ def _normalize_year_level_filter(value: str) -> str:
 
 
 def _normalize_module_level(value: Any, default: str = "beginner") -> str:
-    """Maps a module level (or a legacy 1st-4th year value) to beginner/elementary/intermediate/advanced."""
+    """Maps a module level (or a legacy 1st-4th year value) to beginner/intermediate/advanced."""
     normalized = str(value or "").strip().lower()
     if normalized in {"beginner", "1", "1st", "1st year", "2", "2nd", "2nd year"}:
         return "beginner"
     if normalized == "elementary":
-        return "elementary"
+        # The Elementary level was removed; its modules are Beginner modules.
+        return "beginner"
     if normalized in {"intermediate", "3", "3rd", "3rd year", "4", "4th", "4th year"}:
         return "intermediate"
     if normalized == "advanced":
@@ -679,7 +680,7 @@ def _current_levels_for_users(user_ids: list[int]) -> dict[int, str]:
 def leaderboard(request: Any) -> Response:
     current_email = str(request.query_params.get("email") or "").strip().lower()
     sort_by = str(request.query_params.get("sortBy") or "points").strip().lower()
-    # Filter by learning level (Beginner / Elementary / Intermediate / Advanced), not school year.
+    # Filter by learning level (Beginner / Intermediate / Advanced), not school year.
     level_filter = _normalize_module_level(request.query_params.get("level") or "all", default="all")
     try:
         limit = max(3, min(50, int(request.query_params.get("limit") or 10)))
@@ -1515,7 +1516,6 @@ def _normalize_test_type(value: Any) -> str:
 
 LEVEL_LABELS = {
     "beginner": "Beginner",
-    "elementary": "Elementary",
     "intermediate": "Intermediate",
     "advanced": "Advanced",
 }
@@ -1540,7 +1540,7 @@ def _best_attempt(attempts: list) -> QuizAttempt | None:
 
 
 def _level_rank_ordering():
-    """ORDER BY expression that sorts modules Beginner -> Elementary -> Intermediate -> Advanced."""
+    """ORDER BY expression that sorts modules Beginner -> Intermediate -> Advanced."""
     return Case(
         *[When(year_level=level, then=Value(i)) for i, level in enumerate(LearningModule.LEVEL_ORDER)],
         default=Value(len(LearningModule.LEVEL_ORDER)),
@@ -1578,8 +1578,8 @@ def _beginner_modules_remaining(user: User) -> int:
 def _level_lock_for(level: str, remaining_by_level: dict[str, int]) -> tuple[str, int] | None:
     """(blocking level, modules left) when `level` is still locked, else None.
 
-    Beginner is always open. Each later level (Elementary, Intermediate,
-    Advanced) needs every module in all the levels before it finished.
+    Beginner is always open. Each later level (Intermediate, Advanced)
+    needs every module in all the levels before it finished.
     The earliest unfinished level is reported, so a student who hasn't
     finished Beginner is told to finish Beginner for both higher levels.
     """
@@ -1761,7 +1761,7 @@ def student_content(request: Any) -> Response:
         request,
     )
     # Each level unlocks only after every module in the levels before it is
-    # finished (Beginner -> Elementary -> Intermediate -> Advanced).
+    # finished (Beginner -> Intermediate -> Advanced).
     remaining_by_level = _modules_remaining_by_level(user)
     beginner_remaining = remaining_by_level.get(LearningModule.LEVEL_BEGINNER, 0)
 

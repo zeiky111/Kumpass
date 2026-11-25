@@ -150,14 +150,14 @@
     return '1';
   }
 
-  // Modules are grouped by learner level (Beginner / Elementary / Intermediate / Advanced),
+  // Modules are grouped by learner level (Beginner / Intermediate / Advanced),
   // not by school year. Legacy 1st-4th year values map onto the levels.
-  const LEVEL_LABELS = { beginner: 'Beginner', elementary: 'Elementary', intermediate: 'Intermediate', advanced: 'Advanced' };
+  const LEVEL_LABELS = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
 
   function getModuleLevelKey(value) {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === 'advanced') return 'advanced';
-    if (normalized === 'elementary') return 'elementary';
+    if (normalized === 'elementary') return 'beginner'; // Elementary level was removed
     if (['intermediate', '3', '3rd', '4', '4th'].includes(normalized)) return 'intermediate';
     return 'beginner';
   }
@@ -232,7 +232,7 @@
       preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
       preTestCount: Number((module && module.preTestCount) || 0),
       // Each level stays locked until every module in the levels before it
-      // is finished (Beginner -> Elementary -> Intermediate -> Advanced).
+      // is finished (Beginner -> Intermediate -> Advanced).
       levelLocked: Boolean(module && module.levelLocked),
       levelLockedBy: getModuleLevelKey((module && module.levelLockedBy) || 'beginner'),
       levelRemaining: Number((module && module.levelRemaining) || 0),

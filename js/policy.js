@@ -23,9 +23,8 @@
         {
           heading: '1. Levels',
           items: [
-            'Modules are grouped into <strong>Beginner</strong>, <strong>Elementary</strong>, <strong>Intermediate</strong> and <strong>Advanced</strong>.',
-            'Elementary modules unlock only after you <strong>pass every Beginner module</strong>.',
-            'Intermediate modules unlock only after you <strong>pass every Elementary module</strong>.',
+            'Modules are grouped into <strong>Beginner</strong>, <strong>Intermediate</strong> and <strong>Advanced</strong>.',
+            'Intermediate modules unlock only after you <strong>pass every Beginner module</strong>.',
             'Advanced modules unlock only after you <strong>pass every Intermediate module</strong>.',
           ],
         },
