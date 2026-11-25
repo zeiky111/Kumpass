@@ -813,7 +813,13 @@
             [/\b(everyday|daily|actions?|activit\w*|verbs?)\b/i, ['everyday_words']],
             [/\b(conversations?|questions?|answer\w*|respon\w*|phrases?|sentences?|introduc\w*)\b/i, ['phrases', 'responses']],
             [/\b(emergenc\w*|survival|help|health|safety|instructions?)\b/i, ['survival', 'responses']],
+            // Classifiers show people and things moving/placed in the signing
+            // space: practice with signs for people and everyday actions.
+            [/\b(classifiers?|signing space|space|spatial|placement|locations?|grammar|structure)\b/i, ['relationships', 'everyday_words']],
         ];
+        // Used when nothing in the title or description matches, so every
+        // module still gets sign videos to watch.
+        const WATCH_DEFAULT_CATEGORIES = ['phrases', 'responses', 'greetings'];
 
         function categoriesFor(text) {
             const categories = [];
@@ -851,7 +857,11 @@
             // The title says what the module is about; use the description only if the title gives nothing.
             let categories = categoriesFor(module.title || '');
             if (!categories.length) categories = categoriesFor(module.description || '');
-            if (!categories.length) return { list, source: '' };
+            let source = 'the KUMPAS sign video library';
+            if (!categories.length) {
+                categories = WATCH_DEFAULT_CATEGORIES;
+                source = 'common signs in the KUMPAS sign video library';
+            }
             const videos = await loadDatasetVideos();
             // Original videos first, FSL-105 copies of the same word skipped.
             const ordered = videos.slice().sort((a, b) =>
@@ -860,7 +870,7 @@
                 .filter(v => v.category === category && v.video_url)
                 .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
                 .forEach(v => add(v.word, v.video_url)));
-            return { list: list.slice(0, 40), source: 'the KUMPAS sign video library' };
+            return { list: list.slice(0, 40), source };
         }
 
         async function renderWatchAndLearn(module) {
