@@ -1036,7 +1036,9 @@
           openQuizBtn.style.display = module && (Number(module.quizCount || 0) > 0) ? 'inline-flex' : 'none';
           const locked = isQuizLocked(module);
           openQuizBtn.disabled = locked;
-          openQuizBtn.style.opacity = locked ? '0.6' : '';
+          // Readable "locked" look (a faded button made the text hard to read).
+          openQuizBtn.style.opacity = '';
+          openQuizBtn.classList.toggle('is-locked', locked);
           openQuizBtn.style.cursor = locked ? 'not-allowed' : '';
           openQuizBtn.title = locked
             ? (isPreTestPending(module) ? 'Take the pre-test first.' : 'Finish every topic and open every material to unlock the post-test.')
@@ -1063,7 +1065,8 @@
     if (startButton) {
       const needsPreTest = isPreTestPending(module);
       startButton.disabled = module.levelLocked;
-      startButton.style.opacity = module.levelLocked ? '0.6' : '';
+      startButton.style.opacity = '';
+      startButton.classList.toggle('is-locked', Boolean(module.levelLocked));
       startButton.style.cursor = module.levelLocked ? 'not-allowed' : '';
       startButton.textContent = module.levelLocked
         ? getLevelLockShort(module)
@@ -1642,7 +1645,7 @@
             </td>
             <td>
               <span class="module-chip" style="background:#eef2ff;color:#2563eb;">${safeText(module.levelLabel)}</span>
-              ${module.levelLocked ? `<div style="margin-top:6px;color:#92400e;font-size:0.82rem;font-weight:600;">🔒 Finish ${safeText(LEVEL_LABELS[module.levelLockedBy] || 'Beginner')} first</div>` : ''}
+              ${module.levelLocked ? `<div class="learning-module-lock-note">🔒 Finish ${safeText(LEVEL_LABELS[module.levelLockedBy] || 'Beginner')} first</div>` : ''}
             </td>
             <td>
               <div class="learning-module-meta">
@@ -1655,7 +1658,7 @@
             </td>
             <td>
               <div class="progress-bar" style="margin-bottom:10px;"><div class="progress-fill" style="width: ${progress}%;"></div></div>
-              ${completed ? '<span class="completion-badge">✓ Completed</span>' : `<span style="color:#475569;font-size:0.92rem;">${progress}% complete</span>`}
+              ${completed ? '<span class="completion-badge">✓ Completed</span>' : `<span class="learning-module-progress-text">${progress}% complete</span>`}
             </td>
             <td>
               <div class="learning-module-actions" onclick="event.stopPropagation();">

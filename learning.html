@@ -316,6 +316,68 @@
             font-size: 0.92rem;
         }
 
+        /* Readability of the module list's details (both themes).
+           .module-chip is white-on-translucent for the blue hero banner, so
+           inside the table it needs its own colors or its text disappears. */
+        .learning-module-meta .module-chip {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+
+        .learning-module-progress-text {
+            color: #475569;
+            font-size: 0.92rem;
+        }
+
+        .learning-module-lock-note {
+            margin-top: 6px;
+            color: #92400e;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        /* Locked buttons: clearly locked, but still readable. */
+        .module-detail-actions .is-locked,
+        #learningModuleStartButton.is-locked {
+            background: #e2e8f0 !important;
+            color: #334155 !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+        }
+
+        :root[data-theme="dark"] .learning-module-title {
+            color: #f1f5f9;
+        }
+
+        :root[data-theme="dark"] .learning-module-description,
+        :root[data-theme="dark"] .learning-module-outcome {
+            color: #cbd5e1;
+        }
+
+        :root[data-theme="dark"] .learning-module-outcome strong {
+            color: #f1f5f9;
+        }
+
+        :root[data-theme="dark"] .learning-module-files-preview,
+        :root[data-theme="dark"] .learning-module-progress-text {
+            color: #cbd5e1;
+        }
+
+        :root[data-theme="dark"] .learning-module-meta .module-chip {
+            background: rgba(148, 163, 184, 0.2);
+            color: #e2e8f0;
+        }
+
+        :root[data-theme="dark"] .learning-module-lock-note {
+            color: #fbbf24;
+        }
+
+        :root[data-theme="dark"] .module-detail-actions .is-locked,
+        :root[data-theme="dark"] #learningModuleStartButton.is-locked {
+            background: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+
         /* Module Card */
         .module-card {
             background: white;
