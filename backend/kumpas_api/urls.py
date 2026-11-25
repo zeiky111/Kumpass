@@ -4,7 +4,8 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path, re_path
 from django.conf import settings
-from django.views.static import serve as serve_static
+
+from .media import serve_media
 
 
 def root_home(request):
@@ -33,11 +34,12 @@ urlpatterns = [
 # whenever DEBUG=False, and this deployment has no separate web server (nginx/
 # S3/CDN) in front of it, so without an explicit route here the /media/...
 # URLs handed out by ModuleFileSerializer 404 for everyone in production,
-# including students trying to open files teachers uploaded.
+# including students trying to open files teachers uploaded. serve_media adds
+# HTTP Range support (needed by Safari/iOS for <video>) and caching.
 urlpatterns += [
     re_path(
         r"^%s(?P<path>.*)$" % re.escape(settings.MEDIA_URL.lstrip("/")),
-        serve_static,
+        serve_media,
         {"document_root": settings.MEDIA_ROOT},
     ),
 ]
