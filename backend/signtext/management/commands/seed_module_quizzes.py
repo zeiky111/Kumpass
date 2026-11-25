@@ -7,7 +7,9 @@ instructor-written questions keep them: only the missing test is added.
 
     python manage.py seed_module_quizzes              # add the missing quizzes
     python manage.py seed_module_quizzes --dry-run    # show what would be added
-    python manage.py seed_module_quizzes --module fsl-beginner   # one module only
+    python manage.py seed_module_quizzes --module fsl-beginner   # one module (key or part of its title)
+    python manage.py seed_module_quizzes --module "Classifiers" --replace
+        # replace the questions this command added earlier (instructor-written ones are kept)
 
 The questions cover concepts and common vocabulary taught in the lessons (not
 exact handshapes), so they hold for any module of that subject. Instructors
@@ -154,6 +156,30 @@ BANK = {
           "That the story is over", "A number", "A spelling mistake"),
         q("Before using a classifier, signers usually first:", "Sign or spell what the object is",
           "Do nothing", "Stop signing", "Close their eyes"),
+        q("Which of these could a classifier show?", "A car moving along a road",
+          "The letter A", "The number five", "A greeting"),
+        q("Besides position and movement, classifiers can also describe an object's:", "Size and shape",
+          "Price", "Spelling", "Smell"),
+        q("A classifier for a person walking shows:", "The person's path and movement",
+          "The person's name", "The person's age", "The person's voice"),
+        q("When a signer uses a classifier on each hand at the same time, it can show:",
+          "How two things are placed or move in relation to each other",
+          "Two different languages", "A spelling mistake", "A number above ten"),
+        q("In the signing space, the signer's left and right sides can be used to:", "Stand for different people, places or things",
+          "Do nothing", "Show only numbers", "Show only the signer's mood"),
+        q("Where should you keep your signs so others can see them clearly?", "Inside the signing space, in front of your body",
+          "Behind your head", "Under the table", "Far to the side, out of view"),
+        q("Facial expressions used together with classifiers can show:", "How big, fast or difficult something is",
+          "Nothing", "The signer's name", "The date"),
+        q('If you place HOUSE on your right and SCHOOL on your left, moving your hand from right to left can show:',
+          "Going from the house to the school", "Going from the school to the house", "Counting houses", "Spelling HOUSE"),
+        q("Why do signers use classifiers instead of fingerspelling every detail?",
+          "They show shape, location and movement quickly and visually",
+          "Fingerspelling is not allowed", "Classifiers are only for children", "They make signing slower"),
+        q("When using the signing space, it is important to:", "Keep each person or object in the same spot where you placed it",
+          "Move them to a new spot every time", "Fingerspell them every time", "Sign with your eyes closed"),
+        q("The signing space can also show time, for example:", "The future in front of you and the past behind you",
+          "The future behind you and the past in front of you", "Time is never shown in space", "Only with numbers"),
     ],
     "practical": [
         q("If you don't understand your teacher's signing, you can sign:", "I don't understand", "Goodbye", "Yellow", "Married"),
@@ -236,35 +262,61 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true", help="Show what would be added without saving.")
-        parser.add_argument("--module", help="Only this module (module_key).")
+        parser.add_argument("--module", help="Only this module: its module_key, or part of its title.")
+        parser.add_argument("--replace", action="store_true",
+                            help="First remove the questions this command added before (questions an instructor "
+                                 "wrote are kept), then add fresh ones.")
 
     def handle(self, *args, **opts):
         modules = LearningModule.objects.all().order_by("sort_order", "title")
         if opts.get("module"):
-            modules = modules.filter(module_key=opts["module"])
+            wanted = opts["module"].strip()
+            by_key = modules.filter(module_key=wanted)
+            modules = by_key if by_key.exists() else modules.filter(title__icontains=wanted)
+            if not modules.exists():
+                self.stdout.write(self.style.ERROR(f'No module matches "{wanted}".'))
+                return
+        bank_texts = {item["text"] for items in BANK.values() for item in items}
         added_tests = 0
         with transaction.atomic():
             for module in modules:
-                has_pre = module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).exists()
-                has_post = module.quiz_questions.filter(test_type=QuizQuestion.TEST_POST).exists()
-                if has_pre and has_post:
+                if opts["replace"]:
+                    # Only questions that came from this command's question bank.
+                    generated = module.quiz_questions.filter(question_text__in=bank_texts)
+                    count = generated.count()
+                    if count:
+                        self.stdout.write(f"  remove  {module.title}: {count} generated question(s)")
+                        generated.delete()
+                existing = {
+                    test_type: list(module.quiz_questions.filter(test_type=test_type).values_list("question_text", flat=True))
+                    for test_type in (QuizQuestion.TEST_PRE, QuizQuestion.TEST_POST)
+                }
+                targets = {QuizQuestion.TEST_PRE: PRE_COUNT, QuizQuestion.TEST_POST: POST_COUNT}
+                if opts["replace"]:
+                    # Top each test up to its size; instructor questions count toward it.
+                    needed = {t: max(0, targets[t] - len(existing[t])) for t in targets}
+                else:
+                    # Only add a test the module doesn't have at all.
+                    needed = {t: (0 if existing[t] else targets[t]) for t in targets}
+                if not any(needed.values()):
                     self.stdout.write(f"  keep    {module.title} (already has a pre-test and a post-test)")
                     continue
-                pool = question_pool(module)
+
                 # Pre-test and post-test use different questions where possible.
-                pre_items = pool[:PRE_COUNT]
-                post_items = (pool[PRE_COUNT:] + pool[:PRE_COUNT])[:POST_COUNT]
-                plan = []
-                if not has_pre:
-                    plan.append((QuizQuestion.TEST_PRE, pre_items))
-                if not has_post:
-                    plan.append((QuizQuestion.TEST_POST, post_items))
-                for test_type, items in plan:
+                used = set(existing[QuizQuestion.TEST_PRE]) | set(existing[QuizQuestion.TEST_POST])
+                pool = [item for item in question_pool(module) if item["text"] not in used]
+                pre_items = pool[:needed[QuizQuestion.TEST_PRE]]
+                rest = pool[len(pre_items):] + pre_items
+                post_items = rest[:needed[QuizQuestion.TEST_POST]]
+                for test_type, items in ((QuizQuestion.TEST_PRE, pre_items), (QuizQuestion.TEST_POST, post_items)):
+                    if not items:
+                        continue
                     label = "pre-test" if test_type == QuizQuestion.TEST_PRE else "post-test"
                     self.stdout.write(f"  add     {module.title}: {label} ({len(items)} questions; {', '.join(groups_for(module))})")
                     added_tests += 1
                     if opts["dry_run"]:
                         continue
+                    start = len(existing[test_type])
                     QuizQuestion.objects.bulk_create([
                         QuizQuestion(
                             module=module,
@@ -273,7 +325,7 @@ class Command(BaseCommand):
                             question_type=QuizQuestion.QUESTION_TYPE_MULTIPLE_CHOICE,
                             choices=choices_for(item, i),
                             correct_answer=item["correct"],
-                            order=i + 1,
+                            order=start + i + 1,
                         )
                         for i, item in enumerate(items)
                     ])
