@@ -246,7 +246,8 @@
 
   // Flow per module: pre-test -> open every material -> post-test.
   function isPreTestPending(module) {
-    return Boolean(module) && Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+    // Not needed once the post-test is passed (a pre-test added later must not re-lock a finished module).
+    return Boolean(module) && Number(module.preTestCount || 0) > 0 && !module.preTestAttempt && !module.quizPassed;
   }
 
   function getBeginnerRemaining() {
@@ -1025,7 +1026,7 @@
           actions.insertBefore(preTestBtn, openQuizBtn || null);
         }
         if (preTestBtn) {
-          preTestBtn.style.display = Number(module.preTestCount || 0) > 0 && !module.levelLocked ? 'inline-flex' : 'none';
+          preTestBtn.style.display = Number(module.preTestCount || 0) > 0 && !module.levelLocked && (module.preTestAttempt || !module.quizPassed) ? 'inline-flex' : 'none';
           preTestBtn.textContent = module.preTestAttempt
             ? `✓ Pre-test done (${module.preTestAttempt.score}/${module.preTestAttempt.total})`
             : '1. Take Pre-test';

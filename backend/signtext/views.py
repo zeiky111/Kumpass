@@ -1655,10 +1655,16 @@ def _level_locked_response(user: User, module: LearningModule) -> Response | Non
 
 
 def _pre_test_pending(user: User, module: LearningModule) -> bool:
-    """True when the module has a pre-test the student hasn't taken yet."""
+    """True when the module has a pre-test the student hasn't taken yet.
+
+    A student who already passed the module's post-test never needs it (e.g.
+    a pre-test added after they finished must not lock the module again)."""
     if not module.quiz_questions.filter(test_type=QuizQuestion.TEST_PRE).exists():
         return False
-    return not QuizAttempt.objects.filter(user=user, module=module, test_type=QuizQuestion.TEST_PRE).exists()
+    if QuizAttempt.objects.filter(user=user, module=module, test_type=QuizQuestion.TEST_PRE).exists():
+        return False
+    best = _best_attempt(list(QuizAttempt.objects.filter(user=user, module=module, test_type=QuizQuestion.TEST_POST)))
+    return not _attempt_passed(best)
 
 
 def _viewed_file_ids(user: User, file_ids: list[int]) -> set[int]:

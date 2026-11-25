@@ -769,7 +769,7 @@
             }
 
             const videoFile = files.find(f => f.file_type === 'video' && f.file_url);
-            const preTestPending = Number(module.preTestCount || 0) > 0 && !module.preTestAttempt;
+            const preTestPending = Number(module.preTestCount || 0) > 0 && !module.preTestAttempt && !module.quizPassed;
             renderTopicsList(module, preTestPending || module.levelLocked);
             renderMaterialsList(module, files, preTestPending || module.levelLocked);
             if (preTestPending || module.levelLocked) {
@@ -982,7 +982,7 @@
             if (!window.KumpasPortal || !window.KumpasPortal.getModuleById) return;
             const fresh = window.KumpasPortal.getModuleById(currentModuleId);
             if (fresh) {
-                const preTestPending = Number(fresh.preTestCount || 0) > 0 && !fresh.preTestAttempt;
+                const preTestPending = Number(fresh.preTestCount || 0) > 0 && !fresh.preTestAttempt && !fresh.quizPassed;
                 renderTopicsList(fresh, preTestPending || fresh.levelLocked);
                 renderMaterialsList(fresh, Array.isArray(fresh.files) ? fresh.files : [], preTestPending || fresh.levelLocked);
                 renderQuiz(fresh);
@@ -1079,7 +1079,7 @@
                 container.innerHTML = '<p style="color:#6b7280;">No quiz has been added for this module yet.</p>';
                 return;
             }
-            if (preCount && !module.preTestAttempt) {
+            if (preCount && !module.preTestAttempt && !module.quizPassed) {
                 container.innerHTML = box('info', `<strong>Step 1: Pre-test</strong> (${preCount} question${preCount === 1 ? '' : 's'})<br>
                     Take the pre-test first. It checks what you already know and unlocks this module's topics and materials. It is taken once and does not affect passing.`
                     + button(quizLink(module, 'pre'), '📝 Take Pre-test'));
