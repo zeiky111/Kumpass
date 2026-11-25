@@ -532,6 +532,9 @@ class Certificate(models.Model):
         blank=True,
         related_name="certificate",
     )
+    # Learning level ("beginner" / "intermediate" / "advanced") for the
+    # per-level Certificate of Completion; null for game certificates.
+    level = models.CharField(max_length=20, unique=True, null=True, blank=True)
     title = models.CharField(max_length=150)
     template_path = models.CharField(max_length=255)
 

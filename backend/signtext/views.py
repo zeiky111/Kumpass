@@ -33,10 +33,11 @@ from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_
 from .file_downloads import download_url
 from .certificates import (
     upgrade_legacy_certificates,
-    award_all_modules_certificate_if_earned,
+    LEVEL_CERT_TEMPLATES,
+    award_level_certificates_if_earned,
+    level_progress,
     award_certificate_if_earned,
     send_certificate_email_async,
-    unpassed_module_count,
     verify_certificate_number,
 )
 from .permissions import IsInstructorOrAdmin, IsAdmin
@@ -1493,14 +1494,13 @@ def verify_certificate(request: Any) -> Response:
 def user_certificates(request: Any) -> Response:
     user = request.user
 
-    # Students who passed every module before the certificate rules changed
-    # never hit the post-test that issues it -- issue it now (idempotent).
+    # Level certificates the student already earned but never received (e.g.
+    # they finished a level before per-level certificates existed): issue now.
     try:
-        new_certificate = award_all_modules_certificate_if_earned(user)
-        if new_certificate is not None:
+        for new_certificate in award_level_certificates_if_earned(user):
             send_certificate_email_async(new_certificate)
     except Exception:
-        logger.exception("Could not check the modules certificate for %s", user.username)
+        logger.exception("Could not check the level certificates for %s", user.username)
 
     # Old certificates (no number, old design) -> new template with a number.
     try:
@@ -1521,9 +1521,8 @@ def user_certificates(request: Any) -> Response:
         .select_related("certificate")
         .order_by("-issued_at")
     )
-    total_modules = LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).count()
-    modules_left = unpassed_module_count(user) if total_modules else 0
-    has_modules_certificate = any(item.certificate.game_key is None for item in earned)
+    earned_levels = {item.certificate.level for item in earned if item.certificate.level}
+    progress = level_progress(user)
     return Response({
         "certificates": [
             {
@@ -1535,13 +1534,18 @@ def user_certificates(request: Any) -> Response:
             }
             for item in earned
         ],
-        # Progress toward the Certificate of Completion (all modules passed).
-        "modulesCertificate": {
-            "earned": has_modules_certificate,
-            "total": total_modules,
-            "passed": max(0, total_modules - modules_left),
-            "left": modules_left,
-        },
+        # Progress toward each level's Certificate of Completion.
+        "levelCertificates": [
+            {
+                "level": level,
+                "label": LEVEL_CERT_TEMPLATES[level][2],
+                "earned": level in earned_levels,
+                "total": progress[level]["total"],
+                "passed": progress[level]["passed"],
+                "left": max(0, progress[level]["total"] - progress[level]["passed"]),
+            }
+            for level in LEVEL_CERT_TEMPLATES
+        ],
     })
 
 
@@ -2829,10 +2833,18 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
                     "text": f"Achievement unlocked: {achievement.name}",
                     "meta": "Module post-test passed",
                 })
-        modules_left = unpassed_module_count(user)
+        # Progress toward this module's level certificate.
+        module_level = _normalize_module_level(module.year_level)
+        level_counts = level_progress(user).get(module_level, {"total": 0, "passed": 0})
+        modules_left = {
+            "level": module_level,
+            "label": LEVEL_LABELS.get(module_level, module_level.title()),
+            "left": max(0, level_counts["total"] - level_counts["passed"]),
+        }
 
-        # The certificate is only for completing and passing EVERY module.
-        user_certificate = award_all_modules_certificate_if_earned(user) if passed else None
+        # A level's certificate once every module of that level is passed.
+        new_certificates = award_level_certificates_if_earned(user) if passed else []
+        user_certificate = new_certificates[0] if new_certificates else None
         if user_certificate is not None:
             send_certificate_email_async(user_certificate)
             recent_activity.insert(0, {
@@ -2842,6 +2854,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             })
             certificate_payload = {
                 "title": user_certificate.certificate.title,
+                "level": user_certificate.certificate.level,
                 "number": user_certificate.certificate_number,
                 "issuedAt": user_certificate.issued_at,
                 "downloadUrl": download_url(request, "certificate", user_certificate.id),
@@ -2868,7 +2881,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
         "state": updated_state,
         "certificate": certificate_payload,
         "achievement": achievement_payload,
-        "modulesLeftForCertificate": modules_left,
+        "levelCertificateProgress": modules_left,
     })
 
 

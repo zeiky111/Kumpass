@@ -47,10 +47,10 @@
           ],
         },
         {
-          heading: '4. Achievements and certificate',
+          heading: '4. Achievements and certificates',
           items: [
             'Passing a module\'s post-test earns an <strong>achievement</strong> for that module (e.g. "Passed: Alphabets").',
-            'The <strong>Certificate of Completion</strong> is given only when you have <strong>completed and passed every learning module</strong>.',
+            'Each level has its own <strong>Certificate of Completion</strong>: when you <strong>pass every module of a level</strong> (Beginner, Intermediate or Advanced), you can claim that level\'s certificate.',
             'Each certificate has its own <strong>certificate number</strong> that anyone can check on the <strong>Verify a Certificate</strong> page.',
             'Achievements and certificates appear in your <strong>Profile</strong>; certificates are also sent to your registered email.',
           ],

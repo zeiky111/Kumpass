@@ -93,23 +93,6 @@
                 </div>
             </section>
 
-            <!-- Practice Section -->
-            <section class="practice-section">
-                <div class="practice-card">
-                    <h2>Your Turn to Practice</h2>
-                    <div class="camera-container">
-                        <div class="camera-placeholder">
-                            <div class="camera-icon">📷</div>
-                            <p>Camera Feed</p>
-                            <button class="btn-primary" onclick="startCamera()">Start Camera</button>
-                        </div>
-                    </div>
-                    <div class="practice-feedback">
-                        <p class="feedback-text">Ready to practice? Click "Start Camera" to begin.</p>
-                    </div>
-                </div>
-            </section>
-
             <!-- Activity Type: Quiz -->
             <section class="quiz-section">
                 <div class="quiz-card">
@@ -372,27 +355,6 @@
             color: #2563eb;
         }
 
-        .camera-container {
-            margin-bottom: 1.5rem;
-        }
-
-        .camera-placeholder {
-            background: #f0f4ff;
-            border: 2px dashed #2563eb;
-            border-radius: 16px;
-            padding: 3rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
-        }
-
-        .camera-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
         .practice-feedback {
             background: #fffbf0;
             border-left: 4px solid #f59e0b;
@@ -579,11 +541,6 @@
             background: var(--surface-card-alt);
         }
 
-        :root[data-theme="dark"] .camera-placeholder {
-            background: rgba(37, 99, 235, 0.14);
-            border-color: var(--primary);
-        }
-
         :root[data-theme="dark"] .practice-feedback {
             background: rgba(245, 158, 11, 0.14);
             color: var(--text-body);
@@ -742,10 +699,6 @@
 
         function nextActivity() {
             window.location.href = 'learning.html';
-        }
-
-        function startCamera() {
-            alert('Camera access would be enabled here. This is a demo interface.');
         }
 
         function renderModuleHeader(module) {

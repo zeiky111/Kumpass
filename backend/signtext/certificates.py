@@ -330,7 +330,8 @@ ALL_MODULES_PASSING_PERCENT = 75
 
 
 def _all_modules_certificate() -> Certificate:
-    certificate = Certificate.objects.filter(game_key__isnull=True, module__isnull=True).first()
+    # The old all-modules certificate (no game, no module, no level).
+    certificate = Certificate.objects.filter(game_key__isnull=True, module__isnull=True, level__isnull=True).first()
     if certificate is None:
         certificate = Certificate.objects.create(title=ALL_MODULES_CERT_TITLE, template_path=MODULES_CERT_TEMPLATE_PATH)
     elif certificate.title != ALL_MODULES_CERT_TITLE or certificate.template_path != MODULES_CERT_TEMPLATE_PATH:
@@ -447,3 +448,64 @@ def upgrade_legacy_certificates(user: User) -> int:
         except Exception:
             logger.exception("Could not upgrade legacy certificate %s", user_certificate.id)
     return upgraded
+
+
+# ---- Certificate of Completion per level ----
+# A student earns a level's certificate once they have passed (75%+) the
+# post-test of every published module in that level. Passing a single module
+# earns an achievement; finishing a game (Hard) earns that game's certificate.
+LEVEL_CERT_TEMPLATES = {
+    "beginner": ("images/cert-level-beginner.png", "Beginner Level — Certificate of Completion", "Beginner"),
+    "intermediate": ("images/cert-level-intermediate.png", "Intermediate Level — Certificate of Completion", "Intermediate"),
+    "advanced": ("images/cert-level-advanced.png", "Advanced Level — Certificate of Completion", "Advanced"),
+}
+
+
+def _level_certificate(level: str) -> Certificate:
+    template_path, title, _label = LEVEL_CERT_TEMPLATES[level]
+    certificate, _ = Certificate.objects.get_or_create(
+        level=level, defaults={"title": title, "template_path": template_path}
+    )
+    if certificate.title != title or certificate.template_path != template_path:
+        certificate.title, certificate.template_path = title, template_path
+        certificate.save(update_fields=["title", "template_path"])
+    return certificate
+
+
+def level_progress(user: User) -> dict:
+    """{level: {"total": published modules, "passed": modules passed}} for every level."""
+    from .views import _normalize_module_level  # local import: views imports this module
+
+    progress = {level: {"total": 0, "passed": 0} for level in LEVEL_CERT_TEMPLATES}
+    published = list(
+        LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).values_list("id", "year_level")
+    )
+    passed_ids = {
+        attempt.module_id
+        for attempt in QuizAttempt.objects.filter(
+            user=user, test_type=QuizQuestion.TEST_POST, module_id__in=[mid for mid, _ in published]
+        ).only("module_id", "score", "total")
+        if attempt.total and attempt.score / attempt.total * 100 >= ALL_MODULES_PASSING_PERCENT
+    }
+    for module_id, year_level in published:
+        level = _normalize_module_level(year_level)
+        if level not in progress:
+            continue
+        progress[level]["total"] += 1
+        if module_id in passed_ids:
+            progress[level]["passed"] += 1
+    return progress
+
+
+def award_level_certificates_if_earned(user: User) -> list:
+    """Issues each level's certificate the student has earned but not received
+    yet. Returns the newly issued UserCertificates (usually none or one)."""
+    issued = []
+    for level, counts in level_progress(user).items():
+        if counts["total"] == 0 or counts["passed"] < counts["total"]:
+            continue
+        certificate = _level_certificate(level)
+        if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
+            continue
+        issued.append(_issue_certificate(user, certificate, f"kumpas-{level}-{user.id}"))
+    return issued

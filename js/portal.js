@@ -537,8 +537,8 @@
     }
   }
 
-  // Progress toward the modules Certificate of Completion, from the last load.
-  let modulesCertificateStatus = null;
+  // Progress toward each level's Certificate of Completion, from the last load.
+  let levelCertificatesStatus = null;
 
   // Returns the list, or null when it couldn't be loaded.
   async function loadCertificatesForEmail(email) {
@@ -556,7 +556,7 @@
       }
 
       const payload = await response.json();
-      modulesCertificateStatus = payload && payload.modulesCertificate ? payload.modulesCertificate : null;
+      levelCertificatesStatus = payload && Array.isArray(payload.levelCertificates) ? payload.levelCertificates : null;
       return Array.isArray(payload.certificates) ? payload.certificates : [];
     } catch (_) {
       return null;
@@ -1269,7 +1269,8 @@
           const details = Array.isArray(result.details) ? result.details : [];
           const certificate = result.certificate && typeof result.certificate === 'object' ? result.certificate : null;
           const achievement = result.achievement && typeof result.achievement === 'object' ? result.achievement : null;
-          const modulesLeft = Number.isFinite(Number(result.modulesLeftForCertificate)) ? Number(result.modulesLeftForCertificate) : null;
+          const levelProgress = result.levelCertificateProgress && typeof result.levelCertificateProgress === 'object' ? result.levelCertificateProgress : null;
+          const modulesLeft = levelProgress ? Number(levelProgress.left || 0) : null;
 
           if (result.state && typeof result.state === 'object') {
             hydratedState = mergeState(result.state);
@@ -1314,7 +1315,7 @@
               ${passed
                 ? `<div style="margin-top:10px;padding:12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;">🎉 You passed! This module is complete.
                     ${achievement ? `<div style="margin-top:6px;font-weight:700;">🏅 Achievement unlocked: ${safeText(achievement.name)}</div>` : ''}
-                    ${!certificate && modulesLeft ? `<div style="margin-top:6px;">Pass ${modulesLeft} more module${modulesLeft === 1 ? '' : 's'} to earn your Kumpas Certificate.</div>` : ''}
+                    ${!certificate && modulesLeft ? `<div style="margin-top:6px;">Pass ${modulesLeft} more ${safeText(levelProgress.label)} module${modulesLeft === 1 ? '' : 's'} to earn the ${safeText(levelProgress.label)} Level certificate.</div>` : ''}
                   </div>`
                 : `<div style="margin-top:10px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#991b1b;">
                     Not passed yet — you need ${passingPercent}% to pass. Review the module topics and materials, then retake the post-test.
@@ -1330,7 +1331,7 @@
               </div>
               ${certificate ? `
                 <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
-                  <div style="font-size:1.1rem;margin-bottom:4px;">🏆 You passed every module — Certificate of Completion earned!</div>
+                  <div style="font-size:1.1rem;margin-bottom:4px;">🏆 You passed every ${safeText((levelProgress && levelProgress.label) || '')} module — ${safeText(certificate.title)} earned!</div>
                   ${certificate.number ? `<div style="margin-bottom:8px;color:#475569;">Certificate No. <strong>${safeText(certificate.number)}</strong></div>` : ''}
                   <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
                 </div>
@@ -2092,14 +2093,16 @@
           `;
           return;
         }
-        // Still working toward the modules certificate? Show how far along.
-        const status = viewingSomeoneElse ? null : modulesCertificateStatus;
-        const pendingModulesCert = status && !status.earned && Number(status.total) > 0 ? `
+        // Level certificates still to earn: show how far along each one is.
+        const levels = viewingSomeoneElse ? [] : (levelCertificatesStatus || []);
+        const pendingModulesCert = levels
+          .filter(item => !item.earned && Number(item.total) > 0)
+          .map(item => `
           <div class="achievement" style="opacity: 0.75;">
             <span class="achievement-icon">🔒</span>
-            <span class="achievement-name">Kumpas Learning Modules — Certificate of Completion<br>
-              <small>Pass ${Number(status.left)} more module${Number(status.left) === 1 ? '' : 's'} to earn it (${Number(status.passed)}/${Number(status.total)} passed)</small></span>
-          </div>` : '';
+            <span class="achievement-name">${safeText(item.label)} Level — Certificate of Completion<br>
+              <small>Pass ${Number(item.left)} more ${safeText(item.label)} module${Number(item.left) === 1 ? '' : 's'} to earn it (${Number(item.passed)}/${Number(item.total)} passed)</small></span>
+          </div>`).join('');
         if (!certificates.length && pendingModulesCert) {
           certificatesList.innerHTML = pendingModulesCert;
           return;
@@ -2108,7 +2111,7 @@
           certificatesList.innerHTML = `
             <div class="achievement" style="opacity: 0.55;">
               <span class="achievement-icon">📜</span>
-              <span class="achievement-name">Pass every learning module (Certificate of Completion) or finish a game on Hard (Certificate of Achievement) to earn a certificate!</span>
+              <span class="achievement-name">Pass every module of a level (Certificate of Completion) or finish a game on Hard (Certificate of Achievement) to earn a certificate!</span>
             </div>
           `;
           return;
