@@ -712,6 +712,28 @@
             opacity: 1;
         }
 
+        /* A new sign video loading on top of the previous one, not shown yet. */
+        .translate-media video.sign-video-pending,
+        .sign-preview-media video.sign-video-pending {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Off-screen holder that keeps preloaded sign videos in the page, so
+           the browser actually downloads them. */
+        #signVideoPreloadHolder {
+            position: fixed !important;
+            left: -9999px;
+            top: 0;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
         .sign-video-loading::after {
             content: '';
             width: 40px;
@@ -1142,10 +1164,28 @@
             video.setAttribute('playsinline', '');
             video.preload = 'auto';
             video.src = url;
+            // Keep it in the page (off-screen) so the browser really preloads it.
+            preloadHolder().appendChild(video);
             video.load();
             videoPool.set(url, video);
             trimVideoPool();
             return video;
+        }
+
+        function preloadHolder() {
+            let holder = document.getElementById('signVideoPreloadHolder');
+            if (!holder) {
+                holder = document.createElement('div');
+                holder.id = 'signVideoPreloadHolder';
+                holder.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(holder);
+            }
+            return holder;
+        }
+
+        // On screen = in the page, but not just waiting in the preload holder.
+        function isOnScreen(video) {
+            return video.isConnected && !(video.parentNode && video.parentNode.id === 'signVideoPreloadHolder');
         }
 
         function releaseVideo(video) {
@@ -1158,15 +1198,19 @@
             const video = videoPool.get(url);
             if (!video) return;
             videoPool.delete(url);
-            if (!video.isConnected) releaseVideo(video);
+            if (!isOnScreen(video)) {
+                releaseVideo(video);
+                video.remove();
+            }
         }
 
         function trimVideoPool() {
             for (const [url, video] of videoPool) {
                 if (videoPool.size <= VIDEO_POOL_MAX) break;
-                if (video.isConnected) continue; // currently on screen
+                if (isOnScreen(video)) continue;
                 videoPool.delete(url);
                 releaseVideo(video);
+                video.remove();
             }
         }
 
@@ -1190,25 +1234,47 @@
 
         // Puts `video` into `container`, keeping whatever was there visible
         // until the new video has a frame to show, then swaps it in.
+        // The video is attached to the page right away (invisible, on top of
+        // the previous one): browsers don't reliably load a <video> that
+        // isn't in the page, which left the player as an empty dark box.
+        const VIDEO_REVEAL_FALLBACK_MS = 4000;
+        // Any of these means there's a frame to show. ('loadeddata' alone isn't
+        // enough: it fires once per file, so a video that was rewound for a
+        // replay would wait for it forever.)
+        const VIDEO_READY_EVENTS = ['loadeddata', 'canplay', 'seeked', 'playing'];
         function showSignVideo(container, video, isCurrent) {
-            const swap = () => {
-                if (!isCurrent()) return;
+            if (video._revealTimer) clearTimeout(video._revealTimer);
+            if (video._reveal) VIDEO_READY_EVENTS.forEach(name => video.removeEventListener(name, video._reveal));
+            const reveal = () => {
+                clearTimeout(video._revealTimer);
+                VIDEO_READY_EVENTS.forEach(name => video.removeEventListener(name, reveal));
+                video._reveal = null;
+                if (!isCurrent()) {
+                    if (video.parentNode === container && video.classList.contains('sign-video-pending')) video.remove();
+                    return;
+                }
+                video.classList.remove('sign-video-pending');
                 Array.from(container.children).forEach(child => {
                     if (child !== video && !child.classList.contains('sign-video-loading')) {
                         if (child.tagName === 'VIDEO') { try { child.pause(); } catch (_) {} }
                         child.remove();
                     }
                 });
-                if (video.parentNode !== container) {
-                    container.insertBefore(video, ensureLoadingOverlay(container));
-                }
             };
-            if (video.readyState >= 2) {
-                swap();
-            } else {
-                setVideoLoading(container, true);
-                video.addEventListener('loadeddata', swap, { once: true });
+            if (video.parentNode !== container) {
+                container.insertBefore(video, ensureLoadingOverlay(container));
             }
+            if (video.readyState >= 2) {
+                reveal();
+                return;
+            }
+            video.classList.add('sign-video-pending');
+            setVideoLoading(container, true);
+            video._reveal = reveal;
+            VIDEO_READY_EVENTS.forEach(name => video.addEventListener(name, reveal));
+            // Never leave an empty box: show the player (with its controls)
+            // after a few seconds even if no frame has arrived yet.
+            video._revealTimer = setTimeout(reveal, VIDEO_REVEAL_FALLBACK_MS);
         }
 
         async function loadSignLibrary() {
