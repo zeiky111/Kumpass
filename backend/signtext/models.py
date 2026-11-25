@@ -547,6 +547,9 @@ class UserCertificate(models.Model):
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE, related_name="unlocks")
     file = models.FileField(upload_to="certificates/%Y/%m/", storage=RAW_FILE_STORAGE)
     student_name = models.CharField(max_length=150)
+    # System-generated, printed on the certificate and used to verify it,
+    # e.g. KMP-2026-0727-0001 (year, month+day issued, running number that day).
+    certificate_number = models.CharField(max_length=32, unique=True, null=True, blank=True)
     issued_at = models.DateTimeField(auto_now_add=True)
     emailed = models.BooleanField(default=False)
 

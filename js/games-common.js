@@ -721,7 +721,18 @@
 
     if (passed) engine.markDifficultyCompleted(difficulty);
     if (gameComplete) {
-      awardCertificateIfEarned(cfg.gameKey);
+      // Passing Hard completes the game: its Certificate of Achievement.
+      awardCertificateIfEarned(cfg.gameKey).then(result => {
+        const cert = result && result.certificate;
+        const msg = document.getElementById('gameRoundMessage');
+        if (!cert || !msg) return;
+        msg.insertAdjacentHTML('beforeend', `
+          <div style="margin-top:12px;padding:12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;">
+            🏆 <strong>Certificate of Achievement earned!</strong><br>
+            Certificate No. <strong>${escapeHtml(cert.number || '')}</strong><br>
+            <a class="btn btn-primary" style="margin-top:8px;display:inline-block;" href="${escapeHtml(cert.downloadUrl)}" target="_blank" rel="noopener">Download Certificate</a>
+          </div>`);
+      });
       syncGameResult(cfg.gameKey, {
         score: engine.state.score,
         highScore: cfg.highScore,

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="images/kumpas_logo.png">
+    <link rel="icon" type="image/png" href="images/kumpas_logo.png">
+    <title>Verify Certificate - Kumpas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root {
+            --bg: #eef2ff;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --brand: #1e3a8a;
+            --accent: #2563eb;
+            --border: #e2e8f0;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0b1220; --card: #111827; --text: #e5e7eb; --muted: #9ca3af; --brand: #93c5fd; --border: #1f2937;
+            }
+        }
+        :root[data-theme="dark"] {
+            --bg: #0b1220; --card: #111827; --text: #e5e7eb; --muted: #9ca3af; --brand: #93c5fd; --border: #1f2937;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+        .card {
+            width: min(560px, 100%);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+            padding: 28px 24px;
+        }
+        .brand { display: flex; justify-content: center; margin-bottom: 14px; }
+        .brand img { width: 200px; height: auto; }
+        h1 { margin: 0 0 6px; font-size: 1.4rem; text-align: center; color: var(--brand); }
+        .lead { margin: 0 0 20px; text-align: center; color: var(--muted); line-height: 1.55; }
+        form { display: flex; gap: 8px; flex-wrap: wrap; }
+        label { width: 100%; font-weight: 700; font-size: 0.9rem; }
+        input {
+            flex: 1 1 240px;
+            min-height: 46px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0 14px;
+            font: 600 1rem ui-monospace, SFMono-Regular, Consolas, monospace;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: transparent;
+            color: var(--text);
+        }
+        button {
+            min-height: 46px;
+            border: none;
+            border-radius: 12px;
+            padding: 0 20px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        }
+        button:disabled { opacity: 0.6; cursor: wait; }
+        .result { margin-top: 18px; border-radius: 14px; padding: 16px; line-height: 1.6; display: none; }
+        .result.show { display: block; }
+        .result.valid { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+        .result.invalid { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+        .result.pending { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
+        .result dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+        .result dt { font-weight: 700; }
+        .result dd { margin: 0; }
+        .back { display: block; margin-top: 18px; text-align: center; color: var(--accent); font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="brand"><img src="images/logo_transparent.png" alt="KUMPAS logo"></div>
+        <h1>Verify a Certificate</h1>
+        <p class="lead">Enter the certificate number printed on a KUMPAS certificate (for example <strong>KMP-2026-0727-0001</strong>) to check that it was issued by the system.</p>
+
+        <form id="verifyForm" autocomplete="off">
+            <label for="certNumber">Certificate No.</label>
+            <input id="certNumber" name="number" type="text" placeholder="KMP-YYYY-MMDD-0000" required maxlength="32">
+            <button type="submit" id="verifyBtn">Verify</button>
+        </form>
+
+        <div class="result" id="verifyResult" role="status" aria-live="polite"></div>
+        <a class="back" href="index.html">← Back to Home</a>
+    </main>
+
+    <script src="js/api-config.js"></script>
+    <script>
+        (function () {
+            const form = document.getElementById('verifyForm');
+            const input = document.getElementById('certNumber');
+            const button = document.getElementById('verifyBtn');
+            const result = document.getElementById('verifyResult');
+
+            function esc(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            }
+
+            function show(kind, html) {
+                result.className = `result show ${kind}`;
+                result.innerHTML = html;
+            }
+
+            async function verify(number) {
+                const value = String(number || '').trim().toUpperCase();
+                if (!value) return;
+                input.value = value;
+                button.disabled = true;
+                show('pending', 'Checking… (the first check can take up to a minute while the server wakes up)');
+                try {
+                    const response = await fetch(`${window.KUMPAS_API_BASE}/certificates/verify/?number=${encodeURIComponent(value)}`);
+                    const data = await response.json();
+                    if (data && data.valid) {
+                        const issued = data.issuedAt ? new Date(data.issuedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+                        show('valid', `<strong>✓ Valid certificate</strong>
+                            <dl>
+                                <dt>Certificate No.</dt><dd>${esc(data.number)}</dd>
+                                <dt>Awarded to</dt><dd>${esc(data.studentName)}</dd>
+                                <dt>Certificate</dt><dd>${esc(data.title)}</dd>
+                                <dt>Issued</dt><dd>${esc(issued)}</dd>
+                            </dl>`);
+                    } else {
+                        show('invalid', `<strong>✗ Not found</strong><br>No KUMPAS certificate has the number <strong>${esc(value)}</strong>. Check the number and try again.`);
+                    }
+                } catch (_) {
+                    show('invalid', "Couldn't reach the KUMPAS server right now. Check your connection and try again.");
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                verify(input.value);
+            });
+
+            const fromLink = new URLSearchParams(window.location.search).get('number');
+            if (fromLink) verify(fromLink);
+        })();
+    </script>
+</body>
+</html>

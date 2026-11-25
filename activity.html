@@ -927,16 +927,33 @@
         async function initActivityPage() {
             if (!window.KumpasPortal) return;
 
+            // Show the saved copy of this module right away (no dead loading),
+            // then refresh it from the backend.
+            if (window.KumpasPortal.primeStudentContentFromCache && window.KumpasPortal.primeStudentContentFromCache()) {
+                const cachedModule = window.KumpasPortal.getModuleById(currentModuleId);
+                if (cachedModule) {
+                    renderModuleHeader(cachedModule);
+                    renderModuleStats(cachedModule);
+                    renderQuiz(cachedModule);
+                }
+            }
+
             await window.KumpasPortal.ensureCurrentUser().catch(() => null);
             await window.KumpasPortal.loadStudentContentFromBackend().catch(() => null);
             await window.KumpasPortal.loadStateFromBackend().catch(() => null);
 
             const module = window.KumpasPortal.getModuleById(currentModuleId);
             if (!module) {
+                const failed = window.KumpasPortal.getStudentContentStatus
+                    && window.KumpasPortal.getStudentContentStatus() === 'error';
                 const lessonTitle = document.getElementById('activityLessonTitle');
-                if (lessonTitle) lessonTitle.textContent = 'Module not found';
+                if (lessonTitle) lessonTitle.textContent = failed ? "Couldn't load this module" : 'Module not found';
                 const quizContainer = document.getElementById('activityQuizContainer');
-                if (quizContainer) quizContainer.innerHTML = '<p style="color:#991b1b;">This module could not be found. Go back to the Learning page and try again.</p>';
+                if (quizContainer) {
+                    quizContainer.innerHTML = failed
+                        ? '<p style="color:#991b1b;">The server may be waking up or your connection dropped.</p><button type="button" class="btn-primary" onclick="window.location.reload()">Try again</button>'
+                        : '<p style="color:#991b1b;">This module could not be found. Go back to the Learning page and try again.</p>';
+                }
                 return;
             }
 

@@ -43,6 +43,10 @@
   };
   let hydratedState = null;
   let studentContentCache = null;
+  // 'idle' | 'loading' | 'ready' | 'error'. With a cached copy on screen,
+  // 'loading'/'error' only mean the background refresh is still running/failed.
+  let studentContentStatus = 'idle';
+  let studentContentOwner = '';
   let currentUserCache = null;
   let currentUserPromise = null;
 
@@ -102,6 +106,9 @@
 
           const payload = await response.json();
           currentUserCache = payload && payload.user ? payload.user : null;
+          if (currentUserCache && currentUserCache.email) {
+            try { localStorage.setItem(LAST_USER_KEY, JSON.stringify({ email: currentUserCache.email })); } catch (_) {}
+          }
           return currentUserCache;
         } catch (_) {
           currentUserCache = null;
@@ -258,7 +265,10 @@
     const raw = studentContentCache && Array.isArray(studentContentCache.modules)
       ? studentContentCache.modules.find(item => Number(item.id) === Number(numericId))
       : null;
-    if (raw) update(raw);
+    if (raw) {
+      update(raw);
+      saveStudentContentCache();
+    }
   }
 
   function getOpenedMaterialsCount(module) {
@@ -556,14 +566,53 @@
     }
   }
 
+  // ---- Student content cache (no dead loading) ----
+  // The module list is kept in this browser per account, so the Learning and
+  // activity pages can show it immediately on the next visit while a fresh
+  // copy loads in the background (the backend can take a while to wake up).
+  const LAST_USER_KEY = 'kumpasLastUser';
+  const contentCacheKey = email => `kumpasStudentContent:${String(email || '').trim().toLowerCase()}`;
+
+  function saveStudentContentCache() {
+    if (!studentContentCache || !studentContentOwner) return;
+    try { localStorage.setItem(contentCacheKey(studentContentOwner), JSON.stringify(studentContentCache)); } catch (_) {}
+  }
+
+  // Loads the last saved module list for the last signed-in account. Returns true when one is available.
+  function primeStudentContentFromCache() {
+    if (studentContentCache) return true;
+    try {
+      const last = JSON.parse(localStorage.getItem(LAST_USER_KEY) || 'null');
+      if (!last || !last.email) return false;
+      const cached = JSON.parse(localStorage.getItem(contentCacheKey(last.email)) || 'null');
+      if (!cached || !Array.isArray(cached.modules)) return false;
+      studentContentCache = cached;
+      studentContentOwner = String(last.email).trim().toLowerCase();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getStudentContentStatus() {
+    return studentContentStatus;
+  }
+
   async function loadStudentContentFromBackend() {
+    studentContentStatus = 'loading';
     // Ensure we have the session-backed user before requesting student content
     const sessionUser = await ensureCurrentUser().catch(() => null);
     const currentUser = sessionUser || getCurrentUser();
     const email = String(currentUser.email || '').trim();
     if (!email) {
       // No authenticated email yet; skip loading content
+      studentContentStatus = 'error';
       return null;
+    }
+    // A cached copy from a different account must never be shown.
+    if (studentContentOwner && studentContentOwner !== email.toLowerCase()) {
+      studentContentCache = null;
+      studentContentOwner = '';
     }
 
     try {
@@ -571,21 +620,33 @@
         credentials: 'include'
       });
       if (!response.ok) {
+        studentContentStatus = 'error';
         return null;
       }
 
       const payload = await response.json();
       if (!payload || !Array.isArray(payload.modules)) {
-        studentContentCache = null;
+        studentContentStatus = 'error';
         return null;
       }
 
       studentContentCache = payload;
+      studentContentOwner = email.toLowerCase();
+      studentContentStatus = 'ready';
+      saveStudentContentCache();
       return payload;
     } catch (_) {
-      studentContentCache = null;
+      // Keep showing the cached copy (if any) instead of wiping the page.
+      studentContentStatus = 'error';
       return null;
     }
+  }
+
+  async function retryStudentContent() {
+    studentContentStatus = 'loading';
+    try { renderLearning(); } catch (_) {}
+    await loadStudentContentFromBackend();
+    try { renderLearning(); } catch (_) {}
   }
 
   function renderRecentActivityList(target, entries) {
@@ -1194,7 +1255,8 @@
               </div>
               ${certificate ? `
                 <div class="quiz-certificate-earned" style="margin-top:16px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;text-align:center;">
-                  <div style="font-size:1.1rem;margin-bottom:8px;">🏆 You passed every module — Certificate earned!</div>
+                  <div style="font-size:1.1rem;margin-bottom:4px;">🏆 You passed every module — Certificate of Completion earned!</div>
+                  ${certificate.number ? `<div style="margin-bottom:8px;color:#475569;">Certificate No. <strong>${safeText(certificate.number)}</strong></div>` : ''}
                   <a class="btn-primary" href="${safeText(certificate.downloadUrl)}" target="_blank" rel="noopener" style="display:inline-block;">Download Certificate</a>
                 </div>
               ` : ''}
@@ -1383,6 +1445,10 @@
     try {
       const payload = await loadLeaderboardFromBackend({ limit: 5 });
       const leaderboard = document.getElementById('dashboardLeaderboardList');
+      if (leaderboard && !payload) {
+        // Never leave "Loading live top learners..." up forever.
+        leaderboard.innerHTML = '<li style="padding: 0.75rem 0; color: #666;">Couldn&#39;t load the top learners right now. <a href="leaderboard.html">Open the leaderboard</a></li>';
+      }
       if (leaderboard && payload) {
         const players = Array.isArray(payload.players) ? payload.players : [];
         leaderboard.innerHTML = players.length
@@ -1451,6 +1517,27 @@
           })
         : levelModules;
       if (pagination) pagination.innerHTML = '';
+
+      if (!allModules.length && !studentContentCache && studentContentStatus !== 'ready') {
+        const failed = studentContentStatus === 'error';
+        target.innerHTML = failed
+          ? `
+          <div class="table-container" style="padding:24px; text-align:center; color:#6b7280;">
+            <div style="font-size:1.05rem; font-weight:700; margin-bottom:8px; color:#b91c1c;">Couldn't load the modules</div>
+            <p style="margin:0 0 12px;">The server may be waking up or your connection dropped.</p>
+            <button type="button" class="btn btn-primary" id="learningModulesRetry">Try again</button>
+          </div>`
+          : `
+          <div class="table-container" style="padding:24px; text-align:center; color:#6b7280;" role="status">
+            <div style="width:34px;height:34px;margin:0 auto 10px;border-radius:50%;border:4px solid #dbeafe;border-top-color:#2563eb;animation:kumpasSpin .8s linear infinite;"></div>
+            <div style="font-weight:700;">Loading modules…</div>
+            <p style="margin:6px 0 0;font-size:0.9rem;">The first load can take up to a minute while the server wakes up.</p>
+            <style>@keyframes kumpasSpin{to{transform:rotate(360deg)}}</style>
+          </div>`;
+        const retryBtn = document.getElementById('learningModulesRetry');
+        if (retryBtn) retryBtn.addEventListener('click', () => retryStudentContent());
+        return;
+      }
 
       if (!allModules.length) {
         target.innerHTML = `
@@ -1919,7 +2006,7 @@
           certificatesList.innerHTML = `
             <div class="achievement" style="opacity: 0.55;">
               <span class="achievement-icon">📜</span>
-              <span class="achievement-name">Pass every learning module to earn your Kumpas certificate!</span>
+              <span class="achievement-name">Pass every learning module (Certificate of Completion) or finish a game on Hard (Certificate of Achievement) to earn a certificate!</span>
             </div>
           `;
           return;
@@ -1928,7 +2015,7 @@
         certificatesList.innerHTML = certificates.map(item => `
           <div class="achievement">
             <span class="achievement-icon">📜</span>
-            <span class="achievement-name">${safeText(item.title)}</span>
+            <span class="achievement-name">${safeText(item.title)}${item.number ? `<br><small style="opacity:0.75;">No. ${safeText(item.number)}</small>` : ''}</span>
             ${viewingSomeoneElse ? '' : `<a href="${safeText(item.downloadUrl)}" target="_blank" rel="noopener" class="btn-secondary" style="margin-left:auto; padding:4px 12px; font-size:0.85em; white-space:nowrap;">Download</a>`}
           </div>
         `).join('');
@@ -2652,6 +2739,10 @@
     try {
       const payload = await loadLeaderboardFromBackend({ limit: 5 });
       const leaderboard = document.getElementById('dashboardLeaderboardList');
+      if (leaderboard && !payload) {
+        // Never leave "Loading live top learners..." up forever.
+        leaderboard.innerHTML = '<li style="padding: 0.75rem 0; color: #666;">Couldn&#39;t load the top learners right now. <a href="leaderboard.html">Open the leaderboard</a></li>';
+      }
       if (leaderboard && payload) {
         const players = Array.isArray(payload.players) ? payload.players : [];
         leaderboard.innerHTML = players.length
@@ -2706,6 +2797,11 @@
         loadDashboardAsyncData().catch(e => console.error('loadDashboardAsyncData error:', e));
       }, 500);
     } else if (pageType === 'learning') {
+      // Show the saved module list (or a loading state) right away, then
+      // refresh it from the backend.
+      primeStudentContentFromCache();
+      studentContentStatus = 'loading';
+      try { renderLearning(); } catch (e) { console.error('renderLearning error:', e); }
       try {
         await loadStudentContentFromBackend();
       } catch (e) {
@@ -2839,6 +2935,9 @@
     openMaterial,
     markTopicComplete,
     openModuleTopics,
+    primeStudentContentFromCache,
+    getStudentContentStatus,
+    retryStudentContent,
     recordModuleReview
   };
   // Backwards compatibility: allow inline onclick="uploadPhoto()" in profile.html

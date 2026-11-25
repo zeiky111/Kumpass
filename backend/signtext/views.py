@@ -33,8 +33,10 @@ from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_
 from .file_downloads import download_url
 from .certificates import (
     award_all_modules_certificate_if_earned,
+    award_certificate_if_earned,
     send_certificate_email_async,
     unpassed_module_count,
+    verify_certificate_number,
 )
 from .permissions import IsInstructorOrAdmin, IsAdmin
 from .models import (
@@ -1417,9 +1419,9 @@ def learning_state(request: Any) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def award_certificate(request: Any) -> Response:
-    """Called when a student passes a game's Hard difficulty. Games earn an
-    achievement (not a certificate); the only certificate is for passing
-    every learning module."""
+    """Called when a student passes a game's Hard difficulty (completes the
+    game): issues that game's Certificate of Achievement, plus the game
+    achievement badge. Idempotent."""
     user = request.user
     game_key = str(request.data.get("game_key") or "").strip()
     if not game_key:
@@ -1428,26 +1430,59 @@ def award_certificate(request: Any) -> Response:
         return Response({"error": "Unknown game_key"}, status=400)
 
     achievement = _unlock_game_achievement(user, game_key)
-    if achievement is None:
+    user_certificate = award_certificate_if_earned(user, game_key)
+    if achievement is None and user_certificate is None:
         return Response({"certificate": None, "achievement": None, "alreadyEarned": True})
 
     learning_state = _get_learning_state_for_user(user)
     state = dict(learning_state.state or {})
     recent_activity = list(state.get("recentActivity") or [])
-    recent_activity.insert(0, {
-        "icon": "🏆",
-        "text": f"Achievement unlocked: {achievement.name}",
-        "meta": "Game passed on Hard",
-    })
+    if achievement is not None:
+        recent_activity.insert(0, {
+            "icon": "🏅",
+            "text": f"Achievement unlocked: {achievement.name}",
+            "meta": "Game passed on Hard",
+        })
+    certificate_payload = None
+    if user_certificate is not None:
+        send_certificate_email_async(user_certificate)
+        recent_activity.insert(0, {
+            "icon": "🏆",
+            "text": f"Earned the {user_certificate.certificate.title}",
+            "meta": f"Certificate No. {user_certificate.certificate_number}",
+        })
+        certificate_payload = {
+            "gameKey": game_key,
+            "title": user_certificate.certificate.title,
+            "number": user_certificate.certificate_number,
+            "issuedAt": user_certificate.issued_at,
+            "downloadUrl": download_url(request, "certificate", user_certificate.id),
+        }
     state["recentActivity"] = recent_activity[:10]
     state["achievements"] = _evaluate_achievements(user, state)
     learning_state.state = state
     learning_state.save(update_fields=["state", "updated_at"])
 
     return Response({
-        "certificate": None,
-        "achievement": {"name": achievement.name, "icon": achievement.icon},
+        "certificate": certificate_payload,
+        "achievement": {"name": achievement.name, "icon": achievement.icon} if achievement else None,
         "alreadyEarned": False,
+    })
+
+
+@api_view(["GET"])
+def verify_certificate(request: Any) -> Response:
+    """Public check of a certificate number printed on a KUMPAS certificate."""
+    number = str(request.query_params.get("number") or "").strip().upper()
+    issued = verify_certificate_number(number)
+    if issued is None:
+        return Response({"valid": False, "number": number})
+    return Response({
+        "valid": True,
+        "number": issued.certificate_number,
+        "studentName": issued.student_name,
+        "title": issued.certificate.title,
+        "issuedAt": issued.issued_at,
     })
 
 
@@ -1465,6 +1500,7 @@ def user_certificates(request: Any) -> Response:
             {
                 "gameKey": item.certificate.game_key,
                 "title": item.certificate.title,
+                "number": item.certificate_number or "",
                 "issuedAt": item.issued_at,
                 "downloadUrl": download_url(request, "certificate", item.id),
             }
@@ -2765,6 +2801,7 @@ def module_quiz_submit(request: Any, module_id: int) -> Response:
             })
             certificate_payload = {
                 "title": user_certificate.certificate.title,
+                "number": user_certificate.certificate_number,
                 "issuedAt": user_certificate.issued_at,
                 "downloadUrl": download_url(request, "certificate", user_certificate.id),
             }

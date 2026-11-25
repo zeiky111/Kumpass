@@ -1300,8 +1300,12 @@
             if (!wordBrowseGrid || !wordBrowsePagination) return;
 
             if (!signLibraryReady) {
-                wordBrowseGrid.innerHTML = '<div class="word-browse-empty">Loading sign words…</div>';
+                wordBrowseGrid.innerHTML = signLibraryFailed
+                    ? '<div class="word-browse-empty">Couldn&#39;t load the sign words. The server may be waking up. <button type="button" class="browse-page-btn" id="signLibraryRetry">Try again</button></div>'
+                    : '<div class="word-browse-empty">Loading sign words… (the first load can take up to a minute)</div>';
                 wordBrowsePagination.innerHTML = '';
+                const retry = document.getElementById('signLibraryRetry');
+                if (retry) retry.addEventListener('click', startLoadingSignLibrary);
                 return;
             }
 
@@ -1591,7 +1595,9 @@
             if (!text) return;
 
             if (!signLibraryReady) {
-                alert('The sign dictionary is still loading. Try again in a moment.');
+                alert(signLibraryFailed
+                    ? "The sign dictionary couldn't be loaded. Use \"Try again\" in the word list below."
+                    : 'The sign dictionary is still loading. Try again in a moment.');
                 return;
             }
 
@@ -1649,12 +1655,22 @@
 
         renderWordBrowse();
 
-        loadSignLibrary()
-            .then(() => renderWordBrowse())
-            .catch(err => {
-                console.error('Failed to load sign videos:', err);
-                renderWordBrowse();
-            });
+        // Loading the dictionary must never leave "Loading…" up forever:
+        // a failure shows a message with "Try again".
+        // var (not let): renderWordBrowse() runs above this line too.
+        var signLibraryFailed = false;
+        function startLoadingSignLibrary() {
+            signLibraryFailed = false;
+            renderWordBrowse();
+            loadSignLibrary()
+                .then(() => renderWordBrowse())
+                .catch(err => {
+                    console.error('Failed to load sign videos:', err);
+                    signLibraryFailed = true;
+                    renderWordBrowse();
+                });
+        }
+        startLoadingSignLibrary();
 
         // Navbar dropdown
         (function() {

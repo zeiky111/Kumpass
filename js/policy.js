@@ -51,8 +51,9 @@
           heading: '4. Achievements and certificate',
           items: [
             'Passing a module\'s post-test earns an <strong>achievement</strong> for that module (e.g. "Passed: Alphabets").',
-            'The <strong>certificate</strong> is given only when you have <strong>completed and passed every learning module</strong>.',
-            'Achievements and the certificate appear in your <strong>Profile</strong>; the certificate is also sent to your registered email.',
+            'The <strong>Certificate of Completion</strong> is given only when you have <strong>completed and passed every learning module</strong>.',
+            'Each certificate has its own <strong>certificate number</strong> that anyone can check on the <strong>Verify a Certificate</strong> page.',
+            'Achievements and certificates appear in your <strong>Profile</strong>; certificates are also sent to your registered email.',
           ],
         },
         {
@@ -101,7 +102,7 @@
           heading: '3. After you pass',
           items: [
             'You may <strong>play the same difficulty again</strong> for practice, or <strong>proceed</strong> to the next one.',
-            'Passing <strong>Hard</strong> completes the game and earns the game\'s <strong>achievement</strong> (e.g. "Sign Match Game Champion").',
+            'Passing <strong>Hard</strong> completes the game and earns that game\'s <strong>Certificate of Achievement</strong> and an achievement badge (e.g. "Sign Match Game Champion").',
           ],
         },
         {

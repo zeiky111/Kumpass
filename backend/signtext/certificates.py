@@ -142,6 +142,134 @@ def _generate_module_certificate_pdf(template_path: str, student_name: str, issu
     return buffer.getvalue()
 
 
+# ---- Certificate templates (Canva designs, 1491x1055) ----
+# Games: "Certificate of Achievement", one template per game.
+# Learning modules: one "Certificate of Completion" once EVERY module is passed.
+# The templates have a blank name band, a blank date line and a blank
+# certificate number; the system stamps all three when issuing.
+FONTS_DIR = settings.BASE_DIR / "signtext" / "certificate_assets" / "fonts"
+NAME_FONT_PATH = FONTS_DIR / "GreatVibes-Regular.ttf"      # script, like the design's sample name
+TEXT_FONT_PATH = FONTS_DIR / "Poppins-Regular.ttf"          # date line
+NUMBER_FONT_PATH = FONTS_DIR / "Poppins-Medium.ttf"         # certificate number
+
+GAME_CERT_TEMPLATES = {
+    "sign_match": ("images/cert-game-sign-match.png", "Sign Match Game — Certificate of Achievement"),
+    "typing": ("images/cert-game-typing.png", "Sign-to-Word Game — Certificate of Achievement"),
+    "sentence": ("images/cert-game-sentence.png", "Sentence Builder Game — Certificate of Achievement"),
+    "scenario": ("images/cert-game-scenario.png", "Scenario-Based Game — Certificate of Achievement"),
+}
+MODULES_CERT_TEMPLATE_PATH = "images/cert-modules-completion.png"
+
+# Positions measured on the templates.
+NEW_NAME_LEFT, NEW_NAME_RIGHT = 300, 1190
+NEW_NAME_BASELINE = 528          # just above the printed underline (y=551)
+NEW_NAME_COLOR = (25, 56, 132)
+NEW_NAME_MAX, NEW_NAME_MIN = 118, 56
+NEW_DATE_CENTER_X, NEW_DATE_BASELINE = 745, 752
+NEW_DATE_COLOR = (20, 20, 20)
+NEW_DATE_SIZE = 25
+NEW_NUMBER_CENTER_X, NEW_NUMBER_BASELINE = 1190, 901
+NEW_NUMBER_COLOR = (22, 43, 99)
+NEW_NUMBER_SIZE = 16
+
+
+def _text_width(draw, text, font):
+    box = draw.textbbox((0, 0), text, font=font, anchor="ls")
+    return box[2] - box[0]
+
+
+def _render_certificate_pdf(template_path: str, student_name: str, issued_at, certificate_number: str) -> bytes:
+    """Stamps the student's name, the issue date and the certificate number
+    onto one of the new templates and returns the PDF bytes."""
+    with Image.open(REPO_ROOT / template_path) as template:
+        canvas = template.convert("RGB").copy()
+    draw = ImageDraw.Draw(canvas)
+
+    # Name: script font, as large as fits the name band.
+    size = NEW_NAME_MAX
+    while size > NEW_NAME_MIN:
+        name_font = ImageFont.truetype(str(NAME_FONT_PATH), size)
+        if _text_width(draw, student_name, name_font) <= NEW_NAME_RIGHT - NEW_NAME_LEFT:
+            break
+        size -= 2
+    name_font = ImageFont.truetype(str(NAME_FONT_PATH), size)
+    center = (NEW_NAME_LEFT + NEW_NAME_RIGHT) / 2
+    draw.text((center, NEW_NAME_BASELINE), student_name, font=name_font, fill=NEW_NAME_COLOR, anchor="ms")
+
+    # Date: "issued this 27th day of July 2026." with a raised ordinal suffix.
+    day = issued_at.day
+    suffix = "th" if 11 <= day % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    date_font = ImageFont.truetype(str(TEXT_FONT_PATH), NEW_DATE_SIZE)
+    sup_font = ImageFont.truetype(str(TEXT_FONT_PATH), int(NEW_DATE_SIZE * 0.6))
+    before = f"issued this {day}"
+    after = f" day of {issued_at.strftime('%B %Y')}."
+    total = _text_width(draw, before, date_font) + _text_width(draw, suffix, sup_font) + _text_width(draw, after, date_font)
+    x = NEW_DATE_CENTER_X - total / 2
+    draw.text((x, NEW_DATE_BASELINE), before, font=date_font, fill=NEW_DATE_COLOR, anchor="ls")
+    x += _text_width(draw, before, date_font)
+    draw.text((x, NEW_DATE_BASELINE - int(NEW_DATE_SIZE * 0.42)), suffix, font=sup_font, fill=NEW_DATE_COLOR, anchor="ls")
+    x += _text_width(draw, suffix, sup_font)
+    draw.text((x, NEW_DATE_BASELINE), after, font=date_font, fill=NEW_DATE_COLOR, anchor="ls")
+
+    # Certificate number, on the "CERTIFICATE NO." line.
+    number_font = ImageFont.truetype(str(NUMBER_FONT_PATH), NEW_NUMBER_SIZE)
+    draw.text((NEW_NUMBER_CENTER_X, NEW_NUMBER_BASELINE), certificate_number, font=number_font,
+              fill=NEW_NUMBER_COLOR, anchor="ms")
+
+    buffer = io.BytesIO()
+    canvas.save(buffer, format="PDF", resolution=150)
+    return buffer.getvalue()
+
+
+def _next_certificate_number(issued_at) -> str:
+    """KMP-<year>-<MMDD>-<running number for that day>, e.g. KMP-2026-0727-0001."""
+    prefix = f"KMP-{issued_at:%Y}-{issued_at:%m%d}-"
+    last = (
+        UserCertificate.objects.filter(certificate_number__startswith=prefix)
+        .order_by("-certificate_number")
+        .values_list("certificate_number", flat=True)
+        .first()
+    )
+    try:
+        sequence = int(str(last).rsplit("-", 1)[1]) + 1 if last else 1
+    except (IndexError, ValueError):
+        sequence = UserCertificate.objects.filter(certificate_number__startswith=prefix).count() + 1
+    return f"{prefix}{sequence:04d}"
+
+
+def _issue_certificate(user: User, certificate: Certificate, file_stem: str) -> UserCertificate:
+    """Creates the UserCertificate with a unique number and its PDF."""
+    from django.db import IntegrityError, transaction
+
+    student_name = _student_name_for_user(user)
+    issued_at = timezone.localtime(timezone.now())
+    for _attempt in range(5):
+        number = _next_certificate_number(issued_at)
+        pdf_bytes = _render_certificate_pdf(certificate.template_path, student_name, issued_at, number)
+        user_certificate = UserCertificate(
+            user=user, certificate=certificate, student_name=student_name, certificate_number=number
+        )
+        try:
+            with transaction.atomic():
+                user_certificate.file.save(f"{file_stem}-{number}.pdf", ContentFile(pdf_bytes), save=False)
+                user_certificate.save()
+            return user_certificate
+        except IntegrityError:
+            # Another certificate took this number at the same moment; take the next one.
+            if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
+                return UserCertificate.objects.get(user=user, certificate=certificate)
+            continue
+    raise RuntimeError("Could not allocate a certificate number")
+
+
+def verify_certificate_number(number: str):
+    """Returns the issued certificate for a number, or None."""
+    number = str(number or "").strip().upper()
+    if not number:
+        return None
+    return UserCertificate.objects.select_related("certificate").filter(certificate_number=number).first()
+
+
 def _student_name_for_user(user: User) -> str:
     profile = getattr(user, "profile", None)
     full_name = getattr(profile, "full_name", "") if profile else ""
@@ -149,25 +277,22 @@ def _student_name_for_user(user: User) -> str:
 
 
 def award_certificate_if_earned(user: User, game_key: str) -> UserCertificate | None:
-    """Idempotently issues the certificate for game_key to user. Returns the
-    newly-created UserCertificate, or None if the game has no certificate
-    catalog entry or the user already earned it."""
-    try:
-        certificate = Certificate.objects.get(game_key=game_key)
-    except Certificate.DoesNotExist:
+    """Idempotently issues the game's Certificate of Achievement (called once
+    the game's Hard difficulty is passed). Returns the new UserCertificate, or
+    None for an unknown game or one the user already earned."""
+    if game_key not in GAME_CERT_TEMPLATES:
         return None
+    template_path, title = GAME_CERT_TEMPLATES[game_key]
+    certificate, _ = Certificate.objects.get_or_create(
+        game_key=game_key, defaults={"title": title, "template_path": template_path}
+    )
+    if certificate.template_path != template_path or certificate.title != title:
+        certificate.template_path, certificate.title = template_path, title
+        certificate.save(update_fields=["template_path", "title"])
 
     if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
         return None
-
-    student_name = _student_name_for_user(user)
-    pdf_bytes = _generate_certificate_pdf(certificate.template_path, student_name)
-
-    user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
-    file_name = f"{certificate.game_key}-{user.id}.pdf"
-    user_certificate.file.save(file_name, ContentFile(pdf_bytes), save=False)
-    user_certificate.save()
-    return user_certificate
+    return _issue_certificate(user, certificate, f"{game_key}-{user.id}")
 
 
 def award_module_certificate_if_earned(user: User, module: LearningModule) -> UserCertificate | None:
@@ -197,19 +322,20 @@ def award_module_certificate_if_earned(user: User, module: LearningModule) -> Us
     return user_certificate
 
 
-# The one Kumpas certificate: issued once a student has completed and passed
-# EVERY published learning module. Passing a single module (or a game) earns
-# an achievement instead (see views._unlock_module_achievement).
-ALL_MODULES_CERT_TITLE = "Kumpas Learning Modules — Certificate of Achievement"
+# The modules certificate ("Certificate of Completion"): issued once a student
+# has completed and passed EVERY published learning module. Passing a single
+# module earns an achievement instead (see views._unlock_module_achievement).
+ALL_MODULES_CERT_TITLE = "Kumpas Learning Modules — Certificate of Completion"
 ALL_MODULES_PASSING_PERCENT = 75
 
 
 def _all_modules_certificate() -> Certificate:
-    certificate = Certificate.objects.filter(
-        game_key__isnull=True, module__isnull=True, title=ALL_MODULES_CERT_TITLE
-    ).first()
+    certificate = Certificate.objects.filter(game_key__isnull=True, module__isnull=True).first()
     if certificate is None:
-        certificate = Certificate.objects.create(title=ALL_MODULES_CERT_TITLE, template_path=MODULE_CERT_TEMPLATE_PATH)
+        certificate = Certificate.objects.create(title=ALL_MODULES_CERT_TITLE, template_path=MODULES_CERT_TEMPLATE_PATH)
+    elif certificate.title != ALL_MODULES_CERT_TITLE or certificate.template_path != MODULES_CERT_TEMPLATE_PATH:
+        certificate.title, certificate.template_path = ALL_MODULES_CERT_TITLE, MODULES_CERT_TEMPLATE_PATH
+        certificate.save(update_fields=["title", "template_path"])
     return certificate
 
 
@@ -240,13 +366,7 @@ def award_all_modules_certificate_if_earned(user: User) -> UserCertificate | Non
     if UserCertificate.objects.filter(user=user, certificate=certificate).exists():
         return None
 
-    student_name = _student_name_for_user(user)
-    issued_at = timezone.now()
-    pdf_bytes = _generate_module_certificate_pdf(certificate.template_path, student_name, issued_at)
-    user_certificate = UserCertificate(user=user, certificate=certificate, student_name=student_name)
-    user_certificate.file.save(f"kumpas-modules-{user.id}.pdf", ContentFile(pdf_bytes), save=False)
-    user_certificate.save()
-    return user_certificate
+    return _issue_certificate(user, certificate, f"kumpas-modules-{user.id}")
 
 
 def _send_certificate_email_sync(user_certificate_id: int) -> None:

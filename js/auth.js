@@ -122,6 +122,12 @@ async function logoutUser() {
         // Continue logout even if request fails
     }
     window.setKumpasToken(null);
+    // Don't leave this account's saved module list on a shared computer.
+    try {
+        Object.keys(localStorage)
+            .filter(key => key === 'kumpasLastUser' || key.indexOf('kumpasStudentContent:') === 0)
+            .forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
     window.location.replace('index.html');
 }
 

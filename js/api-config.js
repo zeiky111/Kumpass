@@ -72,3 +72,126 @@ window.setKumpasToken = function (token) {
         });
     };
 })();
+
+// ---- No dead loading ----------------------------------------------------
+// The backend runs on a free Render instance that sleeps when idle; the
+// first request after that can take 30-60 seconds. Without feedback the
+// app just looks frozen ("dead loading"). So, for every call to the API:
+//   * GET requests time out after 45 s instead of hanging forever, so the
+//     page's own error handling can run;
+//   * if a request is still running after 3 s, a small notice explains the
+//     server is waking up; it disappears when the requests finish;
+//   * if the server can't be reached, the notice offers "Try again".
+// Public pages (landing, login, register, ...) also wake the server up
+// right away, so it is ready by the time the student has logged in.
+(function () {
+    const API = String(window.KUMPAS_API_BASE || '').replace(/\/$/, '');
+    if (!API || typeof window.fetch !== 'function') return;
+
+    const GET_TIMEOUT_MS = 45000;
+    const SLOW_AFTER_MS = 3000;
+    const baseFetch = window.fetch;
+    let slowCount = 0;
+    let toast = null;
+    let toastKind = '';
+    let hideTimer = null;
+
+    function ensureToast() {
+        if (toast && document.body && document.body.contains(toast)) return toast;
+        if (!document.body) return null;
+        toast = document.createElement('div');
+        toast.id = 'kumpasNetNotice';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        // position/z-index are !important because css/bg-orbs.css forces
+        // position:relative on every direct child of <body>.
+        toast.style.cssText = [
+            'position:fixed !important', 'left:50%', 'bottom:20px', 'transform:translateX(-50%)',
+            'z-index:10080 !important', 'max-width:min(560px, calc(100vw - 32px))', 'display:none',
+            'align-items:center', 'gap:10px', 'padding:12px 16px', 'border-radius:14px',
+            'font:600 0.92rem/1.45 system-ui, -apple-system, "Segoe UI", sans-serif',
+            'box-shadow:0 12px 30px rgba(15,23,42,0.28)', 'color:#fff',
+        ].join(';');
+        document.body.appendChild(toast);
+        return toast;
+    }
+
+    function showToast(kind, html, autoHideMs) {
+        const el = ensureToast();
+        if (!el) return;
+        clearTimeout(hideTimer);
+        toastKind = kind;
+        el.style.background = kind === 'error' ? '#b91c1c' : '#1e3a8a';
+        el.innerHTML = html;
+        el.style.display = 'flex';
+        const retry = el.querySelector('[data-net-retry]');
+        if (retry) retry.addEventListener('click', () => window.location.reload());
+        if (autoHideMs) hideTimer = setTimeout(hideToast, autoHideMs);
+    }
+
+    function hideToast() {
+        clearTimeout(hideTimer);
+        toastKind = '';
+        if (toast) toast.style.display = 'none';
+    }
+
+    function isApiCall(url) {
+        // File views/downloads can be large; let them take as long as they need.
+        return url.indexOf(API) === 0 && url.indexOf('/files/') === -1;
+    }
+
+    window.fetch = function (input, init) {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (!isApiCall(url)) return baseFetch(input, init);
+
+        const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+        let timeoutId = null;
+        let timedOut = false;
+        if (method === 'GET' && !(init && init.signal) && typeof AbortController === 'function') {
+            const controller = new AbortController();
+            init = Object.assign({}, init, { signal: controller.signal });
+            timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, GET_TIMEOUT_MS);
+        }
+
+        let isSlow = false;
+        const slowTimer = setTimeout(() => {
+            isSlow = true;
+            slowCount += 1;
+            if (toastKind !== 'error') {
+                showToast('info', '<span aria-hidden="true">⏳</span><span>Connecting to the Kumpas server… The first load can take up to a minute while the server wakes up.</span>');
+            }
+        }, SLOW_AFTER_MS);
+
+        const finish = () => {
+            clearTimeout(timeoutId);
+            clearTimeout(slowTimer);
+            if (isSlow) {
+                slowCount = Math.max(0, slowCount - 1);
+                if (!slowCount && toastKind === 'info') hideToast();
+            }
+        };
+
+        return baseFetch(input, init).then((response) => {
+            finish();
+            return response;
+        }, (error) => {
+            finish();
+            // A caller cancelling its own request isn't a connection problem.
+            if (timedOut || !(error && error.name === 'AbortError')) {
+                showToast('error',
+                    '<span aria-hidden="true">⚠️</span><span>Can\'t reach the Kumpas server right now. Check your internet connection.</span>'
+                    + '<button type="button" data-net-retry style="flex:none;border:none;border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer;background:#fff;color:#b91c1c;">Try again</button>',
+                    15000);
+            }
+            throw error;
+        });
+    };
+
+    // Wake the backend early on the public pages.
+    const page = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    if (/^(index|login|register|forgot-password|reset-password|verify-email|verify-certificate)\.html$/.test(page)) {
+        setTimeout(() => {
+            baseFetch(`${API}/auth/csrf/`, { credentials: 'include', cache: 'no-store' }).catch(() => {});
+        }, 0);
+    }
+})();
