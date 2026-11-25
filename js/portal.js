@@ -691,6 +691,19 @@
     }
   }
 
+  // learning.html?quiz=<module id>[&type=pre] (the activity page's quiz
+  // buttons) opens that module's pre-test / post-test right away.
+  function openQuizFromLink() {
+    let params;
+    try { params = new URLSearchParams(window.location.search); } catch (_) { return; }
+    const moduleId = params.get('quiz');
+    if (!moduleId) return;
+    const module = getModuleById(moduleId);
+    try { window.history.replaceState(null, '', window.location.pathname); } catch (_) {}
+    if (!module) return;
+    openQuiz(module.id, params.get('type') === 'pre' ? 'pre' : undefined);
+  }
+
   async function retryStudentContent() {
     studentContentStatus = 'loading';
     try { renderLearning(); } catch (_) {}
@@ -2917,6 +2930,7 @@
         console.error('loadStudentContentFromBackend error:', e);
       }
       try { renderLearning(); } catch (e) { console.error('renderLearning error:', e); }
+      openQuizFromLink();
     } else if (pageType === 'activities') {
       try { renderActivities(); } catch (e) { console.error('renderActivities error:', e); }
     } else if (pageType === 'profile') {
