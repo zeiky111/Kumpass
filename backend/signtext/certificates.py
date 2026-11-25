@@ -412,3 +412,38 @@ def send_certificate_email_async(user_certificate: UserCertificate) -> None:
         daemon=True,
     )
     thread.start()
+
+
+def upgrade_legacy_certificates(user: User) -> int:
+    """Re-issues this user's game / all-modules certificates that were made
+    before certificate numbers existed (old design, no number): same
+    certificate, now on the new template with a system-generated number.
+    Returns how many were upgraded. Safe to call repeatedly."""
+    upgraded = 0
+    legacy = UserCertificate.objects.filter(user=user, certificate_number__isnull=True).select_related("certificate")
+    for user_certificate in legacy:
+        certificate = user_certificate.certificate
+        if certificate.module_id is not None:
+            continue  # old per-module certificates are now achievements
+        if certificate.game_key:
+            if certificate.game_key not in GAME_CERT_TEMPLATES:
+                continue
+            template_path, title = GAME_CERT_TEMPLATES[certificate.game_key]
+            if certificate.template_path != template_path or certificate.title != title:
+                certificate.template_path, certificate.title = template_path, title
+                certificate.save(update_fields=["template_path", "title"])
+            stem = f"{certificate.game_key}-{user.id}"
+        else:
+            certificate = _all_modules_certificate()
+            stem = f"kumpas-modules-{user.id}"
+        try:
+            issued_at = timezone.localtime(user_certificate.issued_at)
+            number = _next_certificate_number(timezone.localtime(timezone.now()))
+            pdf_bytes = _render_certificate_pdf(certificate.template_path, user_certificate.student_name, issued_at, number)
+            user_certificate.certificate_number = number
+            user_certificate.file.save(f"{stem}-{number}.pdf", ContentFile(pdf_bytes), save=False)
+            user_certificate.save(update_fields=["certificate_number", "file"])
+            upgraded += 1
+        except Exception:
+            logger.exception("Could not upgrade legacy certificate %s", user_certificate.id)
+    return upgraded

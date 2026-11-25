@@ -536,6 +536,9 @@
     }
   }
 
+  // Progress toward the modules Certificate of Completion, from the last load.
+  let modulesCertificateStatus = null;
+
   // Returns the list, or null when it couldn't be loaded.
   async function loadCertificatesForEmail(email) {
     const normalizedEmail = String(email || '').trim();
@@ -552,6 +555,7 @@
       }
 
       const payload = await response.json();
+      modulesCertificateStatus = payload && payload.modulesCertificate ? payload.modulesCertificate : null;
       return Array.isArray(payload.certificates) ? payload.certificates : [];
     } catch (_) {
       return null;
@@ -2071,6 +2075,18 @@
           `;
           return;
         }
+        // Still working toward the modules certificate? Show how far along.
+        const status = viewingSomeoneElse ? null : modulesCertificateStatus;
+        const pendingModulesCert = status && !status.earned && Number(status.total) > 0 ? `
+          <div class="achievement" style="opacity: 0.75;">
+            <span class="achievement-icon">🔒</span>
+            <span class="achievement-name">Kumpas Learning Modules — Certificate of Completion<br>
+              <small>Pass ${Number(status.left)} more module${Number(status.left) === 1 ? '' : 's'} to earn it (${Number(status.passed)}/${Number(status.total)} passed)</small></span>
+          </div>` : '';
+        if (!certificates.length && pendingModulesCert) {
+          certificatesList.innerHTML = pendingModulesCert;
+          return;
+        }
         if (!certificates.length) {
           certificatesList.innerHTML = `
             <div class="achievement" style="opacity: 0.55;">
@@ -2087,7 +2103,7 @@
             <span class="achievement-name">${safeText(item.title)}${item.number ? `<br><small style="opacity:0.75;">No. ${safeText(item.number)}</small>` : ''}</span>
             ${viewingSomeoneElse ? '' : `<a href="${safeText(item.downloadUrl)}" target="_blank" rel="noopener" class="btn-secondary" style="margin-left:auto; padding:4px 12px; font-size:0.85em; white-space:nowrap;">Download</a>`}
           </div>
-        `).join('');
+        `).join('') + pendingModulesCert;
       })();
     }
 

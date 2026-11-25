@@ -32,6 +32,7 @@ from .inference import predict_from_image_bytes
 from .word_sequence_svc import MODEL_PATH as WORD_MODEL_PATH, predict_word_from_sequence
 from .file_downloads import download_url
 from .certificates import (
+    upgrade_legacy_certificates,
     award_all_modules_certificate_if_earned,
     award_certificate_if_earned,
     send_certificate_email_async,
@@ -1491,11 +1492,38 @@ def verify_certificate(request: Any) -> Response:
 @permission_classes([IsAuthenticated])
 def user_certificates(request: Any) -> Response:
     user = request.user
+
+    # Students who passed every module before the certificate rules changed
+    # never hit the post-test that issues it -- issue it now (idempotent).
+    try:
+        new_certificate = award_all_modules_certificate_if_earned(user)
+        if new_certificate is not None:
+            send_certificate_email_async(new_certificate)
+    except Exception:
+        logger.exception("Could not check the modules certificate for %s", user.username)
+
+    # Old certificates (no number, old design) -> new template with a number.
+    try:
+        upgrade_legacy_certificates(user)
+    except Exception:
+        logger.exception("Could not upgrade legacy certificates for %s", user.username)
+
+    # Per-module certificates from the old rule are now achievements: unlock
+    # the module's achievement (if its post-test was passed) and stop listing them.
+    for legacy in UserCertificate.objects.filter(user=user, certificate__module__isnull=False).select_related("certificate__module"):
+        module = legacy.certificate.module
+        best = _best_attempt(list(QuizAttempt.objects.filter(user=user, module=module, test_type=QuizQuestion.TEST_POST)))
+        if _attempt_passed(best):
+            _unlock_module_achievement(user, module)
+
     earned = (
-        UserCertificate.objects.filter(user=user)
+        UserCertificate.objects.filter(user=user, certificate__module__isnull=True)
         .select_related("certificate")
         .order_by("-issued_at")
     )
+    total_modules = LearningModule.objects.filter(status=LearningModule.STATUS_PUBLISHED).count()
+    modules_left = unpassed_module_count(user) if total_modules else 0
+    has_modules_certificate = any(item.certificate.game_key is None for item in earned)
     return Response({
         "certificates": [
             {
@@ -1506,7 +1534,14 @@ def user_certificates(request: Any) -> Response:
                 "downloadUrl": download_url(request, "certificate", item.id),
             }
             for item in earned
-        ]
+        ],
+        # Progress toward the Certificate of Completion (all modules passed).
+        "modulesCertificate": {
+            "earned": has_modules_certificate,
+            "total": total_modules,
+            "passed": max(0, total_modules - modules_left),
+            "left": modules_left,
+        },
     })
 
 
