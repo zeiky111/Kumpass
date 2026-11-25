@@ -680,7 +680,7 @@
             renderMaterialsList(module, files, preTestPending || module.levelLocked);
             if (preTestPending || module.levelLocked) {
                 const container = document.getElementById('activityVideoContainer');
-                const blockingLabel = { beginner: 'Beginner', intermediate: 'Intermediate' }[module.levelLockedBy] || 'Beginner';
+                const blockingLabel = { beginner: 'Beginner', elementary: 'Elementary', intermediate: 'Intermediate' }[module.levelLockedBy] || 'Beginner';
                 if (container) {
                     container.innerHTML = module.levelLocked
                         ? `<div style="padding:18px;color:#92400e;background:#fffbeb;border:1px dashed #f59e0b;border-radius:16px;">🔒 Finish all ${blockingLabel} modules first to unlock ${escapeHtml(module.levelLabel || 'this level')} modules.</div>`

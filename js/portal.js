@@ -137,13 +137,14 @@
     return '1';
   }
 
-  // Modules are grouped by learner level (Beginner / Intermediate / Advanced),
+  // Modules are grouped by learner level (Beginner / Elementary / Intermediate / Advanced),
   // not by school year. Legacy 1st-4th year values map onto the levels.
-  const LEVEL_LABELS = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
+  const LEVEL_LABELS = { beginner: 'Beginner', elementary: 'Elementary', intermediate: 'Intermediate', advanced: 'Advanced' };
 
   function getModuleLevelKey(value) {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === 'advanced') return 'advanced';
+    if (normalized === 'elementary') return 'elementary';
     if (['intermediate', '3', '3rd', '4', '4th'].includes(normalized)) return 'intermediate';
     return 'beginner';
   }
@@ -217,8 +218,8 @@
       // Pre-test: taken before the materials unlock.
       preTests: Array.isArray(module && module.preTests) ? module.preTests : [],
       preTestCount: Number((module && module.preTestCount) || 0),
-      // Intermediate and Advanced stay locked until every Beginner module is
-      // finished (Advanced also needs Intermediate finished).
+      // Each level stays locked until every module in the levels before it
+      // is finished (Beginner -> Elementary -> Intermediate -> Advanced).
       levelLocked: Boolean(module && module.levelLocked),
       levelLockedBy: getModuleLevelKey((module && module.levelLockedBy) || 'beginner'),
       levelRemaining: Number((module && module.levelRemaining) || 0),
@@ -243,7 +244,7 @@
     const blocking = (module && module.levelLockedBy) || 'beginner';
     const remaining = Number((module && module.levelRemaining) || 0)
       || (blocking === 'beginner' ? getBeginnerRemaining() : 0);
-    const level = module ? module.levelLabel : 'Intermediate and Advanced';
+    const level = module ? module.levelLabel : 'higher-level';
     return `🔒 Finish all ${LEVEL_LABELS[blocking] || 'Beginner'} modules first${remaining ? ` (${remaining} left)` : ''} to unlock ${level} modules.`;
   }
 

@@ -100,11 +100,12 @@ class LearningModule(models.Model):
     # Modules are grouped by learner level, not school year. Stored in the
     # (historically named) year_level column.
     LEVEL_BEGINNER = "beginner"
+    LEVEL_ELEMENTARY = "elementary"
     LEVEL_INTERMEDIATE = "intermediate"
     LEVEL_ADVANCED = "advanced"
     # Learning order. A level unlocks only after every published module in
     # the levels before it is finished.
-    LEVEL_ORDER = [LEVEL_BEGINNER, LEVEL_INTERMEDIATE, LEVEL_ADVANCED]
+    LEVEL_ORDER = [LEVEL_BEGINNER, LEVEL_ELEMENTARY, LEVEL_INTERMEDIATE, LEVEL_ADVANCED]
 
     STATUS_CHOICES = [
         (STATUS_DRAFT, "Draft"),
